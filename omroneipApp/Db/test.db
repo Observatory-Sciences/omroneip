@@ -1,0 +1,6 @@
+record(ai, "$(P)testReadPassive") {
+    #field(SCAN, "1 second")
+    field(SCAN, "Passive")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVValue REAL 1")
+}

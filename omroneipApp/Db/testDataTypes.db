@@ -1,0 +1,113 @@
+# record(ai, "$(P)testRead) {
+#     field(DTYP, "asynInt32")
+#     field(INP, "asyn(PORT, ADDR, TIMEOUT)@poller tag_name[start_index] data_type length")
+# }
+
+# This should work but doesnt
+record(ai, "$(P)testReadPassive") {
+    #field(SCAN, "1 second")
+    field(SCAN, "Passive")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] REAL 2")
+}
+
+############################ Read Records #######################################
+#Test each datatype
+
+record(longin, "$(P)readInt16") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] INT 2")
+}
+
+record(longin, "$(P)readInt32") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[2] DINT 2")
+}
+
+#Not supported in epics base 3.15
+#record(int64in, "$(P)readInt64") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynInt64")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple LINT 1")
+#}
+
+record(ai, "$(P)readUInt16") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple UINT 1")
+}
+
+record(ai, "$(P)readUInt32") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple UDINT 1")
+}
+
+record(ai, "$(P)readUInt64") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple ULINT 1")
+}
+
+record(mbbi, "$(P)read4DigitBCD") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynUInt32Digital")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple UINT_BCD 1")
+}
+
+record(mbbi, "$(P)read8DigitBCD") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynUInt32Digital")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple UINT_BCD 1")
+}
+
+#No idea
+record(mbbi, "$(P)read16DigitBCD") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynUInt32Digital")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple UINT_BCD 1")
+}
+
+record(ai, "$(P)readFloat32") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple REAL 1")
+}
+
+record(ai, "$(P)readFloat64") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple LREAL 1")
+}
+
+record(lsi, "$(P)readString") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMulint64tiple STRING 1")
+}
+
+record(stringin, "$(P)readWord") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple WORD 1")
+}
+
+record(stringin, "$(P)readString") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple DWORD 1")
+}
+
+record(stringin, "$(P)readString") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple LWORD 1")
+}
+
+record(waveform, "$(P)readUDT") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple UDT 1")
+}

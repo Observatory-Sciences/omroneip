@@ -1,4 +1,4 @@
-# Makefile for Asyn OmronNJ_EtherIP support
+# Makefile for Asyn omroneip support
 #
 # Created by Phil Smith - Observatory Sciences ltd -  on Fri Jan 12 13:43:07 2024
 

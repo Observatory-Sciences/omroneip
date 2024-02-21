@@ -1,0 +1,62 @@
+# Tag name has spaces
+record(longin, "$(P)test1") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller /test name with gaps[2]/ DINT 5 extras")
+}
+
+# Poller and tag name have spaces
+record(longin, "$(P)test2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)/@test poller/ /test name with gaps[1]/ DINT 1")
+}
+
+# Invalid datatype
+record(longin, "$(P)test3") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[1] bad_dtype 1 extras")
+}
+
+# Invalid startIndex and sliceSize
+record(longin, "$(P)test4") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[1] INT one extras")
+}
+
+# Escape character never closed
+record(longin, "$(P)test5") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)/@testPoller testName[1] DINT 1 extras")
+}
+
+# Undefined start_index
+record(longin, "$(P)test6") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 extras")
+}
+
+# Tag name with spaces without escape character used
+record(longin, "$(P)test7") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller test Name DINT 1 extras")
+}
+
+# Tag name including indexed parent and child
+record(longin, "$(P)test8") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[465].child[2] DINT 1 extras")
+}
+
+# Test startIndes of 0
+record(longin, "$(P)test9") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[0] INT")
+}

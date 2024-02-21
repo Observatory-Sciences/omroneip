@@ -6,6 +6,11 @@ include $(TOP)/configure/CONFIG
 #----------------------------------------
 #  ADD MACRO DEFINITIONS AFTER THIS LINE
 #=============================
+SRC_DIRS += $(LIBPLCTAG_LIB)
+USR_INCLUDES += -I$(LIBPLCTAG_LIB)
+USR_DBDFLAGS += -I$(LIBPLCTAG_LIB)
+PROD_LDFLAGS += -L$(LIBPLCTAG_BUILD)
+PROD_SYS_LIBS += libplctag
 #==================================================
 # Build an IOC support library
 
@@ -16,7 +21,7 @@ DBD += omroneipSupport.dbd
 INC += omroneip.h
 INC += drvOmroneip.h
 
-LIBRARY_IOC = omroneip
+LIBRARY_IOC += omroneip
 
 USR_CFLAGS += -DUSE_TYPED_RSET
 USR_CPPFLAGS += -DUSE_TYPED_RSET
