@@ -175,12 +175,12 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
 
   for(int i = 0; i < str.size(); i++)
   {
-    if (str[i] == '/')
+    if (str[i] == escape)
     {
       if (escaped == false) {escaped = true;}
       else {escaped = false;}
     }
-    if (str[i] == ' ' && !escaped)
+    if (str[i] == delim && !escaped)
     {
       if (i==0) 
       {
@@ -226,6 +226,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
   }
 
   int params = words.size();
+  bool indexable = false;
   for (int i = 0;i<params;i++)
   {
     if (i == 0)
@@ -243,6 +244,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
       if (!startIndex.empty())
       {
         keyWords.at("startIndex")=startIndex;
+        indexable = true;
         if (std::stoi(startIndex)<1)
         {
           std::cout<<"A startIndex of < 1 is forbidden"<<std::endl;
@@ -277,7 +279,15 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
       strtol(words.front().c_str(), &p, 10);
       if (*p == 0)
       {
-        keyWords.at("sliceSize") = words.front();
+        if (indexable && words.front()!="1")
+        {
+          keyWords.at("sliceSize") = words.front();
+        }
+        else if (words.front()!="1")
+        {
+          std::cout<<"You cannot get a slice whole tag. Try tag_name[startIndex] to specify elements for slice"<<std::endl;
+          keyWords.at("stringValid") = "false";
+        }
       }
       else
       {
@@ -348,7 +358,6 @@ void drvOmronEIP::readPoller()
         double temp; 
         getDoubleParam(x.first, &temp);
         setDoubleParam(x.first, data);
-        
         callParamCallbacks(x.first);
 
         // pasynManager->interruptStart(asynStdInterfaces.float64InterruptPvt, &pclientList);

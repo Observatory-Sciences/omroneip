@@ -4,3 +4,9 @@ record(ai, "$(P)testReadPassive") {
     field(DTYP, "asynFloat64")
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVValue REAL 1")
 }
+
+record(ai, "$(P)testReadIntr") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[2].PVValue REAL 1")
+}
