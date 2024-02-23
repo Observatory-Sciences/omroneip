@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <vector>
 #include <list>
+#include <array>
+#include <chrono>
 
 /* EPICS includes */
 #include <dbAccess.h>
@@ -51,6 +53,7 @@ typedef enum {
   dataTypeUDInt_BCD,
   dataTypeULInt_BCD,
   dataTypeReal,
+  dataTypeLReal,
   dataTypeString,
   dataTypeWord,
   dataTypeDWord,
@@ -72,13 +75,12 @@ public:
     bool checkTagStatus(int32_t tagStatus); // Checks a tags status, if bad, prints an error message and returns false
     std::unordered_map<std::string, std::string> drvInfoParser(const char *drvInfo);
     asynStatus drvUserCreate(asynUser *pasynUser, const char *drvInfo, const char **pptypeName, size_t *psize)override;
-    asynStatus readInt32(asynUser *pasynUser, epicsInt32 *value)override;
-    asynStatus readFloat64(asynUser *pasynUser, epicsFloat64 *value)override;
 protected:
 
 private:
   bool initialized_; // Tracks if the driver successfully initialized
   bool cats_;
+  std::array<int, MAX_OMRON_DATA_TYPES> recordTypeCounters_; /* Keeps track of how many of each type of record we have. */
   std::vector<int> readIndexList_; /* A list of parameters which are scheduled to read data at the next polling interval */
   std::unordered_map<int, omronDrvUser_t*> tagMap_; /* Maps the index of each registerd param to the EIP data registered in the PV */
   omronDrvUser_t *drvUser_;   /* Drv user structure */ 

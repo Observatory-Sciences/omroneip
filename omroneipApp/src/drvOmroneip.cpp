@@ -12,6 +12,7 @@ struct omronDrvUser_t {
   std::string tag;
   std::string dataType;
   int32_t tagIndex;
+  int dataCounter;
 };
 
 typedef struct {
@@ -31,6 +32,7 @@ static omronDataTypeStruct omronDataTypes[MAX_OMRON_DATA_TYPES] = {
     {dataTypeUDInt_BCD, "UDINT_BCD"},
     {dataTypeULInt_BCD, "ULINT_BCD"},
     {dataTypeReal, "REAL"},
+    {dataTypeLReal, "LREAL"},
     {dataTypeString, "STRING"},
     {dataTypeWord, "WORD"},
     {dataTypeDWord, "DWORD"},
@@ -129,10 +131,12 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   printf("%s\n", tag.c_str());
   int32_t tagIndex = plc_tag_create(tag.c_str(), 100);
   /* Check and report failure codes */ 
-  checkTagStatus(tagIndex);
+  if (!checkTagStatus(tagIndex))
+  {
+    printf("Tag not added!\n");
+    return asynError;
+  }
 
-  /* Take care of different datatypes */
-  int createStatus = createParam(drvInfo, asynParamFloat64, &asynIndex);
 
   /* Initialise each datatype*/
 
@@ -143,13 +147,63 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   newDrvUser->startIndex = std::stoi(keyWords.at("startIndex"));
   newDrvUser->tagIndex = tagIndex;
 
-  tagMap_[asynIndex] = newDrvUser;
+  { /* Take care of different datatypes */
+    if (keyWords.at("dataType") == "INT")
+    {
+      status = createParam(drvInfo, asynParamInt32, &asynIndex);
+    }
+    
+    else if (keyWords.at("dataType") == "DINT")
+    {
+      status = createParam(drvInfo, asynParamInt32, &asynIndex);
+    }
+
+    else if (keyWords.at("dataType") == "LINT")
+    {
+      status = createParam(drvInfo, asynParamInt64, &asynIndex);
+    }
+
+    else if (keyWords.at("dataType") == "UINT")
+    {
+      status = createParam(drvInfo, asynParamInt32, &asynIndex);
+    }
+    
+    else if (keyWords.at("dataType") == "UDINT")
+    {
+      status = createParam(drvInfo, asynParamInt32, &asynIndex);
+    }
+
+    else if (keyWords.at("dataType") == "ULINT")
+    {
+      status = createParam(drvInfo, asynParamInt64, &asynIndex);
+    }
+
+    else if (keyWords.at("dataType") == "REAL")
+    {
+      status = createParam(drvInfo, asynParamFloat64, &asynIndex);
+    }
+
+    else if (keyWords.at("dataType") == "LREAL")
+    {
+      status = createParam(drvInfo, asynParamFloat64, &asynIndex);
+    }
+
+    else if (keyWords.at("dataType") == "STRING")
+    {
+      status = createParam(drvInfo, asynParamOctet, &asynIndex);
+    }
+  }
+
+  if (asynIndex < 0)
+  {
+    return (asynStatus) asynIndex;
+  }
 
   std::cout << tagIndex << " " << asynIndex <<std::endl;
 
-  pasynUser->drvUser = newDrvUser;
   pasynUser->reason = asynIndex;
-  readIndexList_.push_back(pasynUser->reason);
+  pasynUser->drvUser = newDrvUser;
+  tagMap_[asynIndex] = newDrvUser;
   return asynPortDriver::drvUserCreate(pasynUser, drvInfo, pptypeName, psize);
 }
 
@@ -321,71 +375,111 @@ bool drvOmronEIP::checkTagStatus(int32_t tagStatus)
   switch (tagStatus)
   {
   case -7:
-    std::cout<<"Invalid tag creation attribute string: "<<tagStatus<<std::endl;
+    std::cout<<"Invalid tag creation attribute string. libplctag code: "<<tagStatus<<std::endl;
     return false;
   
   case -19:
-    std::cout<<"Tag not found on PLC: "<<tagStatus<<std::endl;
+    std::cout<<"Tag not found on PLC. code: "<<tagStatus<<std::endl;
+    return false;
+  
+  case -33:
+    std::cout<<"More data was returned than expected, did you reference an array instead of an array element? libplctag code: "<<tagStatus<<std::endl;
     return false;
   
   default:
-    std::cout<<"Unknown status: "<<tagStatus<<std::endl;
+    std::cout<<"Unknown status. libplctag code: "<<tagStatus<<std::endl;
     return false;
   }
 }
 
 void drvOmronEIP::readPoller()
 {
-  double data;
   std::string tag;
   asynParamType type;
-  ELLLIST *pclientList;
-  interruptNode *pnode;
   asynUser *pasynUser;
   int offset;
+  int status;
 
   while (true)
   {
-    epicsThreadSleep(3);
+    int timeTaken;
+    epicsThreadSleep(0.1-(float)(timeTaken/100));
+    auto startTime = std::chrono::system_clock::now();
     for ( auto x : tagMap_)
     {
-      getParamType(x.first, &type);
-      if (std::find(readIndexList_.begin(), readIndexList_.end(), x.first) != readIndexList_.end())
+      plc_tag_read(x.second->tagIndex, 100);
+      if (x.second->dataType == "INT")
       {
-        plc_tag_read(x.second->tagIndex, 100);
+        epicsInt16 data;
+        data = plc_tag_get_int16(x.second->tagIndex, 0);
+        setIntegerParam(x.first, data);
+        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+      }
+      else if (x.second->dataType == "DINT")
+      {
+        epicsInt32 data;
+        data = plc_tag_get_int32(x.second->tagIndex, 0);
+        setIntegerParam(x.first, data);
+        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+      }
+      else if (x.second->dataType == "LINT")
+      {
+        epicsInt64 data;
+        data = plc_tag_get_int64(x.second->tagIndex, 0);
+        setInteger64Param(x.first, data);
+        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+      }
+      else if (x.second->dataType == "UINT")
+      {
+        epicsUInt16 data;
+        data = plc_tag_get_uint16(x.second->tagIndex, 0);
+        setIntegerParam(x.first, data);
+        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+      }
+      else if (x.second->dataType == "UDINT")
+      {
+        epicsUInt32 data;
+        data = plc_tag_get_uint32(x.second->tagIndex, 0);
+        setIntegerParam(x.first, data);
+        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+      }
+      else if (x.second->dataType == "ULINT")
+      {
+        epicsUInt64 data;
+        data = plc_tag_get_uint64(x.second->tagIndex, 0);
+        setInteger64Param(x.first, data);
+        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+      }
+      else if (x.second->dataType == "REAL")
+      {
+        epicsFloat32 data;
         data = plc_tag_get_float32(x.second->tagIndex, 0);
-        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<<std::endl;
-        double temp; 
-        getDoubleParam(x.first, &temp);
         setDoubleParam(x.first, data);
-        callParamCallbacks(x.first);
-
-        // pasynManager->interruptStart(asynStdInterfaces.float64InterruptPvt, &pclientList);
-        // pnode = (interruptNode *)ellFirst(pclientList);
-        // asynFloat64Interrupt *pFloat64;
-        // pFloat64 = (asynFloat64Interrupt *)pnode->drvPvt;
-        // pasynUser = pFloat64->pasynUser;
-        // pasynManager->getAddr(pasynUser, &offset);
-        // pFloat64->callback(pFloat64->userPvt, pasynUser, data);
-        // pnode = (interruptNode *)ellNext(&pnode->node);
-        // pasynManager->interruptEnd(asynStdInterfaces.float64InterruptPvt);
+        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+      }
+      else if (x.second->dataType == "LREAL")
+      {
+        epicsFloat64 data;
+        data = plc_tag_get_float64(x.second->tagIndex, 0);
+        setDoubleParam(x.first, data);
+        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+      }
+      else if (x.second->dataType == "STRING")
+      {
+        int string_length = plc_tag_get_string_length(x.second->tagIndex, 0);
+        char* data = (char*)malloc((string_length)*sizeof(char));
+        status = plc_tag_get_string(x.second->tagIndex, 0, data, string_length);
+        setStringParam(x.first, data);
+        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
       }
     }
+    callParamCallbacks();
+    //epicsThreadSleep(0.01);
+    auto endTime = std::chrono::system_clock::now();
+    timeTaken = std::chrono::duration_cast<std::chrono::milliseconds>(endTime-startTime).count();
+    std::cout<<"Time taken(msec): "<<std::chrono::duration_cast<std::chrono::milliseconds>(endTime-startTime).count()<<std::endl;
+    std::cout<<std::endl;
   }
-}
-
-asynStatus drvOmronEIP::readInt32(asynUser *pasynUser, epicsInt32 *value)
-{
-  std::cout<<"Im requesting to read int!"<<std::endl;
-  readIndexList_.push_back(pasynUser->reason);
-  return asynSuccess;
-}
-
-asynStatus drvOmronEIP::readFloat64(asynUser *pasynUser, epicsFloat64 *value)
-{
-  std::cout<<"Im requesting to read float!"<<std::endl;
-  readIndexList_.push_back(pasynUser->reason);
-  return asynSuccess;
 }
 
 extern "C" {

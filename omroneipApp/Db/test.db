@@ -5,8 +5,20 @@ record(ai, "$(P)testReadPassive") {
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVValue REAL 1")
 }
 
+#record(ai, "$(P)testReadInterval") {
+#    field(SCAN, ".1 second")
+#    field(DTYP, "asynFloat64")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVValue REAL 1")
+#}
+
 record(ai, "$(P)testReadIntr") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[2].PVValue REAL 1")
+}
+
+record(ai, "$(P)testReadIntr3") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[3].PVValue LREAL 1")
 }
