@@ -192,6 +192,26 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
     {
       status = createParam(drvInfo, asynParamOctet, &asynIndex);
     }
+
+    else if (keyWords.at("dataType") == "WORD")
+    {
+      status = createParam(drvInfo, asynParamOctet, &asynIndex);
+    }
+
+    else if (keyWords.at("dataType") == "DWORD")
+    {
+      status = createParam(drvInfo, asynParamOctet, &asynIndex);
+    }
+
+    else if (keyWords.at("dataType") == "LWORD")
+    {
+      status = createParam(drvInfo, asynParamOctet, &asynIndex);
+    }
+
+    else if (keyWords.at("dataType") == "UDT")
+    {
+      status = createParam(drvInfo, asynParamInt8Array, &asynIndex);
+    }
   }
 
   if (asynIndex < 0)
@@ -413,49 +433,49 @@ void drvOmronEIP::readPoller()
         epicsInt16 data;
         data = plc_tag_get_int16(x.second->tagIndex, 0);
         setIntegerParam(x.first, data);
-        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+        //std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
       }
       else if (x.second->dataType == "DINT")
       {
         epicsInt32 data;
         data = plc_tag_get_int32(x.second->tagIndex, 0);
         setIntegerParam(x.first, data);
-        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+        //std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
       }
       else if (x.second->dataType == "LINT")
       {
         epicsInt64 data;
         data = plc_tag_get_int64(x.second->tagIndex, 0);
         setInteger64Param(x.first, data);
-        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+        //std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
       }
       else if (x.second->dataType == "UINT")
       {
         epicsUInt16 data;
         data = plc_tag_get_uint16(x.second->tagIndex, 0);
         setIntegerParam(x.first, data);
-        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+        //std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
       }
       else if (x.second->dataType == "UDINT")
       {
         epicsUInt32 data;
         data = plc_tag_get_uint32(x.second->tagIndex, 0);
         setIntegerParam(x.first, data);
-        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+        //std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
       }
       else if (x.second->dataType == "ULINT")
       {
         epicsUInt64 data;
         data = plc_tag_get_uint64(x.second->tagIndex, 0);
         setInteger64Param(x.first, data);
-        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+        //std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
       }
       else if (x.second->dataType == "REAL")
       {
         epicsFloat32 data;
         data = plc_tag_get_float32(x.second->tagIndex, 0);
         setDoubleParam(x.first, data);
-        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+        //std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
       }
       else if (x.second->dataType == "LREAL")
       {
@@ -466,15 +486,79 @@ void drvOmronEIP::readPoller()
       }
       else if (x.second->dataType == "STRING")
       {
-        int string_length = plc_tag_get_string_length(x.second->tagIndex, 0);
-        char* data = (char*)malloc((string_length)*sizeof(char));
+        int string_length = plc_tag_get_string_length(x.second->tagIndex, 0)+1; /* +1 for the zero termination */
+        char* data = (char*)malloc((size_t)(unsigned int)string_length);
         status = plc_tag_get_string(x.second->tagIndex, 0, data, string_length);
         setStringParam(x.first, data);
-        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+        //std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+      }
+      else if (x.second->dataType == "WORD")
+      {
+        int bytes = 2;
+        uint8_t* rawData = (uint8_t*)malloc((size_t)(uint8_t)bytes);
+        status = plc_tag_get_raw_bytes(x.second->tagIndex, 0, rawData, bytes)+1; /* +1 for the zero termination */
+        char data[bytes+3];
+        char * dataPtr = data;
+        for (int i = 0; i < bytes; i++)
+        {
+          dataPtr+=sprintf(dataPtr, "%02X", rawData[i]);
+        }
+        setStringParam(x.first, data);
+        //std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<data<< " My type: "<< x.second->dataType<<std::endl;
+      }
+      else if (x.second->dataType == "DWORD")
+      {
+        int bytes = 4;
+        uint8_t* rawData = (uint8_t*)malloc((size_t)(uint8_t)bytes);
+        status = plc_tag_get_raw_bytes(x.second->tagIndex, 0, rawData, bytes)+1; /* +1 for the zero termination */
+        char data[bytes+3];
+        char * dataPtr = data;
+        for (int i = 0; i < bytes; i++)
+        {
+          dataPtr+=sprintf(dataPtr, "%02X", rawData[i]);
+        }
+        setStringParam(x.first, data);
+        //std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<data<< " My type: "<< x.second->dataType<<std::endl;
+      }
+      else if (x.second->dataType == "LWORD")
+      {
+        int bytes = 8;
+        uint8_t* rawData = (uint8_t*)malloc((size_t)(uint8_t)bytes);
+        status = plc_tag_get_raw_bytes(x.second->tagIndex, 0, rawData, bytes)+1; /* +1 for the zero termination */
+        char data[bytes+3];
+        char * dataPtr = data;
+        for (int i = 0; i < bytes; i++)
+        {
+          dataPtr+=sprintf(dataPtr, "%02X", rawData[i]);
+        }
+        setStringParam(x.first, data);
+        //std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<data<< " My type: "<< x.second->dataType<<std::endl;
+      }
+      else if (x.second->dataType == "UDT")
+      {
+        int bytes = 100;
+        // uint8_t* pOutput = (uint8_t*)malloc((size_t)(uint8_t)bytes);
+        // status = plc_tag_get_raw_bytes(x.second->tagIndex, 0, pOutput, bytes)+1; /* +1 for the zero termination */
+
+        // ELLLIST *pclientList;
+        // interruptNode *pnode;
+        // epicsInt8 *pData = (epicsInt8*)malloc((size_t)(epicsInt8)bytes);
+        // memcpy(pData, pOutput, bytes);
+        // asynStandardInterfaces *pInterfaces = this->getAsynStdInterfaces();
+        // void* interruptPvt = pInterfaces->int8ArrayInterruptPvt;
+        // pasynManager->interruptStart(interruptPvt, &pclientList);
+        // pnode = (interruptNode *)ellFirst(pclientList);
+        // asynInt8ArrayInterrupt *pInterrupt = (asynInt8ArrayInterrupt *)pnode->drvPvt;
+        // pInterrupt->callback(pInterrupt->userPvt,
+        //                              pInterrupt->pasynUser,
+        //                              pData, bytes);
+        // pnode = (interruptNode *)ellNext(&pnode->node);
+        // pasynManager->interruptEnd(interruptPvt);
+
+        printf("what do \n");
       }
     }
     callParamCallbacks();
-    //epicsThreadSleep(0.01);
     auto endTime = std::chrono::system_clock::now();
     timeTaken = std::chrono::duration_cast<std::chrono::milliseconds>(endTime-startTime).count();
     std::cout<<"Time taken(msec): "<<std::chrono::duration_cast<std::chrono::milliseconds>(endTime-startTime).count()<<std::endl;

@@ -101,6 +101,7 @@ record(stringin, "$(P)readLWord") {
 
 record(waveform, "$(P)readUDT") {
     field(SCAN, "I/O Intr")
-    field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple UDT 1 $(P)")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels UDT 1 $(P)")
 }
