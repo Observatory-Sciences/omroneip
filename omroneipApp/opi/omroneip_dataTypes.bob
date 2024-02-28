@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--Saved on 2024-02-27 13:26:43 by epics-dev-->
+<!--Saved on 2024-02-28 11:47:09 by epics-dev-->
 <display version="2.0.0">
   <name>omroneip_datatypes</name>
   <macros>
@@ -226,6 +226,7 @@
     <x>120</x>
     <y>540</y>
     <width>660</width>
+    <format>4</format>
   </widget>
   <widget type="label" version="2.0.0">
     <name>Label_19</name>
@@ -233,5 +234,28 @@
     <x>70</x>
     <y>540</y>
     <width>60</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_16</name>
+    <pv_name>$(P)readWord2</pv_name>
+    <x>260</x>
+    <y>440</y>
+    <width>630</width>
+    <format>10</format>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_17</name>
+    <pv_name>$(P)getSubUInt16</pv_name>
+    <x>190</x>
+    <y>570</y>
+    <width>290</width>
+    <format>10</format>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_20</name>
+    <text>Subarray UInt16</text>
+    <x>70</x>
+    <y>570</y>
+    <width>140</width>
   </widget>
 </display>

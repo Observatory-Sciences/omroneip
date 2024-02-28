@@ -64,8 +64,8 @@ drvOmronEIP::drvOmronEIP(const char *portName,
 
             : asynPortDriver(portName,
                               1, /* maxAddr */
-                              asynInt32Mask | asynUInt32DigitalMask | asynInt64Mask | asynFloat64Mask | asynInt32ArrayMask | asynOctetMask | asynDrvUserMask, /* Interface mask */
-                              asynInt32Mask | asynUInt32DigitalMask | asynInt64Mask | asynFloat64Mask | asynInt32ArrayMask | asynOctetMask,                   /* Interrupt mask */
+                              asynInt32Mask | asynUInt32DigitalMask | asynInt64Mask | asynFloat64Mask | asynInt32ArrayMask | asynOctetMask | asynDrvUserMask | asynInt8ArrayMask, /* Interface mask */
+                              asynInt32Mask | asynUInt32DigitalMask | asynInt64Mask | asynFloat64Mask | asynInt32ArrayMask | asynOctetMask | asynInt8ArrayMask,                   /* Interrupt mask */
                               ASYN_CANBLOCK | ASYN_MULTIDEVICE, /* asynFlags */
                               1, /* Autoconnect */
                               0, /* Default priority */
@@ -427,7 +427,7 @@ void drvOmronEIP::readPoller()
     auto startTime = std::chrono::system_clock::now();
     for ( auto x : tagMap_)
     {
-      plc_tag_read(x.second->tagIndex, 100);
+      plc_tag_read(x.second->tagIndex, 500);
       if (x.second->dataType == "INT")
       {
         epicsInt16 data;
@@ -482,11 +482,11 @@ void drvOmronEIP::readPoller()
         epicsFloat64 data;
         data = plc_tag_get_float64(x.second->tagIndex, 0);
         setDoubleParam(x.first, data);
-        std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+        //std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
       }
       else if (x.second->dataType == "STRING")
       {
-        int string_length = plc_tag_get_string_length(x.second->tagIndex, 0)+1; /* +1 for the zero termination */
+        int string_length = plc_tag_get_string_length(x.second->tagIndex, 0)+1; /* is +1 needed here? */
         char* data = (char*)malloc((size_t)(unsigned int)string_length);
         status = plc_tag_get_string(x.second->tagIndex, 0, data, string_length);
         setStringParam(x.first, data);
@@ -494,9 +494,9 @@ void drvOmronEIP::readPoller()
       }
       else if (x.second->dataType == "WORD")
       {
-        int bytes = 2;
+        int bytes = plc_tag_get_size(x.second->tagIndex);
         uint8_t* rawData = (uint8_t*)malloc((size_t)(uint8_t)bytes);
-        status = plc_tag_get_raw_bytes(x.second->tagIndex, 0, rawData, bytes)+1; /* +1 for the zero termination */
+        status = plc_tag_get_raw_bytes(x.second->tagIndex, 0, rawData, bytes);
         char data[bytes+3];
         char * dataPtr = data;
         for (int i = 0; i < bytes; i++)
@@ -508,9 +508,9 @@ void drvOmronEIP::readPoller()
       }
       else if (x.second->dataType == "DWORD")
       {
-        int bytes = 4;
+        int bytes = plc_tag_get_size(x.second->tagIndex);
         uint8_t* rawData = (uint8_t*)malloc((size_t)(uint8_t)bytes);
-        status = plc_tag_get_raw_bytes(x.second->tagIndex, 0, rawData, bytes)+1; /* +1 for the zero termination */
+        status = plc_tag_get_raw_bytes(x.second->tagIndex, 0, rawData, bytes);
         char data[bytes+3];
         char * dataPtr = data;
         for (int i = 0; i < bytes; i++)
@@ -522,9 +522,9 @@ void drvOmronEIP::readPoller()
       }
       else if (x.second->dataType == "LWORD")
       {
-        int bytes = 8;
+        int bytes = plc_tag_get_size(x.second->tagIndex);
         uint8_t* rawData = (uint8_t*)malloc((size_t)(uint8_t)bytes);
-        status = plc_tag_get_raw_bytes(x.second->tagIndex, 0, rawData, bytes)+1; /* +1 for the zero termination */
+        status = plc_tag_get_raw_bytes(x.second->tagIndex, 0, rawData, bytes);
         char data[bytes+3];
         char * dataPtr = data;
         for (int i = 0; i < bytes; i++)
@@ -536,26 +536,13 @@ void drvOmronEIP::readPoller()
       }
       else if (x.second->dataType == "UDT")
       {
-        int bytes = 100;
-        // uint8_t* pOutput = (uint8_t*)malloc((size_t)(uint8_t)bytes);
-        // status = plc_tag_get_raw_bytes(x.second->tagIndex, 0, pOutput, bytes)+1; /* +1 for the zero termination */
-
-        // ELLLIST *pclientList;
-        // interruptNode *pnode;
-        // epicsInt8 *pData = (epicsInt8*)malloc((size_t)(epicsInt8)bytes);
-        // memcpy(pData, pOutput, bytes);
-        // asynStandardInterfaces *pInterfaces = this->getAsynStdInterfaces();
-        // void* interruptPvt = pInterfaces->int8ArrayInterruptPvt;
-        // pasynManager->interruptStart(interruptPvt, &pclientList);
-        // pnode = (interruptNode *)ellFirst(pclientList);
-        // asynInt8ArrayInterrupt *pInterrupt = (asynInt8ArrayInterrupt *)pnode->drvPvt;
-        // pInterrupt->callback(pInterrupt->userPvt,
-        //                              pInterrupt->pasynUser,
-        //                              pData, bytes);
-        // pnode = (interruptNode *)ellNext(&pnode->node);
-        // pasynManager->interruptEnd(interruptPvt);
-
-        printf("what do \n");
+        int bytes = plc_tag_get_size(x.second->tagIndex);
+        uint8_t* pOutput = (uint8_t*)malloc(bytes * sizeof(uint8_t));
+        status = plc_tag_get_raw_bytes(x.second->tagIndex, 0, pOutput, bytes); /* +1 for the zero termination */
+        epicsInt8 *pData = (epicsInt8*)malloc(bytes * sizeof(epicsInt8));
+        memcpy(pData, pOutput, bytes);
+        doCallbacksInt8Array(pData, bytes, x.first, 0);
+        //std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<(int*)(pData)<< " My type: "<< x.second->dataType<<std::endl;
       }
     }
     callParamCallbacks();

@@ -44,25 +44,6 @@ record(ai, "$(P)readUInt64") {
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels[1].status ULINT 1 $(P)") #Actually reading UINT
 }
 
-record(mbbi, "$(P)read4DigitBCD") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynUInt32Digital")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple UINT_BCD 1 $(P)")
-}
-
-record(mbbi, "$(P)read8DigitBCD") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynUInt32Digital")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple UINT_BCD 1 $(P)")
-}
-
-#No idea
-record(mbbi, "$(P)read16DigitBCD") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynUInt32Digital")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple UINT_BCD 1 $(P)")
-}
-
 record(ai, "$(P)readFloat32") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
@@ -104,4 +85,23 @@ record(waveform, "$(P)readUDT") {
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels UDT 1 $(P)")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readWordAsChars") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1].ZTC.ErrorID UDT 1 $(P)")
+    field(NELM, "100")
+}
+
+# Gets a WORD from the start of the statusChannels UDT
+record(subArray, "$(P)getSubUInt16"){
+    field(SCAN, "1 second")
+    field(FTVL, "ULONG")
+    field(NELM, "2")
+    field(MALM, "1996")
+    field(INP, "$(P)readUDT.VAL")
+    field(INDX, "0")
 }
