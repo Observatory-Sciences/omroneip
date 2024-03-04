@@ -1,9 +1,9 @@
-record(ai, "$(P)testReadPassive") {
-    #field(SCAN, "1 second")
-    field(SCAN, "Passive")
-    field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVValue REAL 1")
-}
+#record(ai, "$(P)testReadPassive") {
+#    #field(SCAN, "1 second")
+#    field(SCAN, "Passive")
+#    field(DTYP, "asynFloat64")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVValue REAL 1")
+#}
 
 #record(ai, "$(P)testReadInterval") {
 #    field(SCAN, ".1 second")
@@ -11,14 +11,51 @@ record(ai, "$(P)testReadPassive") {
 #    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVValue REAL 1")
 #}
 
-record(ai, "$(P)testReadIntr") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[2].PVValue REAL 1")
+#record(ai, "$(P)testReadIntr") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynFloat64")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[2].PVValue REAL 1")
+#}
+
+#record(ai, "$(P)testReadIntr3") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynFloat64")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[3].PVValue LREAL 1")
+#}
+
+#record(waveform, "$(P)readUDT") {
+#    field(SCAN, "I/O Intr")
+#    field(FTVL, "UCHAR")
+#    field(DTYP, "asynInt8ArrayIn")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels UDT 1 $(P)")
+#    field(NELM, "1996")
+#}
+
+# Gets a WORD from the start of the statusChannels UDT
+#record(subArray, "$(P)getSubUInt16"){
+#    field(SCAN, "1 second")
+#    field(FTVL, "ULONG")
+#    field(NELM, "2")
+#    field(MALM, "1996")
+#    field(INP, "$(P)readUDT.VAL")
+#    field(INDX, "0")
+#}
+
+#record(ai, "$(P)readFloat32Test") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynFloat64")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zone_Heaters.Zone_01.Zone_Circuit_01.CT_Heater_Current REAL 1 $(P)")
+#}
+
+record(lso, "$(P)writeString") {
+    field(DTYP, "asynOctetWrite")
+    field(OUT, "@asyn($(PORT), 0, 1)ISISTestMultiple[1].PVName STRING 1 str_is_zero_terminated=0&str_is_fixed_length=0&str_pad_bytes=0&str_is_counted=1&str_count_word_bytes=2&str_max_capacity=60")
+    field(SIZV, "61")
 }
 
-record(ai, "$(P)testReadIntr3") {
+record(lsi, "$(P)readString") {
     field(SCAN, "I/O Intr")
-    field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[3].PVValue LREAL 1")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVName STRING 1")
+    field(SIZV, "61")
 }

@@ -49,7 +49,8 @@ USR_LDFLAGS=-g
 USR_CPPFLAGS_Linux+=-g
 USR_CFLAGS_Linux+=-g
 USR_LDFLAGS_Linux+=-g
-
+USR_LDFLAGS_Linux+=-fsanitize=address -fsanitize=leak -fsanitize=undefined
+USR_CXXFLAGS+=-fsanitize=address -fsanitize=leak -fsanitize=undefined
 # These allow developers to override the CONFIG_SITE variable
 # settings without having to modify the configure/CONFIG_SITE
 # file itself.

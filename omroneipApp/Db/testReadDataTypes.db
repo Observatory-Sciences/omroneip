@@ -1,0 +1,104 @@
+# record(ai, "$(P)testRead) {
+#     field(DTYP, "asynInt32")
+#     field(INP, "asyn(PORT, ADDR, TIMEOUT)@poller tag_name[start_index] data_type length extras")
+# }
+
+############################ Read Records #######################################
+#Test each datatype
+
+record(longin, "$(P)readInt16") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) transportArray1[1] INT 1")
+}
+
+record(longin, "$(P)readInt32") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) transportArray1[1] DINT 1") #actually reading a INT
+}
+
+#Should be int64in but not supported in epics base 3.15
+record(ai, "$(P)readInt64") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1].ZTC.SampleTimeL LINT 1")
+}
+
+record(longin, "$(P)readUInt16") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels[1].status UINT 1")
+}
+
+record(longin, "$(P)readUInt32") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels[1].status UDINT 1") #Actually reading UINT
+}
+
+#Should be int64in but not supported in epics base 3.15
+record(ai, "$(P)readUInt64") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels[1].status ULINT 1") #Actually reading UINT
+}
+
+record(ai, "$(P)readFloat32") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVValue REAL 1")
+}
+
+record(ai, "$(P)readFloat64") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVValue LREAL 1") #actually reading a REAL
+}
+
+record(lsi, "$(P)readString") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVName STRING 1")
+}
+
+record(stringin, "$(P)readWord") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1].ZTC.ErrorID WORD 1")
+}
+
+record(stringin, "$(P)readDWord") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1].ZTC.ErrorID DWORD 1") #actually reading a WORD
+}
+
+record(stringin, "$(P)readLWord") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1].ZTC.ErrorID LWORD 1") #actually reading a WORD
+}
+
+record(waveform, "$(P)readUDT") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] UDT 1")
+    field(NELM, "1996")
+}
+
+record(stringin, "$(P)readDateTime"){
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1].ZTC.ErrorID LWORD 1")
+}
+
+record(waveform, "$(P)readWordAsCharArray") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1].ZTC.ErrorID UDT 1")
+    field(NELM, "2")
+}
+

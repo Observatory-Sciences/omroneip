@@ -77,6 +77,12 @@ public:
     bool checkTagStatus(int32_t tagStatus); // Checks a tags status, if bad, prints an error message and returns false
     std::unordered_map<std::string, std::string> drvInfoParser(const char *drvInfo);
     asynStatus drvUserCreate(asynUser *pasynUser, const char *drvInfo, const char **pptypeName, size_t *psize)override;
+    /* Must be implemented to support non I/O Interrupt records reading UDTs, not required for other asyn interfaces where defaults are used*/
+    asynStatus readInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements, size_t *nIn)override;
+    asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value)override;
+    asynStatus writeInt64(asynUser *pasynUser, epicsInt64 value)override;
+    asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value)override;
+    asynStatus writeOctet(asynUser *pasynUser, const char * value, size_t nChars, size_t* nActual)override;
 protected:
 
 private:

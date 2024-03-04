@@ -10,12 +10,20 @@ omroneipApp_registerRecordDeviceDriver(pdbbase)
 #drvOmronEIPConfigure(driverPortName, asynPortName, )
 drvOmronEIPConfigure("driverPort", "OmronNJ")
 
-#dbLoadRecords("db/test.db", "P=${P}, PORT=driverPort, POLLER=testPoller")
-dbLoadRecords("db/testDataTypes.db", "P=${P}, PORT=driverPort, POLLER=testPoller")
-#dbLoadRecords("db/testDataTypes.db", "P=${P}2, PORT=driverPort, POLLER=testPoller")
-#dbLoadRecords("db/testDataTypes.db", "P=${P}3, PORT=driverPort, POLLER=testPoller")
-#dbLoadRecords("db/testDataTypes.db", "P=${P}4, PORT=driverPort, POLLER=testPoller")
-#dbLoadRecords("db/testDataTypes.db", "P=${P}5, PORT=driverPort, POLLER=testPoller")
+dbLoadRecords("db/test.db", "P=${P}, PORT=driverPort, POLLER=testPoller")
+
+#dbLoadRecords("db/testWriteDataTypes.db", "P=${P}, PORT=driverPort")
+#dbLoadRecords("db/testWriteDataTypes.db", "P=${P}2, PORT=driverPort")
+#dbLoadRecords("db/testWriteDataTypes.db", "P=${P}3, PORT=driverPort")
+#dbLoadRecords("db/testWriteDataTypes.db", "P=${P}4, PORT=driverPort")
+#dbLoadRecords("db/testWriteDataTypes.db", "P=${P}5, PORT=driverPort")
+
+#dbLoadRecords("db/testReadDataTypes.db", "P=${P}, PORT=driverPort, POLLER=testPoller")
+#dbLoadRecords("db/testReadDataTypes.db", "P=${P}2, PORT=driverPort, POLLER=testPoller")
+#dbLoadRecords("db/testReadDataTypes.db", "P=${P}3, PORT=driverPort, POLLER=testPoller")
+#dbLoadRecords("db/testReadDataTypes.db", "P=${P}4, PORT=driverPort, POLLER=testPoller")
+#dbLoadRecords("db/testReadDataTypes.db", "P=${P}5, PORT=driverPort, POLLER=testPoller")
+
 #dbLoadRecords("db/testWeirdINP.db", "P=${P}, PORT=driverPort")
 dbLoadRecords("db/asynRecord.db","P=${P},R=asyn,PORT=driverPort,ADDR=0,IMAX=100,OMAX=100")
 
