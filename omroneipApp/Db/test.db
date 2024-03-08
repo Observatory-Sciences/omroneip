@@ -47,17 +47,18 @@
 #    field(INDX, "0")
 #}
 
-record(ai, "$(P)readFloat32Test") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zone_Heaters.Zone_01.Zone_Circuit_01.CT_Heater_Current REAL 1 0 0")
-}
 
 #record(lso, "$(P)writeString") {
 #    field(DTYP, "asynOctetWrite")
 #    field(OUT, "@asyn($(PORT), 0, 1)ISISTestMultiple[1].PVName STRING 1 &str_is_zero_terminated=0&str_is_fixed_length=0&str_pad_bytes=0&str_is_counted=1&str_count_word_bytes=2&str_max_capacity=60")
 #    field(SIZV, "61")
 #}
+
+record(ai, "$(P)readFloat32Test") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zone_Heaters.Zone_01.Zone_Circuit_01.CT_Heater_Current REAL 1 0 0")
+}
 
 record(lsi, "$(P)readStringOffset") {
     field(SCAN, "I/O Intr")

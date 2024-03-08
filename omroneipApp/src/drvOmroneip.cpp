@@ -92,6 +92,14 @@ drvOmronEIP::drvOmronEIP(const char *portName,
   initialized_ = true;
 }
 
+omronEIPPoller::omronEIPPoller(const char *portName, const char *pollerName, int updateRate):
+                              belongsTo_(portName),
+                              pollerName_(pollerName),
+                              updateRate_(updateRate)
+{
+}
+
+
 /*
     Takes the asyn parameter name defined for each pv in the loaded database and matches it to a libplctag tag.
     This function is called twice, once before and once after database initialization, the first time we just return asynDisabled.
@@ -787,9 +795,45 @@ asynStatus drvOmronEIP::writeOctet(asynUser *pasynUser, const char *value, size_
 
 extern "C"
 {
+    /*
+  ** drvOmronEIPConfigPoller() - create and init an asyn port driver for a PLC
+  */
+
+  /** EPICS iocsh callable function to call constructor for the drvOmronEIP class. */
+
+  /* Creates a new poller with user provided settings and adds it to the driver */
+  asynStatus drvOmronEIPConfigPoller(const char *portName,
+                                  char *pollerName, int updateRate)
+  {
+    omronEIPPoller* pPoller = new omronEIPPoller(portName, pollerName, updateRate); //make this a smart pointer! Currently not freed
+    drvOmronEIP* pDriver = (drvOmronEIP*)findAsynPortDriver(portName);
+    if (!pDriver){
+      std::cout<<"Error, Port "<<portName<< " not found!"<<std::endl;
+    }
+    else {pDriver->pollerList.push_back(pPoller);}
+    return asynSuccess;
+  }
+
+  /* iocsh functions */
+
+  static const iocshArg pollerConfigArg0 = {"Port name", iocshArgString};
+  static const iocshArg pollerConfigArg1 = {"Poller name", iocshArgString};
+  static const iocshArg pollerConfigArg2 = {"Update rate", iocshArgInt};
+
+  static const iocshArg *const drvOmronEIPConfigPollerArgs[3] = {
+      &pollerConfigArg0,
+      &pollerConfigArg1,
+      &pollerConfigArg2};
+
+  static const iocshFuncDef drvOmronEIPConfigPollerFuncDef = {"drvOmronEIPConfigPoller", 3, drvOmronEIPConfigPollerArgs};
+
+  static void drvOmronEIPConfigPollerCallFunc(const iocshArgBuf *args)
+  {
+    drvOmronEIPConfigPoller(args[0].sval, args[1].sval, args[2].ival);
+  }
+
   /*
   ** drvOmronEIPConfigure() - create and init an asyn port driver for a PLC
-  **
   */
 
   /** EPICS iocsh callable function to call constructor for the drvModbusAsyn class. */
@@ -821,6 +865,7 @@ extern "C"
   static void drvOmronEIPRegister(void)
   {
     iocshRegister(&drvOmronEIPConfigureFuncDef, drvOmronEIPConfigureCallFunc);
+    iocshRegister(&drvOmronEIPConfigPollerFuncDef, drvOmronEIPConfigPollerCallFunc);
   }
 
   epicsExportRegistrar(drvOmronEIPRegister);

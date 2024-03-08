@@ -65,6 +65,7 @@ typedef enum {
 } omronDataType_t;
 
 struct omronDrvUser_t;
+class omronEIPPoller;
 
 class epicsShareClass drvOmronEIP : public asynPortDriver {
 public:
@@ -75,6 +76,7 @@ public:
     
     void readPoller();
     bool checkTagStatus(int32_t tagStatus); // Checks a tags status, if bad, prints an error message and returns false
+    std::vector<omronEIPPoller*> pollerList = {};
     std::unordered_map<std::string, std::string> drvInfoParser(const char *drvInfo);
     asynStatus drvUserCreate(asynUser *pasynUser, const char *drvInfo, const char **pptypeName, size_t *psize)override;
     /* Must be implemented to support non I/O Interrupt records reading UDTs, not required for other asyn interfaces where defaults are used*/
@@ -105,4 +107,12 @@ private:
   };
   std::unordered_map<int, omronDrvUser_t*> tagMap_; /* Maps the index of each registerd param to the EIP data registered in the PV */
   omronDrvUser_t *drvUser_;   /* Drv user structure */ 
+};
+
+class omronEIPPoller{
+  public:
+      omronEIPPoller(const char* portName, const char* pollerName, int updateRate);
+      const char* belongsTo_;
+      const char* pollerName_;
+      int updateRate_;
 };
