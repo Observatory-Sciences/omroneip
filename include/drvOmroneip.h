@@ -88,8 +88,21 @@ protected:
 private:
   bool initialized_; // Tracks if the driver successfully initialized
   bool cats_;
-  std::array<int, MAX_OMRON_DATA_TYPES> recordTypeCounters_; /* Keeps track of how many of each type of record we have. */
-  std::vector<int> readIndexList_; /* A list of parameters which are scheduled to read data at the next polling interval */
+
+  typedef struct {
+    std::string attribName;
+    bool value;
+} libplctagDefaultAttribsStruct;
+
+  //We overwrite some of libplctags defaults for omron PLCs
+  std::unordered_map<std::string, bool> libplctagDefaultAttribs_ = {
+    {"allow_packing", 1},
+    {"str_is_zero_terminated", 0},
+    {"str_is_fixed_length", 0},
+    {"str_is_counted", 1},
+    {"str_count_word_bytes", 2},
+    {"str_pad_bytes", 0}
+  };
   std::unordered_map<int, omronDrvUser_t*> tagMap_; /* Maps the index of each registerd param to the EIP data registered in the PV */
   omronDrvUser_t *drvUser_;   /* Drv user structure */ 
 };
