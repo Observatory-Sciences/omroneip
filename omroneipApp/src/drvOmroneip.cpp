@@ -52,6 +52,13 @@ static void readPollerC(void *drvPvt)
   pPvt->readPoller();
 }
 
+omronEIPPoller::omronEIPPoller(const char *portName, const char *pollerName, double updateRate):
+                              belongsTo_(portName),
+                              pollerName_(pollerName),
+                              updateRate_(updateRate)
+{
+}
+
 /********************************************************************
 **  global driver functions
 *********************************************************************
@@ -80,25 +87,10 @@ drvOmronEIP::drvOmronEIP(const char *portName,
 {
   int status = 6;
   printf("%s\n", portName);
-
-  status = (epicsThreadCreate("readPoller",
-                              epicsThreadPriorityMedium,
-                              epicsThreadGetStackSize(epicsThreadStackMedium),
-                              (EPICSTHREADFUNC)readPollerC,
-                              this) == NULL);
-
   epicsAtExit(omronExitCallback, this);
   // plc_tag_set_debug_level(3);
   initialized_ = true;
 }
-
-omronEIPPoller::omronEIPPoller(const char *portName, const char *pollerName, int updateRate):
-                              belongsTo_(portName),
-                              pollerName_(pollerName),
-                              updateRate_(updateRate)
-{
-}
-
 
 /*
     Takes the asyn parameter name defined for each pv in the loaded database and matches it to a libplctag tag.
@@ -148,11 +140,12 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
     tag += keyWords.at("tagExtras");
   }
   printf("%s\n", tag.c_str());
-  int32_t tagIndex = plc_tag_create(tag.c_str(), 100);
+  int32_t tagIndex = plc_tag_create(tag.c_str(), DATA_TIMEOUT);
   /* Check and report failure codes */
-  if (!checkTagStatus(tagIndex))
+  if (tagIndex<0)
   {
-    printf("Tag not added!\n");
+    const char* error = plc_tag_decode_error(tagIndex);
+    printf("Tag not added! %s\n", error);
     return asynError;
   }
 
@@ -243,8 +236,24 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
 
   pasynUser->reason = asynIndex;
   pasynUser->drvUser = newDrvUser;
+  this->lock(); /* Lock to ensure no other thread tries to use an asynIndex from the tagMap_ before it has been created */
   tagMap_[asynIndex] = newDrvUser;
-  return asynPortDriver::drvUserCreate(pasynUser, drvInfo, pptypeName, psize);
+  status = asynPortDriver::drvUserCreate(pasynUser, drvInfo, pptypeName, psize);
+  this->unlock();
+  return status;
+}
+
+asynStatus drvOmronEIP::createPoller(const char *portName, const char *pollerName, double updateRate)
+{
+  int status;
+  omronEIPPoller* pPoller = new omronEIPPoller(portName, pollerName, updateRate); //make this a smart pointer! Currently not freed
+  pollerList_[pPoller->pollerName_] = pPoller;
+  status = (epicsThreadCreate(pPoller->pollerName_,
+                            epicsThreadPriorityMedium,
+                            epicsThreadGetStackSize(epicsThreadStackMedium),
+                            (EPICSTHREADFUNC)readPollerC,
+                            this) == NULL);
+  return (asynStatus)status;
 }
 
 std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const char *drvInfo)
@@ -392,6 +401,10 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
         {
           keyWords.at("sliceSize") = words.front();
         }
+        else if (words.front() == "0")
+        {
+          keyWords.at("sliceSize") = "1";
+        }
         else if (words.front() != "1")
         {
           std::cout << "You cannot get a slice whole tag. Try tag_name[startIndex] to specify elements for slice" << std::endl;
@@ -436,13 +449,13 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
             if (nextPos != std::string::npos)
             {
               size = remaining.substr(0, nextPos);
+              extrasString = words.front().erase(pos-1, attrib.first.size() + nextPos + 1);
             }
             else
             {
               size = remaining.substr(0, remaining.size());
+              extrasString = words.front().erase(pos-1, words.front().size()-(pos-1));
             }
-
-            extrasString = words.front().erase(pos, attrib.first.size() + nextPos + 1);
 
             if (size == attrib.second) // if defined value is identical to default, continue
             {
@@ -473,204 +486,209 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
 
 
   for (auto i = keyWords.begin(); i != keyWords.end(); i++)
-    std::cout << i->first << " \t\t\t" << i->second << std::endl;
-
+  {
+    std::cout << i->first << " \t\t\t";
+    if (i->first.size() < 7){std::cout<<"\t";}
+    std::cout<< i->second <<std::endl;
+  }
   std::cout << "Returning keyWords" << std::endl;
 
   return keyWords;
 }
 
-bool drvOmronEIP::checkTagStatus(int32_t tagStatus)
-{
-  if (tagStatus >= 0)
-  {
-    return true;
-  }
-
-  switch (tagStatus)
-  {
-  case -7:
-    std::cout << "Invalid tag creation attribute string. libplctag code: " << tagStatus << std::endl;
-    return false;
-
-  case -19:
-    std::cout << "Tag not found on PLC. code: " << tagStatus << std::endl;
-    return false;
-
-  case -33:
-    std::cout << "More data was returned than expected, did you reference an array instead of an array element? libplctag code: " << tagStatus << std::endl;
-    return false;
-
-  default:
-    std::cout << "Unknown status. libplctag code: " << tagStatus << std::endl;
-    return false;
-  }
-}
-
 void drvOmronEIP::readPoller()
 {
+  std::string threadName = epicsThreadGetNameSelf();
+  omronEIPPoller* pPoller = pollerList_.at(threadName);
   std::string tag;
   asynParamType type;
   asynUser *pasynUser;
   int offset;
   int status;
   int still_pending = 1;
+  double interval = pPoller->updateRate_;
+  int timeTaken = 0;
 
   while (true)
   {
-    int timeTaken;
-    epicsThreadSleep(2 - (float)(timeTaken / 100));
+    double waitTime = interval - ((double)timeTaken / 1000);
+    //std::cout<<"Reading tags on poller "<<threadName<<" with interval "<<interval<<" seconds"<<std::endl;
+    if (waitTime >=0) {epicsThreadSleep(waitTime);}
+    else {
+      std::cout<<"Reads taking longer than requested! " << ((double)timeTaken / 1000) << " > " << interval<<std::endl;
+    }
+
     auto startTime = std::chrono::system_clock::now();
     for (auto x : tagMap_)
     {
-      plc_tag_read(x.second->tagIndex, 0); // read as fast as possible, we will check status and timeouts later
+      if (x.second->pollerName == threadName)
+      {
+        //std::cout<<"Reading tag " <<x.second->tagIndex<<" on poller "<<threadName<<" with interval "<<interval<<" seconds"<<std::endl;
+        status = plc_tag_read(x.second->tagIndex, 0); // read as fast as possible, we will check status and timeouts later
+      }
     }
 
     for (auto x : tagMap_)
     {
-      int offset = x.second->tagOffset;
-      still_pending = 1;
-      while (still_pending)
+      if (x.second->pollerName == threadName)
       {
-        still_pending = 0;
-        status = plc_tag_status(x.second->tagIndex);
-        if (status == PLCTAG_STATUS_PENDING)
+        int offset = x.second->tagOffset;
+        still_pending = 1;
+        
+        while (still_pending)
         {
-          still_pending = 1;
+          still_pending = 0;
+          status = plc_tag_status(x.second->tagIndex);
+          if (status == PLCTAG_STATUS_PENDING)
+          {
+            still_pending = 1;
+          }
+          else if (status < 0)
+          {
+            fprintf(stderr, "Error finishing read tag %ld: %s\n", x.second->tagIndex, plc_tag_decode_error(status));
+            // probably want to set epics alarm as we have failed to read fresh data
+            continue;
+          }
+          // need to make sure we dont wait forever
         }
-        else if (status < 0)
-        {
-          fprintf(stderr, "Error finishing read tag %ld: %s\n", x.second->tagIndex, plc_tag_decode_error(status));
-          // probably want to set epics alarm as we have failed to read fresh data
-          continue;
-        }
-        // need to make sure we dont wait forever
-      }
 
-      if (x.second->pollerName != "none")
-      {
-        if (x.second->dataType == "INT")
+        if (x.second->pollerName != "none")
         {
-          epicsInt16 data;
-          data = plc_tag_get_int16(x.second->tagIndex, offset);
-          setIntegerParam(x.first, data);
-          // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
-        }
-        else if (x.second->dataType == "DINT")
-        {
-          epicsInt32 data;
-          data = plc_tag_get_int32(x.second->tagIndex, offset);
-          setIntegerParam(x.first, data);
-          // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
-        }
-        else if (x.second->dataType == "LINT")
-        {
-          epicsInt64 data;
-          data = plc_tag_get_int64(x.second->tagIndex, offset);
-          setInteger64Param(x.first, data);
-          // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
-        }
-        else if (x.second->dataType == "UINT")
-        {
-          epicsUInt16 data;
-          data = plc_tag_get_uint16(x.second->tagIndex, offset);
-          setIntegerParam(x.first, data);
-          // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
-        }
-        else if (x.second->dataType == "UDINT")
-        {
-          epicsUInt32 data;
-          data = plc_tag_get_uint32(x.second->tagIndex, offset);
-          setIntegerParam(x.first, data);
-          // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
-        }
-        else if (x.second->dataType == "ULINT")
-        {
-          epicsUInt64 data;
-          data = plc_tag_get_uint64(x.second->tagIndex, offset);
-          setInteger64Param(x.first, data);
-          // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
-        }
-        else if (x.second->dataType == "REAL")
-        {
-          epicsFloat32 data;
-          data = plc_tag_get_float32(x.second->tagIndex, offset);
-          setDoubleParam(x.first, data);
-          // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
-        }
-        else if (x.second->dataType == "LREAL")
-        {
-          epicsFloat64 data;
-          data = plc_tag_get_float64(x.second->tagIndex, offset);
-          setDoubleParam(x.first, data);
-          // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
-        }
-        else if (x.second->dataType == "STRING")
-        {
-          int string_length = plc_tag_get_string_length(x.second->tagIndex, offset) + 1; /* is +1 needed here? YES!*/
-          char *data = (char *)malloc((size_t)(unsigned int)string_length);
-          status = plc_tag_get_string(x.second->tagIndex, offset, data, string_length);
-          setStringParam(x.first, data);
-          // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
-        }
-        else if (x.second->dataType == "WORD")
-        {
-          int bytes = plc_tag_get_size(x.second->tagIndex);
-          uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
-          status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
-          char data[bytes + 3];
-          char *dataPtr = data;
-          for (int i = 0; i < bytes; i++)
+          if (x.second->dataType == "INT")
           {
-            dataPtr += sprintf(dataPtr, "%02X", rawData[i]);
+            epicsInt16 data;
+            data = plc_tag_get_int16(x.second->tagIndex, offset);
+            setIntegerParam(x.first, data);
+            // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
           }
-          setStringParam(x.first, data);
-          // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<data<< " My type: "<< x.second->dataType<<std::endl;
-        }
-        else if (x.second->dataType == "DWORD")
-        {
-          int bytes = plc_tag_get_size(x.second->tagIndex);
-          uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
-          status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
-          char data[bytes + 3];
-          char *dataPtr = data;
-          for (int i = 0; i < bytes; i++)
+          else if (x.second->dataType == "DINT")
           {
-            dataPtr += sprintf(dataPtr, "%02X", rawData[i]);
+            epicsInt32 data;
+            data = plc_tag_get_int32(x.second->tagIndex, offset);
+            setIntegerParam(x.first, data);
+            // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
           }
-          setStringParam(x.first, data);
-          // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<data<< " My type: "<< x.second->dataType<<std::endl;
-        }
-        else if (x.second->dataType == "LWORD")
-        {
-          int bytes = plc_tag_get_size(x.second->tagIndex);
-          uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
-          status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
-          char data[bytes + 3];
-          char *dataPtr = data;
-          for (int i = 0; i < bytes; i++)
+          else if (x.second->dataType == "LINT")
           {
-            dataPtr += sprintf(dataPtr, "%02X", rawData[i]);
+            epicsInt64 data;
+            data = plc_tag_get_int64(x.second->tagIndex, offset);
+            setInteger64Param(x.first, data);
+            // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
           }
-          setStringParam(x.first, data);
-          // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<data<< " My type: "<< x.second->dataType<<std::endl;
-        }
-        else if (x.second->dataType == "UDT")
-        {
-          int bytes = plc_tag_get_size(x.second->tagIndex);
-          uint8_t *pOutput = (uint8_t *)malloc(bytes * sizeof(uint8_t));
-          status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, pOutput, bytes);
-          epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
-          memcpy(pData, pOutput, bytes);
-          doCallbacksInt8Array(pData, bytes, x.first, 0);
-          // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<(int*)(pData)<< " My type: "<< x.second->dataType<<std::endl;
+          else if (x.second->dataType == "UINT")
+          {
+            epicsUInt16 data;
+            data = plc_tag_get_uint16(x.second->tagIndex, offset);
+            setIntegerParam(x.first, data);
+            // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+          }
+          else if (x.second->dataType == "UDINT")
+          {
+            epicsUInt32 data;
+            data = plc_tag_get_uint32(x.second->tagIndex, offset);
+            setIntegerParam(x.first, data);
+            // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+          }
+          else if (x.second->dataType == "ULINT")
+          {
+            epicsUInt64 data;
+            data = plc_tag_get_uint64(x.second->tagIndex, offset);
+            setInteger64Param(x.first, data);
+            // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+          }
+          else if (x.second->dataType == "REAL")
+          {
+            epicsFloat32 data;
+            data = plc_tag_get_float32(x.second->tagIndex, offset);
+            setDoubleParam(x.first, data);
+            // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+          }
+          else if (x.second->dataType == "LREAL")
+          {
+            epicsFloat64 data;
+            data = plc_tag_get_float64(x.second->tagIndex, offset);
+            setDoubleParam(x.first, data);
+            // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+          }
+          else if (x.second->dataType == "STRING")
+          {
+            int bufferSize = plc_tag_get_size(x.second->tagIndex);
+            int string_length = plc_tag_get_string_length(x.second->tagIndex, offset)+1;
+            int string_capacity = plc_tag_get_string_capacity(x.second->tagIndex, 0);
+            if (offset >= bufferSize-1)
+            {
+              std::cout<<"Error! Attempting to read at an offset beyond tag buffer!"<<std::endl;
+              continue;
+            }
+            if (string_length>string_capacity+1)
+            {
+              std::cout<<"Error! Offset does not point to valid string!"<<std::endl;
+              continue;
+            }
+            char *data = (char *)malloc((size_t)(unsigned int)(string_length));
+            status = plc_tag_get_string(x.second->tagIndex, offset, data, string_length);
+            setStringParam(x.first, data);
+            // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+          }
+          else if (x.second->dataType == "WORD")
+          {
+            int bytes = plc_tag_get_size(x.second->tagIndex);
+            uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
+            status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
+            char data[bytes + 3];
+            char *dataPtr = data;
+            for (int i = 0; i < bytes; i++)
+            {
+              dataPtr += sprintf(dataPtr, "%02X", rawData[i]);
+            }
+            setStringParam(x.first, data);
+            // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<data<< " My type: "<< x.second->dataType<<std::endl;
+          }
+          else if (x.second->dataType == "DWORD")
+          {
+            int bytes = plc_tag_get_size(x.second->tagIndex);
+            uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
+            status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
+            char data[bytes + 3];
+            char *dataPtr = data;
+            for (int i = 0; i < bytes; i++)
+            {
+              dataPtr += sprintf(dataPtr, "%02X", rawData[i]);
+            }
+            setStringParam(x.first, data);
+            // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<data<< " My type: "<< x.second->dataType<<std::endl;
+          }
+          else if (x.second->dataType == "LWORD")
+          {
+            int bytes = plc_tag_get_size(x.second->tagIndex);
+            uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
+            status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
+            char data[bytes + 3];
+            char *dataPtr = data;
+            for (int i = 0; i < bytes; i++)
+            {
+              dataPtr += sprintf(dataPtr, "%02X", rawData[i]);
+            }
+            setStringParam(x.first, data);
+            // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<data<< " My type: "<< x.second->dataType<<std::endl;
+          }
+          else if (x.second->dataType == "UDT")
+          {
+            int bytes = plc_tag_get_size(x.second->tagIndex);
+            uint8_t *pOutput = (uint8_t *)malloc(bytes * sizeof(uint8_t));
+            status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, pOutput, bytes);
+            epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
+            memcpy(pData, pOutput, bytes);
+            doCallbacksInt8Array(pData, bytes, x.first, 0);
+            // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<(int*)(pData)<< " My type: "<< x.second->dataType<<std::endl;
+          }
         }
       }
     }
     callParamCallbacks();
     auto endTime = std::chrono::system_clock::now();
     timeTaken = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-    std::cout << "Time taken(msec): " << std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count() << std::endl;
+    std::cout << "Time taken(msec): " << timeTaken << std::endl;
     std::cout << std::endl;
   }
 }
@@ -803,22 +821,24 @@ extern "C"
 
   /* Creates a new poller with user provided settings and adds it to the driver */
   asynStatus drvOmronEIPConfigPoller(const char *portName,
-                                  char *pollerName, int updateRate)
+                                  const char *pollerName, double updateRate)
   {
-    omronEIPPoller* pPoller = new omronEIPPoller(portName, pollerName, updateRate); //make this a smart pointer! Currently not freed
     drvOmronEIP* pDriver = (drvOmronEIP*)findAsynPortDriver(portName);
     if (!pDriver){
       std::cout<<"Error, Port "<<portName<< " not found!"<<std::endl;
+      return asynError;
     }
-    else {pDriver->pollerList.push_back(pPoller);}
-    return asynSuccess;
+    else
+    {
+      return pDriver->createPoller(portName, pollerName, updateRate); 
+    }
   }
 
   /* iocsh functions */
 
   static const iocshArg pollerConfigArg0 = {"Port name", iocshArgString};
   static const iocshArg pollerConfigArg1 = {"Poller name", iocshArgString};
-  static const iocshArg pollerConfigArg2 = {"Update rate", iocshArgInt};
+  static const iocshArg pollerConfigArg2 = {"Update rate", iocshArgDouble};
 
   static const iocshArg *const drvOmronEIPConfigPollerArgs[3] = {
       &pollerConfigArg0,
@@ -829,7 +849,7 @@ extern "C"
 
   static void drvOmronEIPConfigPollerCallFunc(const iocshArgBuf *args)
   {
-    drvOmronEIPConfigPoller(args[0].sval, args[1].sval, args[2].ival);
+    drvOmronEIPConfigPoller(args[0].sval, args[1].sval, args[2].dval);
   }
 
   /*

@@ -26,6 +26,7 @@
 #include <errlog.h>
 #include <osiSock.h>
 #include <iocsh.h>
+#include <initHooks.h>
 
 /* libplctag include*/
 #include "libplctag.h"
@@ -39,8 +40,8 @@
 
 #include <epicsExport.h>
 
-#define MAX_TAG_LENGTH 100
 #define LIB_PLC_TAG_PROTOCOL "protocol=ab-eip&gateway=10.2.2.57&path=18,10.2.2.57&plc=omron-njnx"
+#define DATA_TIMEOUT 1000 //ms
 
 
 typedef enum {
@@ -69,50 +70,35 @@ class omronEIPPoller;
 
 class epicsShareClass drvOmronEIP : public asynPortDriver {
 public:
-    drvOmronEIP(const char *portName,
-                const char *plcType);
+  drvOmronEIP(const char *portName,
+              const char *plcType);
 
-    bool omronExiting_;
-    
-    void readPoller();
-    bool checkTagStatus(int32_t tagStatus); // Checks a tags status, if bad, prints an error message and returns false
-    std::vector<omronEIPPoller*> pollerList = {};
-    std::unordered_map<std::string, std::string> drvInfoParser(const char *drvInfo);
-    asynStatus drvUserCreate(asynUser *pasynUser, const char *drvInfo, const char **pptypeName, size_t *psize)override;
-    /* Must be implemented to support non I/O Interrupt records reading UDTs, not required for other asyn interfaces where defaults are used*/
-    asynStatus readInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements, size_t *nIn)override;
-    asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value)override;
-    asynStatus writeInt64(asynUser *pasynUser, epicsInt64 value)override;
-    asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value)override;
-    asynStatus writeOctet(asynUser *pasynUser, const char * value, size_t nChars, size_t* nActual)override;
+  bool omronExiting_;
+  
+  void readPoller();
+  asynStatus createPoller(const char * portName, const char * pollerName, double updateRate);
+  std::unordered_map<std::string, std::string> drvInfoParser(const char *drvInfo);
+  asynStatus drvUserCreate(asynUser *pasynUser, const char *drvInfo, const char **pptypeName, size_t *psize)override;
+  /* Must be implemented to support non I/O Interrupt records reading UDTs, not required for other asyn interfaces where defaults are used*/
+  asynStatus readInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements, size_t *nIn)override;
+  asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value)override;
+  asynStatus writeInt64(asynUser *pasynUser, epicsInt64 value)override;
+  asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value)override;
+  asynStatus writeOctet(asynUser *pasynUser, const char * value, size_t nChars, size_t* nActual)override;
 protected:
 
 private:
   bool initialized_; // Tracks if the driver successfully initialized
   bool cats_;
-
-  typedef struct {
-    std::string attribName;
-    bool value;
-} libplctagDefaultAttribsStruct;
-
-  //We overwrite some of libplctags defaults for omron PLCs
-  std::unordered_map<std::string, bool> libplctagDefaultAttribs_ = {
-    {"allow_packing", 1},
-    {"str_is_zero_terminated", 0},
-    {"str_is_fixed_length", 0},
-    {"str_is_counted", 1},
-    {"str_count_word_bytes", 2},
-    {"str_pad_bytes", 0}
-  };
+  std::unordered_map<std::string, omronEIPPoller*> pollerList_ = {};
   std::unordered_map<int, omronDrvUser_t*> tagMap_; /* Maps the index of each registerd param to the EIP data registered in the PV */
   omronDrvUser_t *drvUser_;   /* Drv user structure */ 
 };
 
 class omronEIPPoller{
   public:
-      omronEIPPoller(const char* portName, const char* pollerName, int updateRate);
+      omronEIPPoller(const char* portName, const char* pollerName, double updateRate);
       const char* belongsTo_;
       const char* pollerName_;
-      int updateRate_;
+      double updateRate_;
 };
