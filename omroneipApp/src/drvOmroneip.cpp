@@ -41,7 +41,10 @@ static omronDataTypeStruct omronDataTypes[MAX_OMRON_DATA_TYPES] = {
     {dataTypeWord, "WORD"},
     {dataTypeDWord, "DWORD"},
     {dataTypeLWord, "LWORD"},
-    {dataTypeUDT, "UDT"}};
+    {dataTypeUDT, "UDT"},
+    {dataTypeUDT, "TIME"}};
+
+bool startPollers = false;
 
 /* Local variable declarations */
 static const char *driverName = "drvOmronEIP"; /* String for asynPrint */
@@ -59,19 +62,33 @@ omronEIPPoller::omronEIPPoller(const char *portName, const char *pollerName, dou
 {
 }
 
-/********************************************************************
-**  global driver functions
-*********************************************************************
-*/
-
 static void omronExitCallback(void *pPvt)
 {
   drvOmronEIP *pDriver = (drvOmronEIP *)pPvt;
   pDriver->omronExiting_ = true;
 }
 
+static void myInitHookFunction(initHookState state)
+{
+  switch(state) {
+    case initHookAfterIocRunning:
+      startPollers = true;
+      break;
+    default:
+      break;
+  }
+}
+
+/********************************************************************
+**  global driver functions
+*********************************************************************
+*/
+
+
 drvOmronEIP::drvOmronEIP(const char *portName,
-                         const char *plcType)
+                          char *gateway,
+                          char *path,
+                          char *plcType)
 
     : asynPortDriver(portName,
                      1,                                                                                                                                                  /* maxAddr */
@@ -82,13 +99,15 @@ drvOmronEIP::drvOmronEIP(const char *portName,
                      0,                                                                                                                                                  /* Default priority */
                      0),                                                                                                                                                 /* Default stack size*/
       initialized_(false),
+      startPollers_(false),
       cats_(true)
 
 {
-  int status = 6;
-  printf("%s\n", portName);
+  tagConnectionString_ = "protocol=ab-eip&gateway="+(std::string)gateway+"&path="+(std::string)path+"&plc="+(std::string)plcType;
+  std::cout<<"Starting driver with connection string: "<< tagConnectionString_<<std::endl;;
   epicsAtExit(omronExitCallback, this);
-  // plc_tag_set_debug_level(3);
+  //plc_tag_set_debug_level(3);
+  initHookRegister(myInitHookFunction);
   initialized_ = true;
 }
 
@@ -131,22 +150,18 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
     return asynError;
   }
 
-  tag = (std::string)LIB_PLC_TAG_PROTOCOL +
+  tag = tagConnectionString_ +
         "&name=" + keyWords.at("tagName") +
-        "&elem_count=" + keyWords.at("sliceSize");
-  // need to improve how the user adds extras and how the defaults are added / overwritten
-  if (keyWords.at("tagExtras") != "none")
-  {
-    tag += keyWords.at("tagExtras");
-  }
+        "&elem_count=" + keyWords.at("sliceSize")
+        + keyWords.at("tagExtras");
+
   printf("%s\n", tag.c_str());
   int32_t tagIndex = plc_tag_create(tag.c_str(), DATA_TIMEOUT);
-  /* Check and report failure codes */
+  /* Check and report failure codes. Asynparam will be created even on failure but record will be given error status */
   if (tagIndex<0)
   {
     const char* error = plc_tag_decode_error(tagIndex);
     printf("Tag not added! %s\n", error);
-    return asynError;
   }
 
   /* Initialise each datatype*/
@@ -222,6 +237,11 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
     }
 
     else if (keyWords.at("dataType") == "UDT")
+    {
+      status = createParam(drvInfo, asynParamInt8Array, &asynIndex);
+    }
+
+    else if (keyWords.at("dataType") == "TIME")
     {
       status = createParam(drvInfo, asynParamInt8Array, &asynIndex);
     }
@@ -508,7 +528,7 @@ void drvOmronEIP::readPoller()
   int still_pending = 1;
   double interval = pPoller->updateRate_;
   int timeTaken = 0;
-
+  while (!startPollers) {epicsThreadSleep(0.1);}
   while (true)
   {
     double waitTime = interval - ((double)timeTaken / 1000);
@@ -549,7 +569,7 @@ void drvOmronEIP::readPoller()
             // probably want to set epics alarm as we have failed to read fresh data
             continue;
           }
-          // need to make sure we dont wait forever
+          // need to make sure we dont wait forever - ie break out after the polling interval is up
         }
 
         if (x.second->pollerName != "none")
@@ -635,13 +655,15 @@ void drvOmronEIP::readPoller()
             int bytes = plc_tag_get_size(x.second->tagIndex);
             uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
             status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
-            char data[bytes + 3];
-            char *dataPtr = data;
+            epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
+            /* We flip around the hex numbers to match what is done in the PLC */
+            int n = bytes-1;
             for (int i = 0; i < bytes; i++)
             {
-              dataPtr += sprintf(dataPtr, "%02X", rawData[i]);
+              pData[i] = rawData[n];
+              n--;
             }
-            setStringParam(x.first, data);
+            doCallbacksInt8Array(pData, bytes, x.first, 0);
             // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<data<< " My type: "<< x.second->dataType<<std::endl;
           }
           else if (x.second->dataType == "DWORD")
@@ -649,13 +671,15 @@ void drvOmronEIP::readPoller()
             int bytes = plc_tag_get_size(x.second->tagIndex);
             uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
             status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
-            char data[bytes + 3];
-            char *dataPtr = data;
+            epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
+            /* We flip around the hex numbers to match what is done in the PLC */
+            int n = bytes-1;
             for (int i = 0; i < bytes; i++)
             {
-              dataPtr += sprintf(dataPtr, "%02X", rawData[i]);
+              pData[i] = rawData[n];
+              n--;
             }
-            setStringParam(x.first, data);
+            doCallbacksInt8Array(pData, bytes, x.first, 0);
             // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<data<< " My type: "<< x.second->dataType<<std::endl;
           }
           else if (x.second->dataType == "LWORD")
@@ -663,13 +687,15 @@ void drvOmronEIP::readPoller()
             int bytes = plc_tag_get_size(x.second->tagIndex);
             uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
             status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
-            char data[bytes + 3];
-            char *dataPtr = data;
+            epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
+            /* We flip around the hex numbers to match what is done in the PLC */
+            int n = bytes-1;
             for (int i = 0; i < bytes; i++)
             {
-              dataPtr += sprintf(dataPtr, "%02X", rawData[i]);
+              pData[i] = rawData[n];
+              n--;
             }
-            setStringParam(x.first, data);
+            doCallbacksInt8Array(pData, bytes, x.first, 0);
             // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<data<< " My type: "<< x.second->dataType<<std::endl;
           }
           else if (x.second->dataType == "UDT")
@@ -680,6 +706,16 @@ void drvOmronEIP::readPoller()
             epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
             memcpy(pData, pOutput, bytes);
             doCallbacksInt8Array(pData, bytes, x.first, 0);
+            // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<(int*)(pData)<< " My type: "<< x.second->dataType<<std::endl;
+          }
+          else if (x.second->dataType == "TIME")
+          {
+            int bytes = plc_tag_get_size(x.second->tagIndex);
+            uint8_t *pOutput = (uint8_t *)malloc(bytes * sizeof(uint8_t));
+            status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, pOutput, bytes);
+            epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
+            memcpy(pData, pOutput, bytes);
+            setStringParam(x.first, pData);
             // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<(int*)(pData)<< " My type: "<< x.second->dataType<<std::endl;
           }
         }
@@ -858,9 +894,13 @@ extern "C"
 
   /** EPICS iocsh callable function to call constructor for the drvModbusAsyn class. */
   asynStatus drvOmronEIPConfigure(const char *portName,
+                                  char *gateway,
+                                  char *path,
                                   char *plcType)
   {
     new drvOmronEIP(portName,
+                    gateway,
+                    path,
                     plcType);
 
     return asynSuccess;
@@ -869,17 +909,21 @@ extern "C"
   /* iocsh functions */
 
   static const iocshArg ConfigureArg0 = {"Port name", iocshArgString};
-  static const iocshArg ConfigureArg1 = {"PLC type", iocshArgString};
+  static const iocshArg ConfigureArg1 = {"Gateway", iocshArgString};
+  static const iocshArg ConfigureArg2 = {"Path", iocshArgString};
+  static const iocshArg ConfigureArg3 = {"PLC type", iocshArgString};
 
-  static const iocshArg *const drvOmronEIPConfigureArgs[2] = {
+  static const iocshArg *const drvOmronEIPConfigureArgs[4] = {
       &ConfigureArg0,
-      &ConfigureArg1};
+      &ConfigureArg1,
+      &ConfigureArg2,
+      &ConfigureArg3};
 
-  static const iocshFuncDef drvOmronEIPConfigureFuncDef = {"drvOmronEIPConfigure", 2, drvOmronEIPConfigureArgs};
+  static const iocshFuncDef drvOmronEIPConfigureFuncDef = {"drvOmronEIPConfigure", 4, drvOmronEIPConfigureArgs};
 
   static void drvOmronEIPConfigureCallFunc(const iocshArgBuf *args)
   {
-    drvOmronEIPConfigure(args[0].sval, args[1].sval);
+    drvOmronEIPConfigure(args[0].sval, args[1].sval, args[2].sval, args[3].sval);
   }
 
   static void drvOmronEIPRegister(void)

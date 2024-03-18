@@ -40,7 +40,7 @@
 
 #include <epicsExport.h>
 
-#define LIB_PLC_TAG_PROTOCOL "protocol=ab-eip&gateway=10.2.2.57&path=18,10.2.2.57&plc=omron-njnx"
+/* libplctag also supports modbus-tcp but we do not*/
 #define DATA_TIMEOUT 1000 //ms
 
 
@@ -62,6 +62,7 @@ typedef enum {
   dataTypeDWord,
   dataTypeLWord,
   dataTypeUDT,
+  dataTypeTIME,
   MAX_OMRON_DATA_TYPES
 } omronDataType_t;
 
@@ -71,7 +72,9 @@ class omronEIPPoller;
 class epicsShareClass drvOmronEIP : public asynPortDriver {
 public:
   drvOmronEIP(const char *portName,
-              const char *plcType);
+              char *gateway,
+              char *path,
+              char *plcType);
 
   bool omronExiting_;
   
@@ -89,10 +92,13 @@ protected:
 
 private:
   bool initialized_; // Tracks if the driver successfully initialized
+  bool startPollers_; // Set to 1 after IocInit() which starts pollers
   bool cats_;
+  std::string tagConnectionString_;
   std::unordered_map<std::string, omronEIPPoller*> pollerList_ = {};
   std::unordered_map<int, omronDrvUser_t*> tagMap_; /* Maps the index of each registerd param to the EIP data registered in the PV */
-  omronDrvUser_t *drvUser_;   /* Drv user structure */ 
+  omronDrvUser_t *drvUser_;
+  /* Drv user structure */
 };
 
 class omronEIPPoller{
