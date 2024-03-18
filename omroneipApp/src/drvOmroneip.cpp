@@ -44,7 +44,7 @@ static omronDataTypeStruct omronDataTypes[MAX_OMRON_DATA_TYPES] = {
     {dataTypeUDT, "UDT"},
     {dataTypeUDT, "TIME"}};
 
-bool startPollers = false;
+bool startPollers = false; // Set to 1 after IocInit() which starts pollers
 
 /* Local variable declarations */
 static const char *driverName = "drvOmronEIP"; /* String for asynPrint */
@@ -99,7 +99,6 @@ drvOmronEIP::drvOmronEIP(const char *portName,
                      0,                                                                                                                                                  /* Default priority */
                      0),                                                                                                                                                 /* Default stack size*/
       initialized_(false),
-      startPollers_(false),
       cats_(true)
 
 {
@@ -157,11 +156,15 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
 
   printf("%s\n", tag.c_str());
   int32_t tagIndex = plc_tag_create(tag.c_str(), DATA_TIMEOUT);
-  /* Check and report failure codes. Asynparam will be created even on failure but record will be given error status */
+  /* Check and report failure codes. An Asyn param will be created even on failure but the record will be given error status */
   if (tagIndex<0)
   {
     const char* error = plc_tag_decode_error(tagIndex);
     printf("Tag not added! %s\n", error);
+  }
+  else if (tagIndex == 1)
+  {
+    printf("Tag not added! Timeout while creating tag.\n");
   }
 
   /* Initialise each datatype*/
@@ -257,8 +260,27 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   pasynUser->reason = asynIndex;
   pasynUser->drvUser = newDrvUser;
   this->lock(); /* Lock to ensure no other thread tries to use an asynIndex from the tagMap_ before it has been created */
-  tagMap_[asynIndex] = newDrvUser;
+  if (tagIndex > 1)
+  { 
+    // Add successfull tags to the tagMap
+    tagMap_[asynIndex] = newDrvUser;
+  }
+  // Create the link from the record to the param
   status = asynPortDriver::drvUserCreate(pasynUser, drvInfo, pptypeName, psize);
+  // For unsuccessfull tags, set record to error, they will never be read from the PLC
+  if (tagIndex < 0)
+  {
+    //Set record to error
+    setParamAlarmStatus(asynIndex, epicsAlarmComm);
+    setParamAlarmSeverity(asynIndex, epicsSevInvalid);
+    setParamStatus(asynIndex, asynError);
+  }
+  else if (tagIndex == 1)
+  {
+    setParamAlarmStatus(asynIndex, epicsAlarmTimeout);
+    setParamAlarmSeverity(asynIndex, epicsSevInvalid);
+    setParamStatus(asynIndex, asynError);
+  }
   this->unlock();
   return status;
 }
@@ -552,24 +574,40 @@ void drvOmronEIP::readPoller()
     {
       if (x.second->pollerName == threadName)
       {
+        int waits = 0;
         int offset = x.second->tagOffset;
         still_pending = 1;
         
         while (still_pending)
         {
+          // It should be rare that data for the first tag has not arrived before the last tag is read
+          // Therefor this loop should rarely be entered and would only be called by the first few tags as we 
+          // are asynchronously waiting for all tags in this poller to be read. 
           still_pending = 0;
           status = plc_tag_status(x.second->tagIndex);
           if (status == PLCTAG_STATUS_PENDING)
           {
             still_pending = 1;
+            waits++;
+            epicsThreadSleep(0.01);
           }
           else if (status < 0)
           {
+            setParamAlarmStatus(x.second->tagOffset, epicsAlarmComm);
+            setParamAlarmSeverity(x.second->tagOffset, epicsSevInvalid);
+            setParamStatus(x.second->tagOffset, asynError);
             fprintf(stderr, "Error finishing read tag %ld: %s\n", x.second->tagIndex, plc_tag_decode_error(status));
-            // probably want to set epics alarm as we have failed to read fresh data
             continue;
           }
-          // need to make sure we dont wait forever - ie break out after the polling interval is up
+          else if (waits*0.01>=0.1 && waits*0.01>= 0.5*interval)
+          {
+            // If we have waited for 100ms and at least half of the polling interval, then give up
+            setParamAlarmStatus(x.second->tagOffset, epicsAlarmTimeout);
+            setParamAlarmSeverity(x.second->tagOffset, epicsSevInvalid);
+            setParamStatus(x.second->tagOffset, asynError);
+            fprintf(stderr, "Error finishing read tag %ld: %s\n", x.second->tagIndex, plc_tag_decode_error(status));
+            continue;
+          }
         }
 
         if (x.second->pollerName != "none")

@@ -20,6 +20,7 @@
 #include <epicsMutex.h>
 #include <epicsEvent.h>
 #include <epicsTime.h>
+#include <alarm.h>
 #include <epicsEndian.h>
 #include <epicsExit.h>
 #include <cantProceed.h>
@@ -92,7 +93,6 @@ protected:
 
 private:
   bool initialized_; // Tracks if the driver successfully initialized
-  bool startPollers_; // Set to 1 after IocInit() which starts pollers
   bool cats_;
   std::string tagConnectionString_;
   std::unordered_map<std::string, omronEIPPoller*> pollerList_ = {};
