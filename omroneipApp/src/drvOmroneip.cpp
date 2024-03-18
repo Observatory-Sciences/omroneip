@@ -179,7 +179,12 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   newDrvUser->tagOffset = std::stoi(keyWords.at("offset"));
 
   { /* Take care of different datatypes */
-    if (keyWords.at("dataType") == "INT")
+    if (keyWords.at("dataType") == "BOOL")
+    {
+      status = createParam(drvInfo, asynParamUInt32Digital, &asynIndex);
+    }
+
+    else if (keyWords.at("dataType") == "INT")
     {
       status = createParam(drvInfo, asynParamInt32, &asynIndex);
     }
@@ -610,7 +615,14 @@ void drvOmronEIP::readPoller()
 
         if (!readFailed)
         {
-          if (x.second->dataType == "INT")
+          if (x.second->dataType == "BOOL")
+          {
+            epicsUInt32 data;
+            data = plc_tag_get_bit(x.second->tagIndex, offset);
+            setUIntDigitalParam(x.first, data, 0xFF, 0xFF);
+            // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+          }
+          else if (x.second->dataType == "INT")
           {
             epicsInt16 data;
             data = plc_tag_get_int16(x.second->tagIndex, offset);
