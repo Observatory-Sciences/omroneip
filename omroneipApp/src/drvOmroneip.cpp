@@ -271,14 +271,10 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   if (tagIndex < 0)
   {
     //Set record to error
-    setParamAlarmStatus(asynIndex, epicsAlarmComm);
-    setParamAlarmSeverity(asynIndex, epicsSevInvalid);
     setParamStatus(asynIndex, asynError);
   }
   else if (tagIndex == 1)
   {
-    setParamAlarmStatus(asynIndex, epicsAlarmTimeout);
-    setParamAlarmSeverity(asynIndex, epicsSevInvalid);
     setParamStatus(asynIndex, asynError);
   }
   this->unlock();
@@ -543,8 +539,6 @@ void drvOmronEIP::readPoller()
   std::string threadName = epicsThreadGetNameSelf();
   omronEIPPoller* pPoller = pollerList_.at(threadName);
   std::string tag;
-  asynParamType type;
-  asynUser *pasynUser;
   int offset;
   int status;
   int still_pending = 1;
@@ -570,11 +564,12 @@ void drvOmronEIP::readPoller()
       }
     }
 
+    int waits = 0;
+    bool readFailed = false;
     for (auto x : tagMap_)
     {
       if (x.second->pollerName == threadName)
       {
-        int waits = 0;
         int offset = x.second->tagOffset;
         still_pending = 1;
         
@@ -585,6 +580,8 @@ void drvOmronEIP::readPoller()
           // are asynchronously waiting for all tags in this poller to be read. 
           still_pending = 0;
           status = plc_tag_status(x.second->tagIndex);
+
+
           if (status == PLCTAG_STATUS_PENDING)
           {
             still_pending = 1;
@@ -593,24 +590,25 @@ void drvOmronEIP::readPoller()
           }
           else if (status < 0)
           {
-            setParamAlarmStatus(x.second->tagOffset, epicsAlarmComm);
-            setParamAlarmSeverity(x.second->tagOffset, epicsSevInvalid);
-            setParamStatus(x.second->tagOffset, asynError);
+            setParamStatus(x.first, asynError);
+            readFailed = true;
             fprintf(stderr, "Error finishing read tag %ld: %s\n", x.second->tagIndex, plc_tag_decode_error(status));
-            continue;
+            break;
           }
-          else if (waits*0.01>=0.1 && waits*0.01>= 0.5*interval)
+          if (waits*0.01>=0.1 && waits*0.01>= 0.9*interval)
           {
-            // If we have waited for 100ms and at least half of the polling interval, then give up
-            setParamAlarmStatus(x.second->tagOffset, epicsAlarmTimeout);
-            setParamAlarmSeverity(x.second->tagOffset, epicsSevInvalid);
-            setParamStatus(x.second->tagOffset, asynError);
-            fprintf(stderr, "Error finishing read tag %ld: %s\n", x.second->tagIndex, plc_tag_decode_error(status));
-            continue;
+            // If we have waited for 100ms and at least 90% of the polling interval, then give up
+            setParamStatus(x.first, asynTimeout);
+            readFailed = true;
+            fprintf(stderr, "Timeout finishing read tag %ld: %s. Try decreasing the polling rate\n", x.second->tagIndex, plc_tag_decode_error(status));
+            asynStatus stat;
+            getParamStatus(x.first, &stat);
+            std::cout<<stat<<std::endl;
+            break;
           }
         }
 
-        if (x.second->pollerName != "none")
+        if (!readFailed)
         {
           if (x.second->dataType == "INT")
           {
@@ -756,6 +754,7 @@ void drvOmronEIP::readPoller()
             setStringParam(x.first, pData);
             // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<(int*)(pData)<< " My type: "<< x.second->dataType<<std::endl;
           }
+          setParamStatus(x.first, (asynStatus) status);
         }
       }
     }
