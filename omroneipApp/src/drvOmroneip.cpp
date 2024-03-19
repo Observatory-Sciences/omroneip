@@ -803,6 +803,68 @@ asynStatus drvOmronEIP::readInt8Array(asynUser *pasynUser, epicsInt8 *value, siz
   }
 }
 
+
+
+asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements)
+{
+  omronDrvUser_t *drvUser = (omronDrvUser_t *)pasynUser->drvUser;
+  int tagIndex = drvUser->tagIndex;
+  int offset = drvUser->tagOffset;
+  int status;
+  int tagSize = plc_tag_get_size(tagIndex);
+  if (nElements>tagSize)
+  {
+    std::cout<<"Attempting to write beyond tag capacity, restricting write to " << tagSize << " chars" <<std::endl;
+    nElements=tagSize;
+  }
+  if (drvUser->dataType == "UDT")
+  {
+    uint8_t *pOutput = (uint8_t *)malloc(nElements * sizeof(uint8_t));
+    memcpy(pOutput, value, nElements);
+    status = plc_tag_set_raw_bytes(tagIndex, offset, pOutput ,nElements);
+    status = plc_tag_write(tagIndex, 100);
+    free(pOutput);
+    return asynSuccess;
+  }
+  else if (drvUser->dataType == "WORD" || drvUser->dataType == "DWORD" || drvUser->dataType == "LWORD")
+  {
+    uint8_t *pOutput = (uint8_t *)malloc(nElements * sizeof(uint8_t));
+    int j = nElements-1;
+    int status;
+    for (int i=0; i<nElements; i++)
+    {
+      pOutput[i] = value[j];
+      j--;
+    }
+    status = plc_tag_set_raw_bytes(tagIndex, offset, pOutput ,nElements);
+    status = plc_tag_write(tagIndex, 100);
+    free(pOutput);
+    return asynSuccess;
+  }
+  else
+  {
+    return asynError;
+  }
+}
+
+asynStatus drvOmronEIP::writeUInt32Digital(asynUser *pasynUser, epicsUInt32 value, epicsUInt32 mask)
+{
+  int status = 0;
+  omronDrvUser_t *drvUser = (omronDrvUser_t *)pasynUser->drvUser;
+  int tagIndex = drvUser->tagIndex;
+  int offset = drvUser->tagOffset;
+  if (drvUser->dataType == "BOOL")
+  {
+    status = plc_tag_set_bit(tagIndex, offset, value);
+    status = plc_tag_write(tagIndex, 100);
+    return asynSuccess;
+  }
+  else
+  {
+    return asynError;
+  }
+}
+
 asynStatus drvOmronEIP::writeInt32(asynUser *pasynUser, epicsInt32 value)
 {
   int status = 0;
@@ -886,12 +948,9 @@ asynStatus drvOmronEIP::writeOctet(asynUser *pasynUser, const char *value, size_
     plc_tag_set_size(tagIndex, string_capacity + 2);     // Allow room for string length
     status = plc_tag_set_string(tagIndex, offset, stringOut); // Set the data
     plc_tag_set_size(tagIndex, nChars + 2);              // Reduce the tag buffer to delete any data beyond the string we pass in
-    status = plc_tag_write(tagIndex, 300);
+    status = plc_tag_write(tagIndex, 100);
 
     memcpy(nActual, &nChars, sizeof(size_t));
-  }
-  else if (drvUser->dataType == "UDT")
-  {
   }
   return asynSuccess;
 }
