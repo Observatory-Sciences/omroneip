@@ -42,7 +42,7 @@
 #include <epicsExport.h>
 
 /* libplctag also supports modbus-tcp but we do not*/
-#define DATA_TIMEOUT 1000 //ms
+#define CREATE_TAG_TIMEOUT 1000 //ms
 
 
 typedef enum {

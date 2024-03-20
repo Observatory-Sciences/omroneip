@@ -1,62 +1,104 @@
-# Tag name has spaces
+# Tag name has spaces should work. However this is pointless as libplctag does not support this...
 record(longin, "$(P)test1") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller /test name with gaps[2]/ DINT 5 extras")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller /test name with gaps[2]/ DINT 5 0 0")
 }
 
-# Poller and tag name have spaces
+# Poller and tag name have spaces should work
 record(longin, "$(P)test2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)/@test poller/ /test name with gaps[1]/ DINT 1")
+    field(INP, "@asyn($(PORT), 0, 1)/@test poller/ /test name with gaps[1]/ DINT 0 0")
 }
 
-# Invalid datatype
+# Invalid datatype should report error
 record(longin, "$(P)test3") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[1] bad_dtype 1 extras")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[1] bad_dtype 1 0 0")
 }
 
-# Invalid startIndex and sliceSize
+# Invalid sliceSize should report error
 record(longin, "$(P)test4") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[1] INT one extras")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[1] INT one 0 0")
 }
 
-# Escape character never closed
+# Escape character never closed should report error
 record(longin, "$(P)test5") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)/@testPoller testName[1] DINT 1 extras")
+    field(INP, "@asyn($(PORT), 0, 1)/@testPoller testName[1] DINT 1 0 0")
 }
 
-# Undefined start_index
+# Undefined start_index should work
 record(longin, "$(P)test6") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 extras")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 0 0")
 }
 
-# Tag name with spaces without escape character used
+# Tag name with spaces without escape character used should fail
 record(longin, "$(P)test7") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
     field(INP, "@asyn($(PORT), 0, 1)@testPoller test Name DINT 1 extras")
 }
 
-# Tag name including indexed parent and child
+# Tag name including indexed parent and child should work
 record(longin, "$(P)test8") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
     field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[465].child[2] DINT 1 extras")
 }
 
-# Test startIndes of 0
+# Test startIndex of 0 should report error
 record(longin, "$(P)test9") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[0] INT")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[0] INT 0 0")
+}
+
+# Attempting to index a non indexible tag should report error
+record(longin, "$(P)test10") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 5 0 0")
+}
+
+# Extras term contains invalid string, libplctag should report error when tag creation is attempted
+record(longin, "$(P)test11") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 5 0 &unknown_param")
+}
+
+# No & is used in extras term, should report error
+record(longin, "$(P)test12") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 5 0 allow_packing=2")
+}
+
+# No & is used in extras term, should report error
+record(longin, "$(P)test13") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 5 0 allow_packing=2")
+}
+
+# No poller defined for read record, should report error
+record(longin, "$(P)test14") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)testName DINT 5 0 allow_packing=2")
+}
+
+# Poller defined for write record, should report error
+record(longout, "$(P)test12") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(OUT, "@asyn($(PORT), 0, 1)@testPoller testName DINT 5 0 0")
 }

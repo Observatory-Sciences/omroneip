@@ -1,46 +1,33 @@
 # record(ai, "$(P)testRead) {
 #     field(DTYP, "asynInt32")
-#     field(INP, "asyn(PORT, ADDR, TIMEOUT)@POLLER1 tag_name[start_index] data_type length offset extras")
-#     field(INP, "asyn(PORT, ADDR, TIMEOUT)@POLLER1 tag_name[1] REAL 1 0 0")
+#     field(INP, "asyn(PORT, ADDR, TIMEOUT)@POLLER tag_name[start_index] data_type length offset extras")
+#     field(INP, "asyn(PORT, ADDR, TIMEOUT)@POLLER tag_name[1] REAL 1 0 0")
 # }
 
 #record(ai, "$(P)testReadPassive") {
 #    #field(SCAN, "1 second")
 #    field(SCAN, "Passive")
 #    field(DTYP, "asynFloat64")
-#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER1) ISISTestMultiple[1].PVValue REAL 1")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVValue REAL 1")
 #}
-
-record(ai, "$(P)testReadIntervalSlow") {
-    field(SCAN, ".1 second")
-    field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER2) ISISTestMultiple[1].PVValue REAL 1 0 0")
-}
-
-record(ai, "$(P)testReadIntervalFast") {
-    field(SCAN, ".1 second")
-    field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER1) ISISTestMultiple[1].PVValue REAL 1 0 0")
-}
-
 
 #record(ai, "$(P)testReadIntr") {
 #    field(SCAN, "I/O Intr")
 #    field(DTYP, "asynFloat64")
-#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER1) ISISTestMultiple[2].PVValue REAL 1")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[2].PVValue REAL 1")
 #}
 
 #record(ai, "$(P)testReadIntr3") {
 #    field(SCAN, "I/O Intr")
 #    field(DTYP, "asynFloat64")
-#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER1) ISISTestMultiple[3].PVValue LREAL 1")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[3].PVValue LREAL 1")
 #}
 
 #record(waveform, "$(P)readUDT") {
 #    field(SCAN, "I/O Intr")
 #    field(FTVL, "UCHAR")
 #    field(DTYP, "asynInt8ArrayIn")
-#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER1) statusChannels UDT 1 $(P)")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels UDT 1 $(P)")
 #    field(NELM, "1996")
 #}
 
@@ -61,22 +48,21 @@ record(ai, "$(P)testReadIntervalFast") {
 #    field(SIZV, "61")
 #}
 
-record(ai, "$(P)readFloat32Test") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER1) Zone_Heaters.Zone_01.Zone_Circuit_01.CT_Heater_Current REAL 1 0 0")
-}
+#record(ai, "$(P)readFloat32Test") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynFloat64")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zone_Heaters.Zone_01.Zone_Circuit_01.CT_Heater_Current REAL 1 0 0")
+#}
 
-record(lsi, "$(P)readStringOffset") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER1) ISISTestMultiple[1].PVName STRING 1 0 0")
-    field(SIZV, "61")
-}
+#record(lsi, "$(P)readStringOffset") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynOctetRead")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVName STRING 1 0 0")
+#    field(SIZV, "61")
+#}
 
-record(lsi, "$(P)readString") {
+record(longin, "$(P)readInt16") {
     field(SCAN, "I/O Intr")
-    field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER2) ISISTestMultiple[1].PVName STRING 1 0 0")
-    field(SIZV, "61")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) transportArray1[1] INT 1 0 0")
 }

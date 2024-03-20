@@ -20,6 +20,7 @@
 #include <epicsMutex.h>
 #include <epicsEvent.h>
 #include <epicsTime.h>
+#include <alarm.h>
 #include <epicsEndian.h>
 #include <epicsExit.h>
 #include <cantProceed.h>
@@ -40,7 +41,7 @@
 
 #include <epicsExport.h>
 
-#define LIB_PLC_TAG_PROTOCOL "protocol=ab-eip&gateway=10.2.2.57&path=18,10.2.2.57&plc=omron-njnx"
+/* libplctag also supports modbus-tcp but we do not*/
 #define DATA_TIMEOUT 1000 //ms
 
 
@@ -62,6 +63,7 @@ typedef enum {
   dataTypeDWord,
   dataTypeLWord,
   dataTypeUDT,
+  dataTypeTIME,
   MAX_OMRON_DATA_TYPES
 } omronDataType_t;
 
@@ -71,7 +73,9 @@ class omronEIPPoller;
 class epicsShareClass drvOmronEIP : public asynPortDriver {
 public:
   drvOmronEIP(const char *portName,
-              const char *plcType);
+              char *gateway,
+              char *path,
+              char *plcType);
 
   bool omronExiting_;
   
@@ -80,7 +84,11 @@ public:
   std::unordered_map<std::string, std::string> drvInfoParser(const char *drvInfo);
   asynStatus drvUserCreate(asynUser *pasynUser, const char *drvInfo, const char **pptypeName, size_t *psize)override;
   /* Must be implemented to support non I/O Interrupt records reading UDTs, not required for other asyn interfaces where defaults are used*/
+
   asynStatus readInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements, size_t *nIn)override;
+
+  asynStatus writeInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements)override;
+  asynStatus writeUInt32Digital(asynUser *pasynUser, epicsUInt32 value, epicsUInt32 mask)override;
   asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value)override;
   asynStatus writeInt64(asynUser *pasynUser, epicsInt64 value)override;
   asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value)override;
@@ -90,9 +98,11 @@ protected:
 private:
   bool initialized_; // Tracks if the driver successfully initialized
   bool cats_;
+  std::string tagConnectionString_;
   std::unordered_map<std::string, omronEIPPoller*> pollerList_ = {};
   std::unordered_map<int, omronDrvUser_t*> tagMap_; /* Maps the index of each registerd param to the EIP data registered in the PV */
-  omronDrvUser_t *drvUser_;   /* Drv user structure */ 
+  omronDrvUser_t *drvUser_;
+  /* Drv user structure */
 };
 
 class omronEIPPoller{
