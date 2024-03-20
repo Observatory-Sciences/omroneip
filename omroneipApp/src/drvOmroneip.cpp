@@ -16,6 +16,7 @@ struct omronDrvUser_t
   int dataCounter;
   std::string pollerName;
   int tagOffset;
+  double timeout;
 };
 
 typedef struct
@@ -105,7 +106,7 @@ drvOmronEIP::drvOmronEIP(const char *portName,
   tagConnectionString_ = "protocol=ab-eip&gateway="+(std::string)gateway+"&path="+(std::string)path+"&plc="+(std::string)plcType;
   std::cout<<"Starting driver with connection string: "<< tagConnectionString_<<std::endl;;
   epicsAtExit(omronExitCallback, this);
-  //plc_tag_set_debug_level(3);
+  plc_tag_set_debug_level(3);
   initHookRegister(myInitHookFunction);
   initialized_ = true;
 }
@@ -155,7 +156,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
         + keyWords.at("tagExtras");
 
   printf("%s\n", tag.c_str());
-  int32_t tagIndex = plc_tag_create(tag.c_str(), DATA_TIMEOUT);
+  int32_t tagIndex = plc_tag_create(tag.c_str(), CREATE_TAG_TIMEOUT);
   /* Check and report failure codes. An Asyn param will be created even on failure but the record will be given error status */
   if (tagIndex<0)
   {
@@ -177,6 +178,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   newDrvUser->sliceSize = std::stoi(keyWords.at("sliceSize")); //these all need type protection
   newDrvUser->startIndex = std::stoi(keyWords.at("startIndex"));
   newDrvUser->tagOffset = std::stoi(keyWords.at("offset"));
+  newDrvUser->timeout = pasynUser->timeout;
 
   { /* Take care of different datatypes */
     if (keyWords.at("dataType") == "BOOL")
@@ -565,7 +567,7 @@ void drvOmronEIP::readPoller()
       if (x.second->pollerName == threadName)
       {
         //std::cout<<"Reading tag " <<x.second->tagIndex<<" on poller "<<threadName<<" with interval "<<interval<<" seconds"<<std::endl;
-        status = plc_tag_read(x.second->tagIndex, 0); // read as fast as possible, we will check status and timeouts later
+        status = plc_tag_read(x.second->tagIndex, 0); // read from plc as fast as possible, we will check status and timeouts later
       }
     }
 
@@ -586,29 +588,31 @@ void drvOmronEIP::readPoller()
           still_pending = 0;
           status = plc_tag_status(x.second->tagIndex);
 
-
           if (status == PLCTAG_STATUS_PENDING)
           {
-            still_pending = 1;
-            waits++;
-            epicsThreadSleep(0.01);
+            // Wait for the timeout specified in the record
+            if (waits*0.01>=x.second->timeout)
+            {
+              setParamStatus(x.first, asynTimeout);
+              readFailed = true;
+              fprintf(stderr, "Timeout finishing read tag %ld: %s. Try decreasing the polling rate\n", x.second->tagIndex, plc_tag_decode_error(status));
+              asynStatus stat;
+              getParamStatus(x.first, &stat);
+              std::cout<<stat<<std::endl;
+              break;
+            }
+            else
+            {
+              still_pending = 1;
+              waits++;
+              epicsThreadSleep(0.01);
+            }
           }
           else if (status < 0)
           {
             setParamStatus(x.first, asynError);
             readFailed = true;
             fprintf(stderr, "Error finishing read tag %ld: %s\n", x.second->tagIndex, plc_tag_decode_error(status));
-            break;
-          }
-          if (waits*0.01>=0.1 && waits*0.01>= 0.9*interval)
-          {
-            // If we have waited for 100ms and at least 90% of the polling interval, then give up
-            setParamStatus(x.first, asynTimeout);
-            readFailed = true;
-            fprintf(stderr, "Timeout finishing read tag %ld: %s. Try decreasing the polling rate\n", x.second->tagIndex, plc_tag_decode_error(status));
-            asynStatus stat;
-            getParamStatus(x.first, &stat);
-            std::cout<<stat<<std::endl;
             break;
           }
         }
@@ -812,6 +816,7 @@ asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, si
   int offset = drvUser->tagOffset;
   int status;
   int tagSize = plc_tag_get_size(tagIndex);
+  double timeout = pasynUser->timeout*1000;
   if (nElements>tagSize)
   {
     std::cout<<"Attempting to write beyond tag capacity, restricting write to " << tagSize << " chars" <<std::endl;
@@ -822,7 +827,7 @@ asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, si
     uint8_t *pOutput = (uint8_t *)malloc(nElements * sizeof(uint8_t));
     memcpy(pOutput, value, nElements);
     status = plc_tag_set_raw_bytes(tagIndex, offset, pOutput ,nElements);
-    status = plc_tag_write(tagIndex, 100);
+    status = plc_tag_write(tagIndex, timeout);
     free(pOutput);
     return asynSuccess;
   }
@@ -837,7 +842,7 @@ asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, si
       j--;
     }
     status = plc_tag_set_raw_bytes(tagIndex, offset, pOutput ,nElements);
-    status = plc_tag_write(tagIndex, 100);
+    status = plc_tag_write(tagIndex, timeout);
     free(pOutput);
     return asynSuccess;
   }
@@ -853,10 +858,11 @@ asynStatus drvOmronEIP::writeUInt32Digital(asynUser *pasynUser, epicsUInt32 valu
   omronDrvUser_t *drvUser = (omronDrvUser_t *)pasynUser->drvUser;
   int tagIndex = drvUser->tagIndex;
   int offset = drvUser->tagOffset;
+  double timeout = pasynUser->timeout*1000;
   if (drvUser->dataType == "BOOL")
   {
     status = plc_tag_set_bit(tagIndex, offset, value);
-    status = plc_tag_write(tagIndex, 100);
+    status = plc_tag_write(tagIndex, timeout);
     return asynSuccess;
   }
   else
@@ -871,6 +877,7 @@ asynStatus drvOmronEIP::writeInt32(asynUser *pasynUser, epicsInt32 value)
   omronDrvUser_t *drvUser = (omronDrvUser_t *)pasynUser->drvUser;
   int tagIndex = drvUser->tagIndex;
   int offset = drvUser->tagOffset;
+  double timeout = pasynUser->timeout*1000;
 
   if (drvUser->dataType == "INT")
   {
@@ -889,7 +896,7 @@ asynStatus drvOmronEIP::writeInt32(asynUser *pasynUser, epicsInt32 value)
     plc_tag_set_int32(tagIndex, offset, (epicsUInt32)value);
   }
 
-  status = plc_tag_write(tagIndex, 100);
+  status = plc_tag_write(tagIndex, timeout);
   return asynSuccess;
 }
 
@@ -899,6 +906,7 @@ asynStatus drvOmronEIP::writeInt64(asynUser *pasynUser, epicsInt64 value)
   omronDrvUser_t *drvUser = (omronDrvUser_t *)pasynUser->drvUser;
   int tagIndex = drvUser->tagIndex;
   int offset = drvUser->tagOffset;
+  double timeout = pasynUser->timeout*1000;
   if (drvUser->dataType == "LINT")
   {
     plc_tag_set_int64(tagIndex, offset, value);
@@ -907,7 +915,7 @@ asynStatus drvOmronEIP::writeInt64(asynUser *pasynUser, epicsInt64 value)
   {
     plc_tag_set_int64(tagIndex, offset, (epicsUInt64)value);
   }
-  status = plc_tag_write(tagIndex, 100);
+  status = plc_tag_write(tagIndex, timeout);
   return asynSuccess;
 }
 
@@ -917,6 +925,7 @@ asynStatus drvOmronEIP::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
   omronDrvUser_t *drvUser = (omronDrvUser_t *)pasynUser->drvUser;
   int tagIndex = drvUser->tagIndex;
   int offset = drvUser->tagOffset;
+  double timeout = pasynUser->timeout*1000;
   if (drvUser->dataType == "REAL")
   {
     plc_tag_set_float32(tagIndex, offset, (epicsFloat32)value);
@@ -925,7 +934,7 @@ asynStatus drvOmronEIP::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
   {
     plc_tag_set_float32(tagIndex, offset, value);
   }
-  status = plc_tag_write(tagIndex, 300);
+  status = plc_tag_write(tagIndex, timeout);
   return asynSuccess;
 }
 
@@ -935,6 +944,7 @@ asynStatus drvOmronEIP::writeOctet(asynUser *pasynUser, const char *value, size_
   omronDrvUser_t *drvUser = (omronDrvUser_t *)pasynUser->drvUser;
   int tagIndex = drvUser->tagIndex;
   int offset = drvUser->tagOffset;
+  double timeout = pasynUser->timeout*1000;
 
   /* This is a bit ghetto because Omron does strings a bit different to what libplctag expects*/
   if (drvUser->dataType == "STRING")
@@ -948,7 +958,7 @@ asynStatus drvOmronEIP::writeOctet(asynUser *pasynUser, const char *value, size_
     plc_tag_set_size(tagIndex, string_capacity + 2);     // Allow room for string length
     status = plc_tag_set_string(tagIndex, offset, stringOut); // Set the data
     plc_tag_set_size(tagIndex, nChars + 2);              // Reduce the tag buffer to delete any data beyond the string we pass in
-    status = plc_tag_write(tagIndex, 100);
+    status = plc_tag_write(tagIndex, timeout);
 
     memcpy(nActual, &nChars, sizeof(size_t));
   }
