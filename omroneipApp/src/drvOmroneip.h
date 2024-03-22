@@ -11,6 +11,7 @@
 #include <list>
 #include <array>
 #include <chrono>
+#include <fstream>
 
 /* EPICS includes */
 #include <dbAccess.h>
@@ -80,6 +81,8 @@ public:
   bool omronExiting_;
   
   void readPoller();
+  asynStatus loadStructFile(const char * portName, const char * filePath);
+  asynStatus createStructMap(std::unordered_map<std::string, std::vector<std::string>> rawMap);
   asynStatus createPoller(const char * portName, const char * pollerName, double updateRate);
   std::unordered_map<std::string, std::string> drvInfoParser(const char *drvInfo);
   asynStatus drvUserCreate(asynUser *pasynUser, const char *drvInfo, const char **pptypeName, size_t *psize)override;
@@ -97,8 +100,8 @@ protected:
 
 private:
   bool initialized_; // Tracks if the driver successfully initialized
-  bool cats_;
   std::string tagConnectionString_;
+  std::unordered_map<std::string, std::vector<int>> structMap_;
   std::unordered_map<std::string, omronEIPPoller*> pollerList_ = {};
   std::unordered_map<int, omronDrvUser_t*> tagMap_; /* Maps the index of each registerd param to the EIP data registered in the PV */
   omronDrvUser_t *drvUser_;

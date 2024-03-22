@@ -61,8 +61,8 @@
 #    field(SIZV, "61")
 #}
 
-record(longin, "$(P)readInt16") {
+record(ai, "$(P)readFloat32") {
     field(SCAN, "I/O Intr")
-    field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) transportArray1[1] INT 1 0 0")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, cat)@$(POLLER) transportArray1[1] REAL 1 UDT808_ZTC_TCs[4] 0")
 }

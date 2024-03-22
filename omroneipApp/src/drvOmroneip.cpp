@@ -99,14 +99,13 @@ drvOmronEIP::drvOmronEIP(const char *portName,
                      1,                                                                                                                                                  /* Autoconnect */
                      0,                                                                                                                                                  /* Default priority */
                      0),                                                                                                                                                 /* Default stack size*/
-      initialized_(false),
-      cats_(true)
+      initialized_(false)
 
 {
   tagConnectionString_ = "protocol=ab-eip&gateway="+(std::string)gateway+"&path="+(std::string)path+"&plc="+(std::string)plcType;
   std::cout<<"Starting driver with connection string: "<< tagConnectionString_<<std::endl;;
   epicsAtExit(omronExitCallback, this);
-  plc_tag_set_debug_level(3);
+  //plc_tag_set_debug_level(3);
   initHookRegister(myInitHookFunction);
   initialized_ = true;
 }
@@ -175,10 +174,10 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   newDrvUser->tag = tag;
   newDrvUser->tagIndex = tagIndex;
   newDrvUser->pollerName = keyWords.at("pollerName");
-  newDrvUser->sliceSize = std::stoi(keyWords.at("sliceSize")); //these all need type protection
+  newDrvUser->sliceSize = std::stoi(keyWords.at("sliceSize")); //dtype checked elsewhere
   newDrvUser->startIndex = std::stoi(keyWords.at("startIndex"));
-  newDrvUser->tagOffset = std::stoi(keyWords.at("offset"));
   newDrvUser->timeout = pasynUser->timeout;
+  newDrvUser->tagOffset = std::stoi(keyWords.at("offset"));
 
   { /* Take care of different datatypes */
     if (keyWords.at("dataType") == "BOOL")
@@ -408,9 +407,17 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
       {
         keyWords.at("startIndex") = startIndex;
         indexable = true;
-        if (std::stoi(startIndex) < 1)
+        try
+        {                
+          if (std::stoi(startIndex) < 1)
+          {
+            std::cout << "A startIndex of < 1 is forbidden" << std::endl;
+            keyWords.at("stringValid") = "false";
+          }
+        }
+        catch(...)
         {
-          std::cout << "A startIndex of < 1 is forbidden" << std::endl;
+          std::cout << "startIndex must be an integer" << std::endl;
           keyWords.at("stringValid") = "false";
         }
       }
@@ -465,7 +472,75 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
     }
     else if (i == 3)
     {
-      keyWords.at("offset") = words.front();
+      int structIndex = 0; // will store user supplied index into user supplied struct
+      int indexStartPos = 0; // stores the position of the first '[' within the user supplied string
+      int offset = 0;
+      // attempt to set offset to integer, if not possible then assume it is a structname
+      try
+      {
+        offset = std::stoi(words.front());
+      }
+      catch(...)
+      {
+        // attempt to split name and integer
+        for (int n = 0; n<words.front().size(); n++)
+        {
+          if (words.front().c_str()[n] == '[')
+          {
+            std::string offsetSubstring = words.front().substr(n+1,words.front().size()-(n+1));
+            indexStartPos = n;
+            for (int m = 0; m<offsetSubstring.size(); m++)
+            {
+              if (offsetSubstring.c_str()[m] == ']')
+              {
+                try
+                {
+                  //struct integer found
+                  structIndex = std::stoi(offsetSubstring.substr(0,m));
+                  goto findOffsetFromStruct;
+                }
+                catch(...)
+                {
+                  std::cout << "Error, could not find a valid index for the requested structure: " << words.front() << std::endl;
+                  keyWords.at("stringValid") = "false";
+                }
+              }
+            }
+          }
+        }
+        std::cout<<"Invalid index for requested structure: " << words.front() << std::endl;
+        keyWords.at("stringValid") = "false";
+        
+        //look for matching structure in structMap_
+        //if found, look for the offset at the structIndex within the structure
+        findOffsetFromStruct:
+          std::string structName = words.front().substr(0,indexStartPos);
+          bool structFound = false;
+          for (auto item: this->structMap_)
+          {
+            if (item.first == structName)
+            {
+              //requested structure found
+              structFound = true;
+              if (structIndex>=item.second.size())
+              {
+                std::cout<<"Error, attempt to read index: " << structIndex << " from struct: " << item.first << " failed." << std::endl;
+                keyWords.at("stringValid") = "false";
+              }
+              else
+              {
+                offset = item.second[structIndex];
+                break;
+              }
+            }
+          }
+          if (!structFound)
+          {
+            std::cout << "Could not find structure requested: " << words.front() << ". Have you loaded a struct file?" << std::endl;
+            keyWords.at("stringValid") = "false";
+          }
+      }
+      keyWords.at("offset") = std::to_string(offset);
       words.pop_front();
     }
     else if (i == 4)
@@ -539,6 +614,154 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
   std::cout << "Returning keyWords" << std::endl;
 
   return keyWords;
+}
+
+/* Stores user input struct as a map of Struct:field_list */
+asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * filePath)
+{
+  std::ifstream infile(filePath); 
+  std::unordered_map<std::string, std::vector<std::string>> structMap;
+  std::vector<std::string> row; 
+  std::string line, word; 
+
+  while (std::getline(infile, line)) { 
+
+      row.clear(); 
+      std::istringstream s(line); 
+      while (std::getline(s, word, ',')) 
+      {   
+        row.push_back(word); 
+      } 
+      std::string structName = row.front();
+      row.erase(row.begin());
+      structMap[structName] = row;
+    } 
+    // add to debug
+    // for (auto const& i : structMap) {
+    //   std::cout << i.first;
+    //   for (auto const& j : i.second)
+    //     std::cout << " " << j;
+    //   std::cout<<std::endl;
+    // }
+    this->createStructMap(structMap);
+    return asynSuccess;
+}
+
+int findOffsetsRecursive(auto const& rawMap, std::string structName, auto& structMap)
+{
+  std::vector<int> newRow = {0};
+  int offSetsCounted = 0;
+  std::vector<std::string> row = rawMap.at(structName);
+  int lastOffset = 0;
+  bool structInvalid = false;
+  int thisOffset = 0;
+  // loop through each datatype and find its byte size
+  for (std::string dtype : row)
+  {
+    offSetsCounted++;
+    lastOffset = newRow.back();
+    if (dtype =="BOOL")
+      thisOffset = lastOffset+1;
+    else if (dtype =="UINT" || dtype =="INT" || dtype =="WORD")
+      thisOffset = lastOffset+2;
+    else if (dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD")
+      thisOffset = lastOffset+4;
+    else if (dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD")
+      thisOffset = lastOffset+8;
+    else if (dtype =="UINT")
+      thisOffset = lastOffset+2;
+    else
+    {
+      if (dtype.substr(0,7) == "STRING[")
+      {
+        auto ss = dtype.substr(7,dtype.size()-7);
+        int i = 0;
+        int strLength = 0;
+        bool intFound = false;
+        for (int i = 0; i<ss.size(); i++)
+        {
+          if (ss.substr(i,1)== "]")
+          {
+            intFound = true;
+            try
+            {
+              strLength = std::stoi(ss.substr(0,i+1));
+              if (strLength < 0) throw 1;
+            }
+            catch (...)
+            {
+              std::cout<<"STRING length must be an integer"<<std::endl;
+              strLength = 0;
+            }
+            break;
+          }
+        }
+        thisOffset = lastOffset+strLength;
+        if (!intFound)
+        {
+          structInvalid = true;
+          std::cout<<"STRING type must specify size, " << structName << " definition is invalid" <<std::endl;
+          return -1;
+        }
+      }
+      else
+      {
+        // If we get here, then we assume that we have a structure, but it could be a typo
+        try
+        {
+          std::vector<std::string> nextRow = rawMap.at(dtype);
+          //recursively call this function to calculate the size of the named structure
+          int structSize = findOffsetsRecursive(rawMap, dtype, structMap);
+          if (structSize <= 0)
+          {
+            structInvalid = true;
+            std::cout<<"Error calculating the size of structure: " << dtype << ". Definition for " << structName << " is invalid" << std::endl; 
+          }
+          thisOffset = structSize+lastOffset;
+        }
+        catch (...)
+        {
+          structInvalid = true;
+          std::cout<<"Failed to find the standard datatype: " << dtype << ". Definition for " << structName << " and its dependents failed" << std::endl;
+          return -1;
+        }
+      }
+    }
+    if (offSetsCounted < row.size())
+    {
+      newRow.push_back(thisOffset);
+    }
+    else
+    {
+      // if this is the last offset, then do not add it to the row as it points to the end of the struct
+      // instead we return thisOffset
+      if (!structInvalid)
+      {
+        structMap[structName] = newRow;
+        return thisOffset;
+      }
+      else
+        return -1;
+    }
+  }
+}
+
+asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vector<std::string>> rawMap)
+{
+  std::unordered_map<std::string, std::vector<int>> structMap;
+  for (auto kv: rawMap)
+  {// look for kv.first in structMap
+    findOffsetsRecursive(rawMap, kv.first, structMap);
+  }
+  // add to debug
+  // for (auto const& i : structMap) {
+  //   std::cout << i.first;
+  //   for (auto const& j : i.second)
+  //     std::cout << " " << j;
+  //   std::cout<<std::endl;
+  // }
+  this->structMap_= structMap;
+  return asynSuccess;
 }
 
 void drvOmronEIP::readPoller()
@@ -967,13 +1190,37 @@ asynStatus drvOmronEIP::writeOctet(asynUser *pasynUser, const char *value, size_
 
 extern "C"
 {
-    /*
-  ** drvOmronEIPConfigPoller() - create and init an asyn port driver for a PLC
-  */
+  /* drvOmronEIPStructDefine - Loads structure definitions from file */
+  asynStatus drvOmronEIPStructDefine(const char *portName, const char *filePath)
+  {
+    drvOmronEIP* pDriver = (drvOmronEIP*)findAsynPortDriver(portName);
+    if (!pDriver){
+      std::cout<<"Error, Port "<<portName<< " not found!"<<std::endl;
+      return asynError;
+    }
+    else
+    {
+      return pDriver->loadStructFile(portName, filePath); 
+    }
+  }
 
-  /** EPICS iocsh callable function to call constructor for the drvOmronEIP class. */
+  /* iocsh functions */
 
-  /* Creates a new poller with user provided settings and adds it to the driver */
+  static const iocshArg structDefConfigArg0 = {"Port name", iocshArgString};
+  static const iocshArg structDefConfigArg1 = {"File path", iocshArgString};
+
+  static const iocshArg *const drvOmronEIPStructDefineArgs[2] = {
+      &structDefConfigArg0,
+      &structDefConfigArg1};
+
+  static const iocshFuncDef drvOmronEIPStructDefineFuncDef = {"drvOmronEIPStructDefine", 2, drvOmronEIPStructDefineArgs};
+
+  static void drvOmronEIPStructDefineCallFunc(const iocshArgBuf *args)
+  {
+    drvOmronEIPStructDefine(args[0].sval, args[1].sval);
+  }
+
+  /* drvOmronEIPConfigPoller() - Creates a new poller with user provided settings and adds it to the driver */
   asynStatus drvOmronEIPConfigPoller(const char *portName,
                                   const char *pollerName, double updateRate)
   {
@@ -1048,6 +1295,7 @@ extern "C"
   {
     iocshRegister(&drvOmronEIPConfigureFuncDef, drvOmronEIPConfigureCallFunc);
     iocshRegister(&drvOmronEIPConfigPollerFuncDef, drvOmronEIPConfigPollerCallFunc);
+    iocshRegister(&drvOmronEIPStructDefineFuncDef, drvOmronEIPStructDefineCallFunc);
   }
 
   epicsExportRegistrar(drvOmronEIPRegister);
