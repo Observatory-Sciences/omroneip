@@ -52,7 +52,7 @@ record(ao, "$(P)writeFloat32") {
 
 record(ao, "$(P)writeFloat64") {
     field(DTYP, "asynFloat64")
-    field(OUT, "@asyn($(PORT), 0, 1)testLREAL LREAL 1 0 0") #actually reading a REAL
+    field(OUT, "@asyn($(PORT), 0, 1)testLREAL LREAL 1 0 0")
 }
 
 record(lso, "$(P)writeString") {
@@ -91,7 +91,7 @@ record(waveform, "$(P)writeUDT") {
 
 #Not currently working as the Omron PLC seems to be returning TIME data as TIME_NSEC data which libplctag doesnt understand
 record(stringout, "$(P)writeTime"){
-    field(DTYP, "asynOctetRead")
+    field(DTYP, "asynOctetWrite")
     field(OUT, "@asyn($(PORT), 0, 1)testTime TIME 1 0 0")
 }
 

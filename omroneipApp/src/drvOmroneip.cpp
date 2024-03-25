@@ -2,10 +2,8 @@
 #include "drvOmroneip.h"
 #include <sstream>
 
-/*
-    Each PV which talks to PLC data is an omronDrvUser with values based on the asyn parameter name.
-*/
-
+// This stores information about each communication tag to the PLC.
+// A new instance will be made for each record which requsts to uniquely read/write to the PLC
 struct omronDrvUser_t
 {
   int startIndex;
@@ -25,6 +23,7 @@ typedef struct
   const char *dataTypeString;
 } omronDataTypeStruct;
 
+// Supported PLC datatypes
 static omronDataTypeStruct omronDataTypes[MAX_OMRON_DATA_TYPES] = {
     {dataTypeBool, "BOOL"},
     {dataTypeInt, "INT"},
@@ -47,7 +46,6 @@ static omronDataTypeStruct omronDataTypes[MAX_OMRON_DATA_TYPES] = {
 
 bool startPollers = false; // Set to 1 after IocInit() which starts pollers
 
-/* Local variable declarations */
 static const char *driverName = "drvOmronEIP"; /* String for asynPrint */
 
 static void readPollerC(void *drvPvt)
@@ -69,6 +67,7 @@ static void omronExitCallback(void *pPvt)
   pDriver->omronExiting_ = true;
 }
 
+/* This function is called by the IOC load system after iocInit() or iocRun() have completed */
 static void myInitHookFunction(initHookState state)
 {
   switch(state) {
@@ -80,16 +79,11 @@ static void myInitHookFunction(initHookState state)
   }
 }
 
-/********************************************************************
-**  global driver functions
-*********************************************************************
-*/
-
-
 drvOmronEIP::drvOmronEIP(const char *portName,
                           char *gateway,
                           char *path,
-                          char *plcType)
+                          char *plcType,
+                          int debugLevel)
 
     : asynPortDriver(portName,
                      1,                                                                                                                                                  /* maxAddr */
@@ -102,18 +96,16 @@ drvOmronEIP::drvOmronEIP(const char *portName,
       initialized_(false)
 
 {
+  static const char *functionName = "drvOmronEIP";
   tagConnectionString_ = "protocol=ab-eip&gateway="+(std::string)gateway+"&path="+(std::string)path+"&plc="+(std::string)plcType;
   std::cout<<"Starting driver with connection string: "<< tagConnectionString_<<std::endl;;
   epicsAtExit(omronExitCallback, this);
-  //plc_tag_set_debug_level(3);
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Starting driver with libplctag debug level %d\n", driverName, functionName, debugLevel);
+  plc_tag_set_debug_level(debugLevel);
   initHookRegister(myInitHookFunction);
   initialized_ = true;
 }
 
-/*
-    Takes the asyn parameter name defined for each pv in the loaded database and matches it to a libplctag tag.
-    This function is called twice, once before and once after database initialization, the first time we just return asynDisabled.
-*/
 
 asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, const char **pptypeName, size_t *psize)
 {
@@ -146,6 +138,8 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   std::unordered_map<std::string, std::string> keyWords = drvInfoParser(drvInfo);
   if (keyWords.at("stringValid") == "false")
   {
+    printf("drvInfo string is invalid, record: %s was not created\n", drvInfo);
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "drvInfo string is invalid, record: %s was not created\n", driverName, functionName, drvInfo);
     return asynError;
   }
 
@@ -154,21 +148,26 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
         "&elem_count=" + keyWords.at("sliceSize")
         + keyWords.at("tagExtras");
 
-  printf("%s\n", tag.c_str());
   int32_t tagIndex = plc_tag_create(tag.c_str(), CREATE_TAG_TIMEOUT);
+
   /* Check and report failure codes. An Asyn param will be created even on failure but the record will be given error status */
   if (tagIndex<0)
   {
     const char* error = plc_tag_decode_error(tagIndex);
     printf("Tag not added! %s\n", error);
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "Tag not added! %s\n", driverName, functionName, error);
   }
   else if (tagIndex == 1)
   {
     printf("Tag not added! Timeout while creating tag.\n");
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "Tag not added! Timeout while creating tag.\n", driverName, functionName);
+  }
+  else
+  {
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Created libplctag tag index: %d with tag string: %s\n", driverName, functionName, tagIndex, tag.c_str());
   }
 
   /* Initialise each datatype*/
-
   omronDrvUser_t *newDrvUser = (omronDrvUser_t *)callocMustSucceed(1, sizeof(omronDrvUser_t), functionName);
   newDrvUser->dataType = keyWords.at("dataType");
   newDrvUser->tag = tag;
@@ -258,10 +257,9 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
 
   if (asynIndex < 0)
   {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "Creation of asyn parameter failed for drvInfo: %s\n", driverName, functionName, tagIndex, drvInfo);
     return (asynStatus)asynIndex;
   }
-
-  std::cout << tagIndex << " " << asynIndex << std::endl;
 
   pasynUser->reason = asynIndex;
   pasynUser->drvUser = newDrvUser;
@@ -283,6 +281,11 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   {
     setParamStatus(asynIndex, asynError);
   }
+  else
+  {
+    std::cout << "Successfull creation of asyn parameter with index: "<<asynIndex<<" connected to libplctag index: "<<tagIndex<<std::endl;
+    //asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Successfull creation of asyn parameter with index: %d connected to liplctag index: %d\n", driverName, functionName, status, tagIndex);
+  }
   this->unlock();
   return status;
 }
@@ -302,17 +305,18 @@ asynStatus drvOmronEIP::createPoller(const char *portName, const char *pollerNam
 
 std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const char *drvInfo)
 {
+  const char * functionName = "drvInfoParser";
   const std::string str(drvInfo);
   char delim = ' ';
   char escape = '/';
   std::unordered_map<std::string, std::string> keyWords = {
       {"pollerName", "none"}, // optional
-      {"tagName", "none"},    // required
-      {"dataType", "none"},   // optional
-      {"startIndex", "1"},    // optional
-      {"sliceSize", "1"},     // optional
-      {"offset", "0"},        // optional
-      {"tagExtras", "none"},  // optional
+      {"tagName", "none"},  
+      {"dataType", "none"}, 
+      {"startIndex", "1"},   
+      {"sliceSize", "1"},     
+      {"offset", "0"},       
+      {"tagExtras", "none"},  
       {"stringValid", "none"} // set to false if errors are detected which aborts creation of tag and asyn parameter
   };
   std::list<std::string> words;
@@ -604,19 +608,19 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
     }
   }
 
+  std::cout << "Creating libplctag tag with the following parameters:" << std::endl;
 
   for (auto i = keyWords.begin(); i != keyWords.end(); i++)
   {
     std::cout << i->first << " \t\t\t";
     if (i->first.size() < 7){std::cout<<"\t";}
     std::cout<< i->second <<std::endl;
+    //asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s : %s\n", driverName, functionName, i->first.c_str(), i->second.c_str());
   }
-  std::cout << "Returning keyWords" << std::endl;
-
+  std::cout<<std::endl;
   return keyWords;
 }
 
-/* Stores user input struct as a map of Struct:field_list */
 asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * filePath)
 {
   std::ifstream infile(filePath); 
@@ -647,7 +651,25 @@ asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * fileP
     return asynSuccess;
 }
 
-int findOffsetsRecursive(auto const& rawMap, std::string structName, auto& structMap)
+asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vector<std::string>> rawMap)
+{
+  std::unordered_map<std::string, std::vector<int>> structMap;
+  for (auto kv: rawMap)
+  {// look for kv.first in structMap
+    findOffsetsRecursive(rawMap, kv.first, structMap);
+  }
+  // add to debug
+  // for (auto const& i : structMap) {
+  //   std::cout << i.first;
+  //   for (auto const& j : i.second)
+  //     std::cout << " " << j;
+  //   std::cout<<std::endl;
+  // }
+  this->structMap_= structMap;
+  return asynSuccess;
+}
+
+int drvOmronEIP::findOffsetsRecursive(auto const& rawMap, std::string structName, auto& structMap)
 {
   std::vector<int> newRow = {0};
   int offSetsCounted = 0;
@@ -744,24 +766,6 @@ int findOffsetsRecursive(auto const& rawMap, std::string structName, auto& struc
         return -1;
     }
   }
-}
-
-asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vector<std::string>> rawMap)
-{
-  std::unordered_map<std::string, std::vector<int>> structMap;
-  for (auto kv: rawMap)
-  {// look for kv.first in structMap
-    findOffsetsRecursive(rawMap, kv.first, structMap);
-  }
-  // add to debug
-  // for (auto const& i : structMap) {
-  //   std::cout << i.first;
-  //   for (auto const& j : i.second)
-  //     std::cout << " " << j;
-  //   std::cout<<std::endl;
-  // }
-  this->structMap_= structMap;
-  return asynSuccess;
 }
 
 void drvOmronEIP::readPoller()
@@ -1000,7 +1004,7 @@ void drvOmronEIP::readPoller()
     callParamCallbacks();
     auto endTime = std::chrono::system_clock::now();
     timeTaken = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-    std::cout << "Time taken(msec): " << timeTaken << std::endl;
+    std::cout << "Poller: "<<threadName<< " finished processing in " << timeTaken << " msec" <<std::endl;
     std::cout << std::endl;
   }
 }
@@ -1155,7 +1159,7 @@ asynStatus drvOmronEIP::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
   }
   else if (drvUser->dataType == "LREAL")
   {
-    plc_tag_set_float32(tagIndex, offset, value);
+    plc_tag_set_float64(tagIndex, offset, value);
   }
   status = plc_tag_write(tagIndex, timeout);
   return asynSuccess;
@@ -1261,12 +1265,14 @@ extern "C"
   asynStatus drvOmronEIPConfigure(const char *portName,
                                   char *gateway,
                                   char *path,
-                                  char *plcType)
+                                  char *plcType,
+                                  int debugLevel)
   {
     new drvOmronEIP(portName,
                     gateway,
                     path,
-                    plcType);
+                    plcType,
+                    debugLevel);
 
     return asynSuccess;
   }
@@ -1277,18 +1283,20 @@ extern "C"
   static const iocshArg ConfigureArg1 = {"Gateway", iocshArgString};
   static const iocshArg ConfigureArg2 = {"Path", iocshArgString};
   static const iocshArg ConfigureArg3 = {"PLC type", iocshArgString};
+  static const iocshArg ConfigureArg4 = {"Debug level", iocshArgInt};
 
-  static const iocshArg *const drvOmronEIPConfigureArgs[4] = {
+  static const iocshArg *const drvOmronEIPConfigureArgs[5] = {
       &ConfigureArg0,
       &ConfigureArg1,
       &ConfigureArg2,
-      &ConfigureArg3};
+      &ConfigureArg3,
+      &ConfigureArg4};
 
   static const iocshFuncDef drvOmronEIPConfigureFuncDef = {"drvOmronEIPConfigure", 4, drvOmronEIPConfigureArgs};
 
   static void drvOmronEIPConfigureCallFunc(const iocshArgBuf *args)
   {
-    drvOmronEIPConfigure(args[0].sval, args[1].sval, args[2].sval, args[3].sval);
+    drvOmronEIPConfigure(args[0].sval, args[1].sval, args[2].sval, args[3].sval, args[4].ival);
   }
 
   static void drvOmronEIPRegister(void)

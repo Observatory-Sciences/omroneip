@@ -3,14 +3,13 @@
 TOP = ../..
 include $(TOP)/configure/CONFIG
 
-#----------------------------------------
-#  ADD MACRO DEFINITIONS AFTER THIS LINE
-#=============================
+# Point the build system to libplctags header and shared library files
+# The name "plctag" must be used instead of "libplctag" or there will be problems
+#==================================================
 SRC_DIRS += $(LIBPLCTAG_LIB)
-USR_INCLUDES += -I$(LIBPLCTAG_LIB)
-USR_DBDFLAGS += -I$(LIBPLCTAG_LIB)
-PROD_LDFLAGS += -L$(LIBPLCTAG_BUILD)
-PROD_SYS_LIBS += libplctag
+PROD_LIBS += plctag
+plctag_DIR = $(LIBPLCTAG_BUILD)
+
 #==================================================
 # Build an IOC support library
 
@@ -18,7 +17,6 @@ PROD_SYS_LIBS += libplctag
 DBD += omroneipApp.dbd
 DBD += omroneipSupport.dbd
 
-INC += omroneip.h
 INC += drvOmroneip.h
 
 LIBRARY_IOC += omroneip

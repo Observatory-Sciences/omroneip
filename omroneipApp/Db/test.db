@@ -64,5 +64,5 @@
 record(ai, "$(P)readFloat32") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, cat)@$(POLLER) transportArray1[1] REAL 1 UDT808_ZTC_TCs[4] 0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) transportArray1[1] REAL 1 UDT808_ZTC_TCs[4] 0")
 }

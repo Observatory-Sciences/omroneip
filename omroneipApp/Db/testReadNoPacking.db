@@ -3,7 +3,7 @@ record(waveform, "$(P)readUDTNoPacking") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] UDT 9 allow_packing=0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[1] UDT 9 0 &allow_packing=0")
     field(NELM, "1996")
 }
 
@@ -11,7 +11,7 @@ record(waveform, "$(P)readUDTNoPackingElement1") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] UDT 1 allow_packing=0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[1] UDT 1 0 &allow_packing=0")
     field(NELM, "1996")
 }
 
@@ -19,7 +19,7 @@ record(waveform, "$(P)readUDTNoPackingElement2") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[2] UDT 1 allow_packing=0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[2] UDT 1 0 &allow_packing=0")
     field(NELM, "1996")
 }
 
@@ -27,7 +27,7 @@ record(waveform, "$(P)readUDTNoPackingElement3") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[3] UDT 1 allow_packing=0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[3] UDT 1 0 &allow_packing=0")
     field(NELM, "1996")
 }
 
@@ -35,6 +35,6 @@ record(waveform, "$(P)readUDTNoPackingElement4") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[4] UDT 1 allow_packing=0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[4] UDT 1 0 &allow_packing=0")
     field(NELM, "1996")
 }

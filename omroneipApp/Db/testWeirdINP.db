@@ -9,7 +9,7 @@ record(longin, "$(P)test1") {
 record(longin, "$(P)test2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)/@test poller/ /test name with gaps[1]/ DINT 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)/@test poller/ /test name with gaps[1]/ DINT 0 0 0")
 }
 
 # Invalid datatype should report error
@@ -44,61 +44,61 @@ record(longin, "$(P)test6") {
 record(longin, "$(P)test7") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller test Name DINT 1 extras")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller test Name DINT 1 0 extras")
 }
 
 # Tag name including indexed parent and child should work
 record(longin, "$(P)test8") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[465].child[2] DINT 1 extras")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[465].child[2] DINT 1 0 extras")
 }
 
 # Test startIndex of 0 should report error
 record(longin, "$(P)test9") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[0] INT 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[0] INT 0 0 0")
 }
 
 # Attempting to index a non indexible tag should report error
 record(longin, "$(P)test10") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 5 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 0 0")
 }
 
 # Extras term contains invalid string, libplctag should report error when tag creation is attempted
 record(longin, "$(P)test11") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 5 0 &unknown_param")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 0 &unknown_param")
 }
 
 # No & is used in extras term, should report error
 record(longin, "$(P)test12") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 5 0 allow_packing=2")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 0 allow_packing=2")
 }
 
 # No & is used in extras term, should report error
 record(longin, "$(P)test13") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 5 0 allow_packing=2")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 0 allow_packing=2")
 }
 
 # No poller defined for read record, should report error
 record(longin, "$(P)test14") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)testName DINT 5 0 allow_packing=2")
+    field(INP, "@asyn($(PORT), 0, 1)testName DINT 1 0 allow_packing=2")
 }
 
 # Poller defined for write record, should report error
 record(longout, "$(P)test12") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(OUT, "@asyn($(PORT), 0, 1)@testPoller testName DINT 5 0 0")
+    field(OUT, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 0 0")
 }

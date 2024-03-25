@@ -29,8 +29,9 @@
 #include <osiSock.h>
 #include <iocsh.h>
 #include <initHooks.h>
+#include <epicsExport.h>
 
-/* libplctag include*/
+/* libplctag include */
 #include "libplctag.h"
 
 /* Asyn includes */
@@ -39,12 +40,7 @@
 #include "asynCommonSyncIO.h"
 #include "asynParamType.h"
 
-
-#include <epicsExport.h>
-
-/* libplctag also supports modbus-tcp but we do not*/
 #define CREATE_TAG_TIMEOUT 1000 //ms
-
 
 typedef enum {
   dataTypeBool,
@@ -71,43 +67,60 @@ typedef enum {
 struct omronDrvUser_t;
 class omronEIPPoller;
 
+/* Main class for the driver */
 class epicsShareClass drvOmronEIP : public asynPortDriver {
 public:
   drvOmronEIP(const char *portName,
               char *gateway,
               char *path,
-              char *plcType);
+              char *plcType,
+              int debugLevel);
 
   bool omronExiting_;
   
   void readPoller();
+  /* Takes a csv style file, where each line contains a structure name followed by a list of datatypes within the struct
+     Stores the user input struct as a map containing Struct:field_list pairs. It then calls createStructMap and passes this map */   
   asynStatus loadStructFile(const char * portName, const char * filePath);
+  /* Loops through each structure within the map and calls findOffsetsRecursive which creates the final structure offset map */
   asynStatus createStructMap(std::unordered_map<std::string, std::vector<std::string>> rawMap);
+  /* A recursive function which is passed a row from the raw map and calculates the offset of each datatype in the row. If the datatype
+     is the name of another structure, then the size of this structure must first be calculated by calling this function with the row for
+     this structure. This process is repeated untill the offset for the lowest common structure is found which is returned by this function.
+     The function then works its way back up. structMap is updated with the calculated offsets. */
+  int findOffsetsRecursive(auto const& rawMap, std::string structName, auto& structMap);
+  /* Creates a new instance of the omronEIPPoller class and starts a new thread named after this new poller which reads data linked to the poller name.*/
   asynStatus createPoller(const char * portName, const char * pollerName, double updateRate);
-  std::unordered_map<std::string, std::string> drvInfoParser(const char *drvInfo);
+  /* Reimplemented from asynDriver. This is called when each record is loaded into epics. It processes the drvInfo from the record and attempts
+     to create a libplctag tag and an asynParameter. It saves the handles to these key objects within the tagMap_. This tagMap_ is then used to
+     process read and write requests to the driver.*/
   asynStatus drvUserCreate(asynUser *pasynUser, const char *drvInfo, const char **pptypeName, size_t *psize)override;
-  /* Must be implemented to support non I/O Interrupt records reading UDTs, not required for other asyn interfaces where defaults are used*/
-
+  /* This is responsible for parsing drvInfo when records are created. It takes the drvInfo string and parses it for required data.
+     It returns a map of all of the data required by the driver to setup the asyn parameter and a boolean which indicates the validity of the data. 
+     This function is called twice, once before and once after database initialization, the first time we just return asynDisabled. */
+  std::unordered_map<std::string, std::string> drvInfoParser(const char *drvInfo);
+  
+  /* The read interface only needs to be reimplemented for int8Arrays as the other read interfaces have helper functions to set the value of the
+     asynParameters that they write to */
   asynStatus readInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements, size_t *nIn)override;
 
+  /* Write interfaces reimplemented from asynPortDriver. Write data from the asynParameter to the associated libplctag tag*/
   asynStatus writeInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements)override;
   asynStatus writeUInt32Digital(asynUser *pasynUser, epicsUInt32 value, epicsUInt32 mask)override;
   asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value)override;
   asynStatus writeInt64(asynUser *pasynUser, epicsInt64 value)override;
   asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value)override;
   asynStatus writeOctet(asynUser *pasynUser, const char * value, size_t nChars, size_t* nActual)override;
-protected:
 
 private:
   bool initialized_; // Tracks if the driver successfully initialized
-  std::string tagConnectionString_;
-  std::unordered_map<std::string, std::vector<int>> structMap_;
-  std::unordered_map<std::string, omronEIPPoller*> pollerList_ = {};
-  std::unordered_map<int, omronDrvUser_t*> tagMap_; /* Maps the index of each registerd param to the EIP data registered in the PV */
-  omronDrvUser_t *drvUser_;
-  /* Drv user structure */
+  std::string tagConnectionString_; // Stores the basic PLC connection information common to all read/write requests
+  std::unordered_map<std::string, std::vector<int>> structMap_; // They key is the name of the struct, the vector is a list of byte offsets within the structure
+  std::unordered_map<std::string, omronEIPPoller*> pollerList_ = {}; // Stores the name of each registered poller
+  std::unordered_map<int, omronDrvUser_t*> tagMap_; /* Maps the index of each registered asynParameter to essential communications data for the parameter */
 };
 
+/* Class which stores information about each poller */
 class omronEIPPoller{
   public:
       omronEIPPoller(const char* portName, const char* pollerName, double updateRate);
