@@ -1292,7 +1292,7 @@ extern "C"
       &ConfigureArg3,
       &ConfigureArg4};
 
-  static const iocshFuncDef drvOmronEIPConfigureFuncDef = {"drvOmronEIPConfigure", 4, drvOmronEIPConfigureArgs};
+  static const iocshFuncDef drvOmronEIPConfigureFuncDef = {"drvOmronEIPConfigure", 5, drvOmronEIPConfigureArgs};
 
   static void drvOmronEIPConfigureCallFunc(const iocshArgBuf *args)
   {
