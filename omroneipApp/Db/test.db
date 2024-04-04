@@ -61,6 +61,23 @@
 #    field(SIZV, "61")
 #}
 
+
+#record(waveform, "$(P)readISIS") {
+#    field(SCAN, "I/O Intr")
+#    field(FTVL, "UCHAR")
+#    field(DTYP, "asynInt8ArrayIn")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] UDT 7 0 &elem_size=1428&allow_packing=1")
+#    field(NELM, "1996")
+#}
+
+#record(waveform, "$(P)readISIS2") {
+#    field(SCAN, "I/O Intr")
+#    field(FTVL, "UCHAR")
+#    field(DTYP, "asynInt8ArrayIn")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[8] UDT 7 0 &elem_size=1428&allow_packing=1")
+#    field(NELM, "1996")
+#}
+
 record(ai, "$(P)readFloat32") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")

@@ -1,0 +1,21 @@
+#Read three fields from struct without using offset (sends three CIP requests for the three items)
+
+record(ai, "$(P)$(R)readFloat") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)].PVValue REAL 1 none 0")
+}
+
+record(lsi, "$(P)$(R)readString1") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)].PVName STRING 1 none 0")
+    field(SIZV, "61")
+}
+
+record(lsi, "$(P)$(R)readString2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)].PVDesc STRING 1 none 0")
+    field(SIZV, "61")
+}

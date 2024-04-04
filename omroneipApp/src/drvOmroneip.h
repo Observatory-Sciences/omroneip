@@ -100,7 +100,7 @@ public:
      This function is called twice, once before and once after database initialization, the first time we just return asynDisabled. */
   std::unordered_map<std::string, std::string> drvInfoParser(const char *drvInfo);
   /* Improves efficiency by merging duplicate tags and looking for situations where multiple UDT field read requests can be replaced with a single UDT read */
-  asynStatus optimizeTags();
+  asynStatus optimiseTags();
   
   /* The read interface only needs to be reimplemented for int8Arrays as the other read interfaces have helper functions to set the value of the
      asynParameters that they write to */
@@ -115,6 +115,7 @@ public:
   asynStatus writeOctet(asynUser *pasynUser, const char * value, size_t nChars, size_t* nActual)override;
 
 private:
+  bool startPollers_;
   bool initialized_; // Tracks if the driver successfully initialized
   std::string tagConnectionString_; // Stores the basic PLC connection information common to all read/write requests
   std::unordered_map<std::string, std::vector<int>> structMap_; // They key is the name of the struct, the vector is a list of byte offsets within the structure
