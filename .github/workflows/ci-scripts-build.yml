@@ -41,7 +41,7 @@ jobs:
             extra: "CMD_CXXFLAGS=-std=c++11"
             name: "Ub-20 gcc-9 C++11, static"
             asyn: "R4-44-2"
-            base: "3.15.9"
+            base: "R3.15.9"
             libplctag: "v2.5.5"
 
     steps:
@@ -50,8 +50,6 @@ jobs:
         submodules: true
     - name: Download and unzip libplctag shared library
       run: |
-        ls
-        pwd
         python .ci-local/install-libplctag.py
       if: matrix.libplctag != ''
     - name: Prepare and compile dependencies
