@@ -50,6 +50,7 @@ jobs:
         submodules: true
     - name: Download and unzip libplctag shared library
       run: |
+        ls
         pwd
         python .ci-local/install-libplctag.py
       if: matrix.libplctag != ''
