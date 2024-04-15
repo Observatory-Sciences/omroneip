@@ -20,7 +20,7 @@ record(longout, "$(P)writeInt16") {
 
 record(longout, "$(P)writeInt32") {
     field(DTYP, "asynInt32")
-    field(OUT, "@asyn($(PORT), 0, 1)testDint DINT 1 0 0") #actually writing to an INT
+    field(OUT, "@asyn($(PORT), 0, 1)testDint DINT 1 0 0")
 }
 
 #Should be int64in but not supported in epics base 3.15
