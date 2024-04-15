@@ -41,11 +41,24 @@
 #    field(INDX, "0")
 #}
 
-
 #record(lso, "$(P)writeString") {
 #    field(DTYP, "asynOctetWrite")
-#    field(OUT, "@asyn($(PORT), 0, 1)ISISTestMultiple[1].PVName STRING 1 &str_is_zero_terminated=0&str_is_fixed_length=0&str_pad_bytes=0&str_is_counted=1&str_count_word_bytes=2&str_max_capacity=60")
+#    field(OUT, "@asyn($(PORT), 0, 1)TestString STRING 1 none &str_max_capacity=60&str_pad_to_16_bits=1")
 #    field(SIZV, "61")
+#}
+
+#record(lsi, "$(P)readString") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynOctetRead")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) TestString STRING 1 none 0")
+#    field(SIZV, "61")
+#}
+
+#record(bo, "$(P)writeBool") {
+#    field(DTYP, "asynUInt32Digital")
+#    field(OUT, "@asynMask($(PORT), 0, 1)testBOOL BOOL 1 none 0")
+#    field(ZNAM, "Off")
+#    field(ONAM, "On")
 #}
 
 #record(ai, "$(P)readFloat32Test") {
@@ -61,8 +74,53 @@
 #    field(SIZV, "61")
 #}
 
+<<<<<<< HEAD
 record(ai, "$(P)readFloat32") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
     field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) transportArray1[1] REAL 1 UDT808_ZTC_TCs[4] 0")
+=======
+
+#record(waveform, "$(P)readISIS") {
+#    field(SCAN, "I/O Intr")
+#    field(FTVL, "UCHAR")
+#    field(DTYP, "asynInt8ArrayIn")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] UDT 7 0 &elem_size=1428&allow_packing=1")
+#    field(NELM, "1996")
+#}
+
+#record(waveform, "$(P)readISIS2") {
+#    field(SCAN, "I/O Intr")
+#    field(FTVL, "UCHAR")
+#    field(DTYP, "asynInt8ArrayIn")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[8] UDT 7 0 &elem_size=1428&allow_packing=1")
+#    field(NELM, "1996")
+#}
+
+#record(waveform, "$(P)writeUDT") {
+#    field(FTVL, "UCHAR")
+#    field(DTYP, "asynInt8ArrayOut")
+#    field(INP, "@asyn($(PORT), 0, 1)ISISTestMultiple[1] UDT 1 none 0")
+#    field(NELM, "1996")
+#}
+
+#record(lso, "$(P)writeString") {
+#    field(DTYP, "asynOctetWrite")
+#    field(OUT, "@asyn($(PORT), 0, 1)myStringArray[1] STRING 1 none &str_max_capacity=60")
+#    field(SIZV, "61")
+#}
+
+#record(waveform, "$(P)writeUDT2") {
+#    field(FTVL, "UCHAR")
+#    field(DTYP, "asynInt8ArrayOut")
+#    field(INP, "@asyn($(PORT), 0, 1)stringUDT UDT 1 none &allow_packing=1")
+#    field(NELM, "1996")
+#}
+
+record(bo, "$(P)writeBool") {
+    field(DTYP, "asynUInt32Digital")
+    field(OUT, "@asynMask($(PORT), 0, 1)testBOOL BOOL 1 0 0")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+>>>>>>> eace4f5 (A few minor fixes found during testing)
 }
