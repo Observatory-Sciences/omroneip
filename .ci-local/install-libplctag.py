@@ -3,12 +3,12 @@ from __future__ import print_function
 import sys, os
 import shutil
 import subprocess as sp
-import cue
 import zipfile
 
 curdir = os.getcwd()
 
 sys.path.append(os.path.join(curdir, '.ci'))
+import cue
 cue.detect_context()
 
 sourcedir = os.path.join(cue.homedir, '.source')
