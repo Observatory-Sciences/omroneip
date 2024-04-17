@@ -43,7 +43,7 @@ jobs:
             name: "Ub-20 gcc-9 C++11, static"
             libplctag: "v2.5.5"
 
-          - os: ubuntu-23.10
+          - os: ubuntu-22.04.4
             cmp: gcc
             configuration: static
             extra: "CMD_CXXFLAGS=-std=c++23"
