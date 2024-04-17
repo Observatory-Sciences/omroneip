@@ -3,9 +3,13 @@ record(waveform, "$(P)$(R)readISIS") {
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
 <<<<<<< HEAD
+<<<<<<< HEAD
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(INDEX)] UDT $(SLICE) 0 &elem_size=204&allow_packing=0")
 =======
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(INDEX)] UDT $(SLICE) none &elem_size=204&allow_packing=1")
 >>>>>>> eace4f5 (A few minor fixes found during testing)
+=======
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(INDEX)] UDT $(SLICE) none &elem_size=204&allow_packing=1")
+>>>>>>> f5f9b1db8afb7dffb23785c125392c58b1433c47
     field(NELM, "1996")
 }
