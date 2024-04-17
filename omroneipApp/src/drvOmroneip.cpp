@@ -479,10 +479,21 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
       {"startIndex", "1"},   
       {"sliceSize", "1"},     
       {"offset", "0"},       
+<<<<<<< HEAD
+<<<<<<< HEAD
+      {"tagExtras", "none"},  
+      {"stringValid", "none"} // set to false if errors are detected which aborts creation of tag and asyn parameter
+=======
+=======
+>>>>>>> f5f9b1db8afb7dffb23785c125392c58b1433c47
       {"tagExtras", "none"},
       {"strCapacity", "0"}, // only needed for getting strings from UDTs  
       {"offsetFlag", "false"}, // set to true if the user enters a value for offset other than none, later set to "unique" to identify a tag as needing to be read from PLC
       {"stringValid", "true"} // set to false if errors are detected which aborts creation of tag and asyn parameter
+<<<<<<< HEAD
+>>>>>>> eace4f5 (A few minor fixes found during testing)
+=======
+>>>>>>> f5f9b1db8afb7dffb23785c125392c58b1433c47
   };
   std::list<std::string> words;
   std::string substring;
@@ -642,6 +653,31 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
     }
     else if (i == 3)
     {
+<<<<<<< HEAD
+<<<<<<< HEAD
+      int structIndex = 0; // will store user supplied index into user supplied struct
+      int indexStartPos = 0; // stores the position of the first '[' within the user supplied string
+      int offset = 0;
+      // attempt to set offset to integer, if not possible then assume it is a structname
+      try
+=======
+      size_t structIndex = 0; // will store user supplied index into user supplied struct
+      size_t indexStartPos = 0; // stores the position of the first '[' within the user supplied string
+      size_t offset = 0;
+      size_t strCapacity = 0; // stores the size of the item, used for finding the size of strings inside UDTs
+      // user has chosen not to use an offset
+      if (words.front() == "none")
+>>>>>>> f5f9b1db8afb7dffb23785c125392c58b1433c47
+      {
+        keyWords.at("offsetFlag") = "false";
+        keyWords.at("offset") = "0";
+      }
+<<<<<<< HEAD
+      catch(...)
+      {
+        // attempt to split name and integer
+        for (int n = 0; n<words.front().size(); n++)
+=======
       size_t structIndex = 0; // will store user supplied index into user supplied struct
       size_t indexStartPos = 0; // stores the position of the first '[' within the user supplied string
       size_t offset = 0;
@@ -655,6 +691,12 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
       else {
         // attempt to set offset to integer, if not possible then assume it is a structname
         try
+>>>>>>> eace4f5 (A few minor fixes found during testing)
+=======
+      else {
+        // attempt to set offset to integer, if not possible then assume it is a structname
+        try
+>>>>>>> f5f9b1db8afb7dffb23785c125392c58b1433c47
         {
           offset = std::stoi(words.front());
           keyWords.at("offsetFlag") = "true";
@@ -664,7 +706,17 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
           // attempt to split name and integer
           for (size_t n = 0; n<words.front().size(); n++)
           {
+<<<<<<< HEAD
+<<<<<<< HEAD
+            std::string offsetSubstring = words.front().substr(n+1,words.front().size()-(n+1));
+            indexStartPos = n;
+            for (int m = 0; m<offsetSubstring.size(); m++)
+=======
             if (words.front().c_str()[n] == '[')
+>>>>>>> eace4f5 (A few minor fixes found during testing)
+=======
+            if (words.front().c_str()[n] == '[')
+>>>>>>> f5f9b1db8afb7dffb23785c125392c58b1433c47
             {
               std::string offsetSubstring = words.front().substr(n+1,words.front().size()-(n+1));
               indexStartPos = n;
@@ -672,6 +724,14 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
               {
                 if (offsetSubstring.c_str()[m] == ']')
                 {
+<<<<<<< HEAD
+<<<<<<< HEAD
+                  //struct integer found
+                  structIndex = std::stoi(offsetSubstring.substr(0,m));
+                  goto findOffsetFromStruct;
+=======
+=======
+>>>>>>> f5f9b1db8afb7dffb23785c125392c58b1433c47
                   try
                   {
                     //struct integer found
@@ -684,6 +744,10 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
                     std::cout << "Error, could not find a valid index for the requested structure: " << words.front() << std::endl;
                     keyWords.at("stringValid") = "false";
                   }
+<<<<<<< HEAD
+>>>>>>> eace4f5 (A few minor fixes found during testing)
+=======
+>>>>>>> f5f9b1db8afb7dffb23785c125392c58b1433c47
                 }
               }
             }
@@ -968,11 +1032,21 @@ void drvOmronEIP::readPoller()
   int status;
   int still_pending = 1;
   int timeTaken = 0;
+<<<<<<< HEAD
+<<<<<<< HEAD
+  while (!startPollers) {epicsThreadSleep(0.1);}
+=======
+=======
+>>>>>>> f5f9b1db8afb7dffb23785c125392c58b1433c47
   //The poller may not be fully initialised until the startPollers_ flag is set to 1, do not attempt to get the pPoller yet
   while (!this->startPollers_) {epicsThreadSleep(0.1);}
   omronEIPPoller* pPoller = pollerList_.at(threadName);
   double interval = pPoller->updateRate_;
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Starting poller: %s with interval: %f\n", driverName, functionName, threadName.c_str(), interval);
+<<<<<<< HEAD
+>>>>>>> eace4f5 (A few minor fixes found during testing)
+=======
+>>>>>>> f5f9b1db8afb7dffb23785c125392c58b1433c47
   while (true)
   {
     double waitTime = interval - ((double)timeTaken / 1000);
@@ -988,8 +1062,18 @@ void drvOmronEIP::readPoller()
     {
       if (x.second->pollerName == threadName && x.second->offsetFlag == "unique")
       {
+<<<<<<< HEAD
+<<<<<<< HEAD
+        //std::cout<<"Reading tag " <<x.second->tagIndex<<" on poller "<<threadName<<" with interval "<<interval<<" seconds"<<std::endl;
+        status = plc_tag_read(x.second->tagIndex, 0); // read from plc as fast as possible, we will check status and timeouts later
+=======
         asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Reading tag: %d with polling interval: %f seconds\n", driverName, functionName, x.second->tagIndex, interval);
         plc_tag_read(x.second->tagIndex, 0); // read from plc as fast as possible, we will check status and timeouts later
+>>>>>>> eace4f5 (A few minor fixes found during testing)
+=======
+        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Reading tag: %d with polling interval: %f seconds\n", driverName, functionName, x.second->tagIndex, interval);
+        plc_tag_read(x.second->tagIndex, 0); // read from plc as fast as possible, we will check status and timeouts later
+>>>>>>> f5f9b1db8afb7dffb23785c125392c58b1433c47
       }
     }
 

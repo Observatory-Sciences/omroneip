@@ -74,6 +74,15 @@
 #    field(SIZV, "61")
 #}
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+record(ai, "$(P)readFloat32") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) transportArray1[1] REAL 1 UDT808_ZTC_TCs[4] 0")
+=======
+=======
+>>>>>>> f5f9b1db8afb7dffb23785c125392c58b1433c47
 
 #record(waveform, "$(P)readISIS") {
 #    field(SCAN, "I/O Intr")
@@ -116,4 +125,8 @@ record(bo, "$(P)writeBool") {
     field(OUT, "@asynMask($(PORT), 0, 1)testBOOL BOOL 1 0 0")
     field(ZNAM, "Off")
     field(ONAM, "On")
+<<<<<<< HEAD
+>>>>>>> eace4f5 (A few minor fixes found during testing)
+=======
+>>>>>>> f5f9b1db8afb7dffb23785c125392c58b1433c47
 }
