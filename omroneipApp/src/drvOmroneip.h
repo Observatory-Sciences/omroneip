@@ -88,7 +88,7 @@ public:
      is the name of another structure, then the size of this structure must first be calculated by calling this function with the row for
      this structure. This process is repeated untill the offset for the lowest common structure is found which is returned by this function.
      The function then works its way back up. structMap is updated with the calculated offsets. */
-  int findOffsetsRecursive(auto const& rawMap, std::string structName, auto& structMap);
+  size_t findOffsetsRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap);
   /* Creates a new instance of the omronEIPPoller class and starts a new thread named after this new poller which reads data linked to the poller name.*/
   asynStatus createPoller(const char * portName, const char * pollerName, double updateRate);
   /* Reimplemented from asynDriver. This is called when each record is loaded into epics. It processes the drvInfo from the record and attempts
@@ -99,6 +99,8 @@ public:
      It returns a map of all of the data required by the driver to setup the asyn parameter and a boolean which indicates the validity of the data. 
      This function is called twice, once before and once after database initialization, the first time we just return asynDisabled. */
   std::unordered_map<std::string, std::string> drvInfoParser(const char *drvInfo);
+  /* Improves efficiency by merging duplicate tags and looking for situations where multiple UDT field read requests can be replaced with a single UDT read */
+  asynStatus optimiseTags();
   
   /* The read interface only needs to be reimplemented for int8Arrays as the other read interfaces have helper functions to set the value of the
      asynParameters that they write to */
@@ -113,6 +115,7 @@ public:
   asynStatus writeOctet(asynUser *pasynUser, const char * value, size_t nChars, size_t* nActual)override;
 
 private:
+  bool startPollers_;
   bool initialized_; // Tracks if the driver successfully initialized
   std::string tagConnectionString_; // Stores the basic PLC connection information common to all read/write requests
   std::unordered_map<std::string, std::vector<int>> structMap_; // They key is the name of the struct, the vector is a list of byte offsets within the structure
