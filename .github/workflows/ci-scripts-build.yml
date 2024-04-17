@@ -40,27 +40,17 @@ jobs:
             cmp: gcc
             configuration: static
             extra: "CMD_CXXFLAGS=-std=c++11"
-<<<<<<< HEAD
             name: "Ub-20 C++11, static"
-=======
-            name: "Ub-20 gcc-9 C++11, static"
->>>>>>> f5f9b1db8afb7dffb23785c125392c58b1433c47
             libplctag: "v2.5.5"
 
           - os: ubuntu-22.04.4
             cmp: gcc
             configuration: static
             extra: "CMD_CXXFLAGS=-std=c++23"
-<<<<<<< HEAD
             name: "Ub-22 C++23, static"
             libplctag: "v2.5.3"
             asyn: "R4-44-1"
             base: "7.0"
-=======
-            name: "Ub-23 gcc-9 C++23, static"
-            libplctag: "v2.5.3"
-            asyn: "R4-44-1"
->>>>>>> f5f9b1db8afb7dffb23785c125392c58b1433c47
 
     steps:
     - uses: actions/checkout@v3
