@@ -28,7 +28,7 @@ jobs:
       CMP: ${{ matrix.cmp }}
       BCFG: ${{ matrix.configuration }}
       LIBPLCTAG: ${{ matrix.libplctag }}
-      SET: "stable.set"
+      SET: "stable"
     strategy:
       fail-fast: true
       matrix:
