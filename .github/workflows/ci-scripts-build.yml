@@ -27,9 +27,8 @@ jobs:
     env:
       CMP: ${{ matrix.cmp }}
       BCFG: ${{ matrix.configuration }}
-      BASE: ${{ matrix.base }}
-      ASYN: ${{ matrix.asyn }}
       LIBPLCTAG: ${{ matrix.libplctag }}
+      SET: "stable.set"
     strategy:
       fail-fast: true
       matrix:
@@ -40,8 +39,6 @@ jobs:
             configuration: static
             extra: "CMD_CXXFLAGS=-std=c++11"
             name: "Ub-20 gcc-9 C++11, static"
-            asyn: "R4-44-2"
-            base: "R3.15.9"
             libplctag: "v2.5.5"
 
     steps:
