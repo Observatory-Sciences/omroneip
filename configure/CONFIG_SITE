@@ -36,8 +36,9 @@ CHECK_RELEASE = YES
 #CROSS_OPT = NO
 
 # Path to libplctag installation
-LIBPLCTAG_LIB = /home/epics-dev/work/epics/external/libplctag-experimental/src/lib
-LIBPLCTAG_BUILD = /home/epics-dev/work/epics/external/libplctag-experimental/build/bin_dist
+LIBPLCTAG = /home/epics-dev/work/epics/external/libplctag-experimental
+LIBPLCTAG_LIB = $(LIBPLCTAG)/src/lib
+LIBPLCTAG_BUILD = $(LIBPLCTAG)/build/bin_dist
 STATIC_BUILD = NO
 SHARED_LIBRARIES = YES
 

@@ -1,36 +1,39 @@
-import os
-import requests
+from __future__ import print_function
+
+import sys, os
+import shutil
+import subprocess as sp
+import cue
 import zipfile
 
-def download_file(url, save_path):
-    with requests.get(url, stream=True) as response:
-        with open(save_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
+curdir = os.getcwd()
 
-def unzip_file(zip_file, extract_dir):
-    with zipfile.ZipFile(zip_file, 'r') as zip_ref:
-        zip_ref.extractall(extract_dir)
+sys.path.append(os.path.join(curdir, '.ci'))
+cue.detect_context()
 
-def main():
-    github_url = 'https://github.com/libplctag/libplctag/releases/download/v2.5.5/libplctag_2.5.5_ubuntu_x86.zip'
-    zip_file_name = 'libplctag.zip'
-    download_path = os.path.join(os.getcwd(), zip_file_name)
-    extract_dir = os.path.join(os.getcwd(), 'libplctag')
+sourcedir = os.path.join(cue.homedir, '.source')
+sdkdir = os.path.join(sourcedir, 'sdk')
 
-    # Download the zip file
-    print("Downloading zip file...")
-    download_file(github_url, download_path)
+if 'LIBPLCTAG' in os.environ:
+    with open(os.path.join(curdir, 'configure', 'CONFIG_SITE.local'), 'a') as f:
+        f.write('LIBPLCTAG = {0}'.format(sdkdir))
+    try:
+        os.makedirs(sourcedir)
+        os.makedirs(cue.toolsdir)
+    except:
+        pass
 
-    # Unzip the file
-    print("Unzipping file...")
-    unzip_file(download_path, extract_dir)
-
-    # Delete the zip file
-    print("Deleting zip file...")
-    os.remove(download_path)
-
-    print("Unzip complete!")
-
-if __name__ == "__main__":
-    main()
+    zip_name = '{0}.zip'.format(os.environ['LIBPLCTAG'])
+    print('Downloading libplctag {0}'.format(os.environ['LIBPLCTAG']))
+    sys.stdout.flush()
+    sp.check_call(['curl', '-fsSL', '--retry', '3', '-o', zip_name,
+            'https://github.com/libplctag/libplctag/archive/refs/tags/{0}'
+            .format(zip_name)],
+            cwd=cue.toolsdir)
+    
+    if os.path.exists(sdkdir):
+        shutil.rmtree(sdkdir)
+    zip_path = os.path.join(cue.toolsdir, zip_name)
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(sdkdir)
+    os.remove(zip_path)

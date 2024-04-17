@@ -24,6 +24,7 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     # Set environment variables from matrix parameters
+    # Default modules and epics base read in from stable.set
     env:
       CMP: ${{ matrix.cmp }}
       BCFG: ${{ matrix.configuration }}
