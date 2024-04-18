@@ -31,7 +31,10 @@ jobs:
       LIBPLCTAG: ${{ matrix.libplctag }}
       ASYN: ${{ matrix.asyn }}
       SET: "stable"
+<<<<<<< HEAD
 
+=======
+>>>>>>> 4e06e82636ce95900f62da4918a4826c75f01c00
     strategy:
       fail-fast: true
       matrix:
@@ -45,6 +48,7 @@ jobs:
             libplctag: "v2.5.3"
             asyn: "R4-44-1"
 
+<<<<<<< HEAD
           - os: ubuntu-18.04
             cmp: gcc
             configuration: static
@@ -52,6 +56,14 @@ jobs:
             name: "Ub-18 C++11, static"
             libplctag: "v2.5.5"
             base: "7.0"
+=======
+          - os: ubuntu-20.04
+            cmp: gcc
+            configuration: static
+            extra: "CMD_CXXFLAGS=-std=c++11"
+            name: "Ub-20 gcc-9 C++11, static"
+            libplctag: "v2.5.5"
+>>>>>>> 4e06e82636ce95900f62da4918a4826c75f01c00
 
     steps:
     - uses: actions/checkout@v3
