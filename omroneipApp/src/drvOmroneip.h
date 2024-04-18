@@ -75,7 +75,7 @@ public:
               char *path,
               char *plcType,
               int debugLevel);
-
+  ~drvOmronEIP();
   bool omronExiting_;
   
   void readPoller();
