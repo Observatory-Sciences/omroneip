@@ -127,7 +127,9 @@ private:
 class omronEIPPoller{
   public:
       omronEIPPoller(const char* portName, const char* pollerName, double updateRate);
+      ~omronEIPPoller();
       const char* belongsTo_;
       const char* pollerName_;
       double updateRate_;
+
 };

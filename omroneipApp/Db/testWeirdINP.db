@@ -97,8 +97,15 @@ record(longin, "$(P)test14") {
 }
 
 # Poller defined for write record, should report error
-record(longout, "$(P)test12") {
+record(longout, "$(P)test15") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
     field(OUT, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 0 0")
+}
+
+# Using nones instead of zeroes, should work fine
+record(longout, "$(P)test16") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(OUT, "@asyn($(PORT), 0, 1)@testPoller testName DINT none none none")
 }
