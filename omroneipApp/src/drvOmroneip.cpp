@@ -64,8 +64,7 @@ static int optimiseTagsC(void *drvPvt)
   {
     epicsThreadSleep(0.1);
   }
-  pPvt->optimiseTags();
-  return asynSuccess;
+  return pPvt->optimiseTags();
 }
 
 omronEIPPoller::omronEIPPoller(const char *portName, const char *pollerName, double updateRate):
@@ -79,6 +78,7 @@ static void omronExitCallback(void *pPvt)
 {
   drvOmronEIP *pDriver = (drvOmronEIP *)pPvt;
   pDriver->omronExiting_ = true;
+  epicsThreadSleep(1);
 }
 
 /* This function is called by the IOC load system after iocInit() or iocRun() have completed */
@@ -116,25 +116,28 @@ drvOmronEIP::drvOmronEIP(const char *portName,
   epicsAtExit(omronExitCallback, this);
   plc_tag_set_debug_level(debugLevel);
   initHookRegister(myInitHookFunction);
-  int status = (epicsThreadCreate("optimiseTags",
+  asynStatus status = (asynStatus)(epicsThreadCreate("optimiseTags",
                           epicsThreadPriorityMedium,
                           epicsThreadGetStackSize(epicsThreadStackMedium),
                           (EPICSTHREADFUNC)optimiseTagsC,
                           this) == NULL);
+  if (status!=0){
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Returned asyn status: %i\n", driverName, functionName, status);
+  }
   initialized_ = true;
 }
 
 asynStatus drvOmronEIP::createPoller(const char *portName, const char *pollerName, double updateRate)
 {
   int status;
-  omronEIPPoller* pPoller = new omronEIPPoller(portName, pollerName, updateRate); //make this a smart pointer! Currently not freed
+  omronEIPPoller* pPoller = new omronEIPPoller(portName, pollerName, updateRate);
   pollerList_[pPoller->pollerName_] = pPoller;
   status = (epicsThreadCreate(pPoller->pollerName_,
                             epicsThreadPriorityMedium,
                             epicsThreadGetStackSize(epicsThreadStackMedium),
                             (EPICSTHREADFUNC)readPollerC,
                             this) == NULL);
-  free(pPoller);
+  delete(pPoller);
   return (asynStatus)status;
 }
 
@@ -156,13 +159,18 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   }
 
   status = getAddress(pasynUser, &addr);
-  status = findParam(addr, drvInfo, &asynIndex);
+  if (status == asynSuccess) {
+    status = findParam(addr, drvInfo, &asynIndex);
+  }
+  else return asynError;
+
   if (status == asynSuccess)
   {
     // Parameter already exists
     return asynSuccess;
   }
 
+  // Get the required data from the drvInfo string
   std::unordered_map<std::string, std::string> keyWords = drvInfoParser(drvInfo);
   if (keyWords.at("stringValid") != "true")
   {
@@ -198,12 +206,10 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   if (tagIndex<0)
   {
     const char* error = plc_tag_decode_error(tagIndex);
-    printf("Tag not added! %s\n", error);
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s  Tag not added! %s\n", driverName, functionName, error);
   }
   else if (tagIndex == 1)
   {
-    printf("Tag not added! Timeout while creating tag.\n");
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag not added! Timeout while creating tag.\n", driverName, functionName);
   }
 
@@ -220,6 +226,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   newDrvUser->strCapacity = std::stoi(keyWords.at("strCapacity"));
   newDrvUser->offsetFlag = keyWords.at("offsetFlag");
 
+  status = asynSuccess;
   { /* Take care of different datatypes */
     if (keyWords.at("dataType") == "BOOL")
     {
@@ -297,10 +304,10 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
     }
   }
 
-  if (asynIndex < 0)
+  if (asynIndex < 0 || status!=asynSuccess)
   {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Creation of asyn parameter failed for drvInfo: %s\n", driverName, functionName, tagIndex, drvInfo);
-    return (asynStatus)asynIndex;
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Creation of asyn parameter failed for drvInfo:%s Asyn status:%d\n", driverName, functionName, drvInfo, status);
+    return status;
   }
 
   pasynUser->reason = asynIndex;
@@ -313,6 +320,11 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   }
   // Create the link from the record to the param
   status = asynPortDriver::drvUserCreate(pasynUser, drvInfo, pptypeName, psize);
+  if (status!=asynSuccess){
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Creation of asyn parameter failed for drvInfo:%s Asyn status:%d\n", driverName, functionName, drvInfo, status);
+    return status;
+  }
+
   // For unsuccessfull tags, set record to error, they will never be read from the PLC
   if (tagIndex < 0)
   {
@@ -336,6 +348,7 @@ asynStatus drvOmronEIP::optimiseTags()
   const char * functionName = "drvOptimiseTags";
   std::unordered_map<std::string, int> structIDList; //contains a map of struct paths to the id of the asyn index which gets that struct
   std::unordered_map<std::string, std::vector<int>> commonStructMap; // Contains the structName and a vector of all the asyn Indexes which use this struct
+  int status;
   this->lock();
   // Look at the name used for each tag, if the name references a structure (contains a "."), added structure name to map
   // Each tag which references the structure adds its asyn index to the map under the same structure name key
@@ -409,15 +422,24 @@ asynStatus drvOmronEIP::optimiseTags()
   }
 
   // print out maps
-  for (auto const& i : commonStructMap) {
-    std::cout << i.first;
-    for (auto const& j : i.second)
-      std::cout << " " << j;
-    std::cout<<std::endl;
-  }
+
   std::cout<<std::endl;
   for (auto const& i : structIDList) {
-    std::cout << i.first << " " << i.second <<std::endl;
+    std::cout << i.first << ": " << i.second <<std::endl;
+  }
+
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s The structs which are accessed by multiple records are (struct: libplctag tag index list):\n", driverName, functionName);
+  for (auto const& i : commonStructMap) {
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s: ", i.first.c_str());
+    for (auto const& j : i.second)
+      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%d ", j);
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "\n");
+  }
+
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s The structs alongside the libplctag tag index chosen to read them are:\n", driverName, functionName);
+  for (auto const& i : structIDList) {
+    std::cout << i.first << ": " << i.second <<std::endl;
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s: %d \n", i.first.c_str());
   }
 
   //now that we have a map of structs and which index gets them as well as a map of structs and which indexes need to access them, we can optimise
@@ -448,7 +470,10 @@ asynStatus drvOmronEIP::optimiseTags()
           }
           // we have found a tag that already exists which gets this struct, so we piggy back off this
           // now we get the drvUser for the asyn parameter which is to be optimised and set its tagIndex to the tagIndex we piggy back off
-          plc_tag_destroy(drvUser->tagIndex); //destroy old tag
+          status = plc_tag_destroy(drvUser->tagIndex); //destroy old tag
+          if (status!=0) {
+            asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s  libplctag tag destruction process failed for id %d\n", driverName, functionName, drvUser->tagIndex);
+          }
           drvUser->tagIndex = masterStruct.second;
           asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Asyn index: %d Optimised to use libplctag tag with libplctag index: %d\n", driverName, functionName, asynIndex, masterStruct.second);
         }
@@ -461,9 +486,8 @@ asynStatus drvOmronEIP::optimiseTags()
   }
 
   this->unlock();
-  
   this->startPollers_ = true;
-  return asynSuccess;
+  return asynSuccess; // always return success as any failures to optimise should leave the driver in its pre omtimised state which should have no erros
 }
 
 std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const char *drvInfo)
@@ -543,6 +567,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
 
   if (words.front()[0] == '@')
   {
+    // Sort out potential readpoller reference
     keyWords.at("pollerName") = words.front().substr(1, words.front().size() - 1);
     words.pop_front();
   }
@@ -560,6 +585,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Processing drvInfo parameter: %s\n", driverName, functionName, words.front().c_str());
     if (i == 0)
     {
+      // Check for valid name or name[startIndex]
       std::string startIndex;
       auto b = words.front().begin(), e = words.front().end();
 
@@ -596,7 +622,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
     }
     else if (i == 1)
     {
-      // checking required
+      // Checking for valid datatype
       bool validDataType = false;
       for (int t = 0; t < MAX_OMRON_DATA_TYPES; t++)
       {
@@ -615,37 +641,43 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
     }
     else if (i == 2)
     {
+      // Checking for valid sliceSize
       char *p;
-      strtol(words.front().c_str(), &p, 10);
-      if (*p == 0)
-      {
-        if (indexable && words.front() != "1")
+      if (words.front() == "none"){
+        keyWords.at("sliceSize") = "1";
+      }
+      else {
+        strtol(words.front().c_str(), &p, 10);
+        if (*p == 0)
         {
-          keyWords.at("sliceSize") = words.front();
+          if (indexable && words.front() != "1")
+          {
+            keyWords.at("sliceSize") = words.front();
+          }
+          else if (words.front() == "0")
+          {
+            keyWords.at("sliceSize") = "1";
+          }
+          else if (words.front() != "1")
+          {
+            std::cout << "You cannot get a slice whole tag. Try tag_name[startIndex] to specify elements for slice" << std::endl;
+            keyWords.at("stringValid") = "false";
+          }
         }
-        else if (words.front() == "0")
+        else
         {
-          keyWords.at("sliceSize") = "1";
-        }
-        else if (words.front() != "1")
-        {
-          std::cout << "You cannot get a slice whole tag. Try tag_name[startIndex] to specify elements for slice" << std::endl;
+          std::cout << "Invalid sliceSize, must be integer." << std::endl;
           keyWords.at("stringValid") = "false";
         }
-      }
-      else
-      {
-        std::cout << "Invalid sliceSize, must be integer." << std::endl;
-        keyWords.at("stringValid") = "false";
       }
       words.pop_front();
     }
     else if (i == 3)
     {
+      // Checking for valid offset
       size_t structIndex = 0; // will store user supplied index into user supplied struct
       size_t indexStartPos = 0; // stores the position of the first '[' within the user supplied string
       size_t offset = 0;
-      size_t strCapacity = 0; // stores the size of the item, used for finding the size of strings inside UDTs
       // user has chosen not to use an offset
       if (words.front() == "none")
       {
@@ -726,7 +758,8 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
     }
     else if (i == 4)
     {
-      /*These attributes overwrite libplctag attributes, other attributes which arent overwritten are not mentioned here
+      // Check for valid extra attributes
+      /* These attributes overwrite libplctag attributes, other attributes which arent overwritten are not mentioned here
         Users can overwrite these defaults and other libplctag defaults from their records */
       std::unordered_map<std::string, std::string> defaultTagAttribs = {
           {"allow_packing=", "1"},
@@ -736,8 +769,9 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
           {"str_count_word_bytes=", "2"},
           {"str_pad_bytes=", "0"}};
       std::string extrasString;
-      if (words.front()!="0")
+      if (words.front()!="0" && words.front()!="none")
       {
+        // The user has specified attributes other than default, these will either be added to the list or replace existing default values
         extrasString = words.front();
         for (auto &attrib : defaultTagAttribs)
         {
@@ -792,6 +826,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
       {
         if (attrib.first.substr(0,3) == "str" && keyWords.at("dataType") != "STRING")
         {
+          // If the user requests str type attributes for a non STRING record then ignore
           continue;
         }
         extrasString += "&";
@@ -813,6 +848,8 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
 
 asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * filePath)
 {
+  const char * functionName = "loadStructFile";
+  this->lock();
   std::ifstream infile(filePath); 
   std::unordered_map<std::string, std::vector<std::string>> structMap;
   std::vector<std::string> row; 
@@ -830,32 +867,41 @@ asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * fileP
       row.erase(row.begin());
       structMap[structName] = row;
     } 
-    // add to debug
-    // for (auto const& i : structMap) {
-    //   std::cout << i.first;
-    //   for (auto const& j : i.second)
-    //     std::cout << " " << j;
-    //   std::cout<<std::endl;
-    // }
+
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Loading in struct file with the following definitions:\n", driverName, functionName);
+    for (auto const& i : structMap) {
+      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s: ", i.first.c_str());
+      for (auto const& j : i.second)
+        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s ", j.c_str());
+      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "\n");
+    }
     this->createStructMap(structMap);
     return asynSuccess;
 }
 
 asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vector<std::string>> rawMap)
 {
+  const char * functionName = "createStructMap";
+  asynStatus status = asynSuccess;
   std::unordered_map<std::string, std::vector<int>> structMap;
   for (auto kv: rawMap)
-  {// look for kv.first in structMap
-    findOffsetsRecursive(rawMap, kv.first, structMap);
+  {// look for kv.first in structMap through a recursive search
+    status = (asynStatus) findOffsetsRecursive(rawMap, kv.first, structMap);
   }
-  // add to debug
-  // for (auto const& i : structMap) {
-  //   std::cout << i.first;
-  //   for (auto const& j : i.second)
-  //     std::cout << " " << j;
-  //   std::cout<<std::endl;
-  // }
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s The processed struct definitions with their calculated offsets are:\n", driverName, functionName);
+  for (auto const& i : structMap) {
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s: ", i.first.c_str());
+    for (auto const& j : i.second)
+      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%d ", j);
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "\n");
+  }
   this->structMap_= structMap;
+  if (status != asynSuccess)
+  {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s An error occured while calculating the offsets within the loaded struct file\n", driverName, functionName);
+    return asynError;
+  }
+  this->unlock();
   return asynSuccess;
 }
 
@@ -912,7 +958,7 @@ size_t drvOmronEIP::findOffsetsRecursive(std::unordered_map<std::string, std::ve
         {
           structInvalid = true;
           std::cout<<"STRING type must specify size, " << structName << " definition is invalid" <<std::endl;
-          return -1;
+          return asynError;
         }
       }
       else
@@ -927,6 +973,7 @@ size_t drvOmronEIP::findOffsetsRecursive(std::unordered_map<std::string, std::ve
           {
             structInvalid = true;
             std::cout<<"Error calculating the size of structure: " << dtype << ". Definition for " << structName << " is invalid" << std::endl; 
+            return asynError;
           }
           thisOffset = structSize+lastOffset;
         }
@@ -934,7 +981,7 @@ size_t drvOmronEIP::findOffsetsRecursive(std::unordered_map<std::string, std::ve
         {
           structInvalid = true;
           std::cout<<"Failed to find the standard datatype: " << dtype << ". Definition for " << structName << " and its dependents failed" << std::endl;
-          return -1;
+          return asynError;
         }
       }
     }
@@ -952,11 +999,11 @@ size_t drvOmronEIP::findOffsetsRecursive(std::unordered_map<std::string, std::ve
         return thisOffset;
       }
       else
-        return -1;
+        return asynError;
     }
   }
   // Dont think its possible to get here
-  return -1;
+  return asynError;
 }
 
 void drvOmronEIP::readPoller()
@@ -1064,7 +1111,7 @@ void drvOmronEIP::readPoller()
             epicsInt64 data;
             data = plc_tag_get_int64(x.second->tagIndex, offset);
             status = setInteger64Param(x.first, data);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %ld My type %s\n", driverName, functionName, x.first, x.second->tagIndex, data, x.second->dataType.c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %lld My type %s\n", driverName, functionName, x.first, x.second->tagIndex, data, x.second->dataType.c_str());
           }
           else if (x.second->dataType == "UINT")
           {
@@ -1085,7 +1132,7 @@ void drvOmronEIP::readPoller()
             epicsUInt64 data;
             data = plc_tag_get_uint64(x.second->tagIndex, offset);
             status = setInteger64Param(x.first, data);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %u My type %s\n", driverName, functionName, x.first, x.second->tagIndex, data, x.second->dataType.c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %llu My type %s\n", driverName, functionName, x.first, x.second->tagIndex, data, x.second->dataType.c_str());
           }
           else if (x.second->dataType == "REAL")
           {
@@ -1114,7 +1161,7 @@ void drvOmronEIP::readPoller()
             if (x.second->strCapacity != 0)
             {
               // If we are getting a string from a UDT, we must overwrite the string capacity
-              string_capacity, string_length = x.second->strCapacity;
+              string_capacity = x.second->strCapacity, string_length = x.second->strCapacity;
             }
             else if (string_length>string_capacity+1)
             {
@@ -1123,6 +1170,10 @@ void drvOmronEIP::readPoller()
             }
             char *pData = (char *)malloc((size_t)(unsigned int)(string_length));
             status = plc_tag_get_string(x.second->tagIndex, offset, pData, string_length);
+            if (status !=0){
+              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while accessing STRING data: %s\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
+              continue;
+            }
             status = setStringParam(x.first, pData);
             asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, pData, x.second->dataType.c_str());
             free(pData);
@@ -1132,6 +1183,10 @@ void drvOmronEIP::readPoller()
             int bytes = plc_tag_get_size(x.second->tagIndex);
             uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
             status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
+            if (status !=0){
+              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while accessing WORD data: %s\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
+              continue;
+            }
             epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
             /* We flip around the hex numbers to match what is done in the PLC */
             int n = bytes-1;
@@ -1150,6 +1205,10 @@ void drvOmronEIP::readPoller()
             int bytes = plc_tag_get_size(x.second->tagIndex);
             uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
             status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
+            if (status !=0){
+              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while accessing DWORD data: %s\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
+              continue;
+            }
             epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
             /* We flip around the hex numbers to match what is done in the PLC */
             int n = bytes-1;
@@ -1168,6 +1227,10 @@ void drvOmronEIP::readPoller()
             int bytes = plc_tag_get_size(x.second->tagIndex);
             uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
             status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
+            if (status !=0){
+              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while accessing LWORD data: %s\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
+              continue;
+            }
             epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
             /* We flip around the hex numbers to match what is done in the PLC */
             int n = bytes-1;
@@ -1186,10 +1249,14 @@ void drvOmronEIP::readPoller()
             int bytes = plc_tag_get_size(x.second->tagIndex);
             uint8_t *rawData = (uint8_t *)malloc(bytes * sizeof(uint8_t));
             status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
+            if (status !=0){
+              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while accessing UDT data: %s\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
+              continue;
+            }
             epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
             memcpy(pData, rawData, bytes);
             status = doCallbacksInt8Array(pData, bytes, x.first, 0);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %x My type %s\n", driverName, functionName, x.first, x.second->tagIndex, pData, x.second->dataType.c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %x My type %s\n", driverName, functionName, x.first, x.second->tagIndex, rawData, x.second->dataType.c_str());
             free(rawData);
             free(pData);
           }
@@ -1198,18 +1265,28 @@ void drvOmronEIP::readPoller()
             int bytes = plc_tag_get_size(x.second->tagIndex);
             uint8_t *rawData = (uint8_t *)malloc(bytes * sizeof(uint8_t));
             status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
+            if (status !=0){
+              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while accessing TIME data: %s\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
+              continue;
+            }
             epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
             memcpy(pData, rawData, bytes);
             status = setStringParam(x.first, pData);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter sID: %d My tagIndex: %d My data: %s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, pData, x.second->dataType.c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, pData, x.second->dataType.c_str());
             free(rawData);
             free(pData);
           }
-          setParamStatus(x.first, (asynStatus) status);
+          setParamStatus(x.first, (asynStatus)status);
+          if (status!=asynSuccess) {
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error occured while updating asyn parameter with asyn ID: %d tagIndex: %d Datatype %s\n", driverName, functionName, x.first, x.second->tagIndex, x.second->dataType.c_str());
+          }
         }
       }
     }
     status = callParamCallbacks();
+    if (status!=asynSuccess) {
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error performing asyn callbacks on read poller: %s\n", driverName, functionName, threadName.c_str());
+    }
     auto endTime = std::chrono::system_clock::now();
     timeTaken = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
     if (timeTaken>0)
@@ -1446,19 +1523,26 @@ asynStatus drvOmronEIP::writeOctet(asynUser *pasynUser, const char *value, size_
       asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s A write to a string tag is being attempted without defining the capacity of this string, this may not work! Tag index: %d\n", driverName, functionName, tagIndex);       
       string_capacity = nChars;
     }
-    plc_tag_set_size(tagIndex, string_capacity + 2);     // Allow room for string length
+    status = plc_tag_set_size(tagIndex, string_capacity + 2);     // Allow room for string length
+    if (status < 0) {
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Resizing libplctag tag buffer returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+      return asynError;
+    }
     status = plc_tag_set_string(tagIndex, offset, stringOut); // Set the data
     if (status < 0) {
       asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;
     }
-    plc_tag_set_size(tagIndex, nChars + 2);              // Reduce the tag buffer to delete any data beyond the string we pass in
+    status = plc_tag_set_size(tagIndex, nChars + 2);              // Reduce the tag buffer to delete any data beyond the string we pass in
+    if (status < 0) {
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Resizing libplctag tag buffer returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+      return asynError;
+    }
     status = plc_tag_write(tagIndex, timeout);
     if (status < 0) {
       asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;
     }
-
     memcpy(nActual, &nChars, sizeof(size_t));
   }
   else {
@@ -1471,6 +1555,11 @@ asynStatus drvOmronEIP::writeOctet(asynUser *pasynUser, const char *value, size_
 drvOmronEIP::~drvOmronEIP()
 {
   std::cout<<"drvOmronEIP shutting down"<<std::endl;
+}
+
+omronEIPPoller::~omronEIPPoller()
+{
+  std::cout<<"Poller " << this->pollerName_<< " shutting down"<<std::endl;
 }
 
 extern "C"
