@@ -106,6 +106,19 @@ drvOmronEIP::drvOmronEIP(const char *portName,
   initialized_ = true;
 }
 
+asynStatus drvOmronEIP::createPoller(const char *portName, const char *pollerName, double updateRate)
+{
+  int status;
+  omronEIPPoller* pPoller = new omronEIPPoller(portName, pollerName, updateRate); //make this a smart pointer! Currently not freed
+  pollerList_[pPoller->pollerName_] = pPoller;
+  status = (epicsThreadCreate(pPoller->pollerName_,
+                            epicsThreadPriorityMedium,
+                            epicsThreadGetStackSize(epicsThreadStackMedium),
+                            (EPICSTHREADFUNC)readPollerC,
+                            this) == NULL);
+  free(pPoller);
+  return (asynStatus)status;
+}
 
 asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, const char **pptypeName, size_t *psize)
 {
@@ -288,19 +301,6 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   }
   this->unlock();
   return status;
-}
-
-asynStatus drvOmronEIP::createPoller(const char *portName, const char *pollerName, double updateRate)
-{
-  int status;
-  omronEIPPoller* pPoller = new omronEIPPoller(portName, pollerName, updateRate); //make this a smart pointer! Currently not freed
-  pollerList_[pPoller->pollerName_] = pPoller;
-  status = (epicsThreadCreate(pPoller->pollerName_,
-                            epicsThreadPriorityMedium,
-                            epicsThreadGetStackSize(epicsThreadStackMedium),
-                            (EPICSTHREADFUNC)readPollerC,
-                            this) == NULL);
-  return (asynStatus)status;
 }
 
 std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const char *drvInfo)
@@ -778,8 +778,8 @@ void drvOmronEIP::readPoller()
   int still_pending = 1;
   double interval = pPoller->updateRate_;
   int timeTaken = 0;
-  while (!startPollers) {epicsThreadSleep(0.1);}
-  while (true)
+  while (!startPollers || !omronExiting_) {epicsThreadSleep(0.1);}
+  while (!omronExiting_)
   {
     double waitTime = interval - ((double)timeTaken / 1000);
     //std::cout<<"Reading tags on poller "<<threadName<<" with interval "<<interval<<" seconds"<<std::endl;
@@ -928,6 +928,7 @@ void drvOmronEIP::readPoller()
             status = plc_tag_get_string(x.second->tagIndex, offset, data, string_length);
             setStringParam(x.first, data);
             // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: "<<data<< " My type: "<< x.second->dataType<<std::endl;
+            free(data);
           }
           else if (x.second->dataType == "WORD")
           {
@@ -944,6 +945,8 @@ void drvOmronEIP::readPoller()
             }
             doCallbacksInt8Array(pData, bytes, x.first, 0);
             // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<data<< " My type: "<< x.second->dataType<<std::endl;
+            free(rawData);
+            free(pData);
           }
           else if (x.second->dataType == "DWORD")
           {
@@ -960,6 +963,8 @@ void drvOmronEIP::readPoller()
             }
             doCallbacksInt8Array(pData, bytes, x.first, 0);
             // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<data<< " My type: "<< x.second->dataType<<std::endl;
+            free(rawData);
+            free(pData);
           }
           else if (x.second->dataType == "LWORD")
           {
@@ -976,26 +981,32 @@ void drvOmronEIP::readPoller()
             }
             doCallbacksInt8Array(pData, bytes, x.first, 0);
             // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<data<< " My type: "<< x.second->dataType<<std::endl;
+            free(rawData);
+            free(pData);
           }
           else if (x.second->dataType == "UDT")
           {
             int bytes = plc_tag_get_size(x.second->tagIndex);
-            uint8_t *pOutput = (uint8_t *)malloc(bytes * sizeof(uint8_t));
-            status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, pOutput, bytes);
+            uint8_t *rawData = (uint8_t *)malloc(bytes * sizeof(uint8_t));
+            status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
             epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
-            memcpy(pData, pOutput, bytes);
+            memcpy(pData, rawData, bytes);
             doCallbacksInt8Array(pData, bytes, x.first, 0);
             // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<(int*)(pData)<< " My type: "<< x.second->dataType<<std::endl;
+            free(rawData);
+            free(pData);
           }
           else if (x.second->dataType == "TIME")
           {
             int bytes = plc_tag_get_size(x.second->tagIndex);
-            uint8_t *pOutput = (uint8_t *)malloc(bytes * sizeof(uint8_t));
-            status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, pOutput, bytes);
+            uint8_t *rawData = (uint8_t *)malloc(bytes * sizeof(uint8_t));
+            status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
             epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
-            memcpy(pData, pOutput, bytes);
+            memcpy(pData, rawData, bytes);
             setStringParam(x.first, pData);
             // std::cout<<"My ID: " << x.first << " My tagIndex: "<<x.second->tagIndex<<" My data: " <<(int*)(pData)<< " My type: "<< x.second->dataType<<std::endl;
+            free(rawData);
+            free(pData);
           }
           setParamStatus(x.first, (asynStatus) status);
         }
@@ -1030,6 +1041,7 @@ asynStatus drvOmronEIP::readInt8Array(asynUser *pasynUser, epicsInt8 *value, siz
         memcpy(value, pOutput, bytes);
         memcpy(nIn, &bytes, sizeof(size_t));
       }
+      free(pOutput);
     }
   }
 }

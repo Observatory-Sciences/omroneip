@@ -10,3 +10,4 @@ lib
 iocs/*IOC*
 iocs/example
 .idea
+*.local
