@@ -44,11 +44,11 @@ jobs:
             libplctag: "v2.5.3"
             asyn: "R4-44-1"
 
-          - os: ubuntu-18.04
+          - os: ubuntu-20.04
             cmp: gcc
             configuration: static
             extra: "CMD_CXXFLAGS=-std=c++11"
-            name: "Ub-18 C++11, static"
+            name: "Ub-20 C++11, static"
             libplctag: "v2.5.5"
             base: "7.0"
 

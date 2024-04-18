@@ -466,19 +466,6 @@ asynStatus drvOmronEIP::optimiseTags()
   return asynSuccess;
 }
 
-asynStatus drvOmronEIP::createPoller(const char *portName, const char *pollerName, double updateRate)
-{
-  size_t status;
-  omronEIPPoller* pPoller = new omronEIPPoller(portName, pollerName, updateRate); //make this a smart pointer! Currently not freed
-  pollerList_[pPoller->pollerName_] = pPoller;
-  status = (epicsThreadCreate(pPoller->pollerName_,
-                            epicsThreadPriorityMedium,
-                            epicsThreadGetStackSize(epicsThreadStackMedium),
-                            (EPICSTHREADFUNC)readPollerC,
-                            this) == NULL);
-  return (asynStatus)status;
-}
-
 std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const char *drvInfo)
 {
   const char * functionName = "drvInfoParser";
@@ -1134,27 +1121,27 @@ void drvOmronEIP::readPoller()
               asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Offset does not point to valid string!\n", driverName, functionName);
               continue;
             }
-            char *data = (char *)malloc((size_t)(unsigned int)(string_length));
-            status = plc_tag_get_string(x.second->tagIndex, offset, data, string_length);
-            status = setStringParam(x.first, data);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, data, x.second->dataType.c_str());
-            free(data);
+            char *pData = (char *)malloc((size_t)(unsigned int)(string_length));
+            status = plc_tag_get_string(x.second->tagIndex, offset, pData, string_length);
+            status = setStringParam(x.first, pData);
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, pData, x.second->dataType.c_str());
+            free(pData);
           }
           else if (x.second->dataType == "WORD")
           {
             int bytes = plc_tag_get_size(x.second->tagIndex);
             uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
             status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
-            epicsInt8 *data = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
+            epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
             /* We flip around the hex numbers to match what is done in the PLC */
             int n = bytes-1;
             for (int i = 0; i < bytes; i++)
             {
-              data[i] = rawData[n];
+              pData[i] = rawData[n];
               n--;
             }
-            status = doCallbacksInt8Array(data, bytes, x.first, 0);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %x My type %s\n", driverName, functionName, x.first, x.second->tagIndex, data, x.second->dataType.c_str());
+            status = doCallbacksInt8Array(pData, bytes, x.first, 0);
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %x My type %s\n", driverName, functionName, x.first, x.second->tagIndex, pData, x.second->dataType.c_str());
             free(rawData);
             free(pData);
           }
@@ -1163,16 +1150,16 @@ void drvOmronEIP::readPoller()
             int bytes = plc_tag_get_size(x.second->tagIndex);
             uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
             status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
-            epicsInt8 *data = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
+            epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
             /* We flip around the hex numbers to match what is done in the PLC */
             int n = bytes-1;
             for (int i = 0; i < bytes; i++)
             {
-              data[i] = rawData[n];
+              pData[i] = rawData[n];
               n--;
             }
-            status = doCallbacksInt8Array(data, bytes, x.first, 0);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %x My type %s\n", driverName, functionName, x.first, x.second->tagIndex, data, x.second->dataType.c_str());
+            status = doCallbacksInt8Array(pData, bytes, x.first, 0);
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %x My type %s\n", driverName, functionName, x.first, x.second->tagIndex, pData, x.second->dataType.c_str());
             free(rawData);
             free(pData);
           }
@@ -1181,16 +1168,16 @@ void drvOmronEIP::readPoller()
             int bytes = plc_tag_get_size(x.second->tagIndex);
             uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
             status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
-            epicsInt8 *data = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
+            epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
             /* We flip around the hex numbers to match what is done in the PLC */
             int n = bytes-1;
             for (int i = 0; i < bytes; i++)
             {
-              data[i] = rawData[n];
+              pData[i] = rawData[n];
               n--;
             }
-            status = doCallbacksInt8Array(data, bytes, x.first, 0);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %x My type %s\n", driverName, functionName, x.first, x.second->tagIndex, data, x.second->dataType.c_str());
+            status = doCallbacksInt8Array(pData, bytes, x.first, 0);
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %x My type %s\n", driverName, functionName, x.first, x.second->tagIndex, pData, x.second->dataType.c_str());
             free(rawData);
             free(pData);
           }
@@ -1479,6 +1466,11 @@ asynStatus drvOmronEIP::writeOctet(asynUser *pasynUser, const char *value, size_
     return asynError;
   }
   return asynSuccess;
+}
+
+drvOmronEIP::~drvOmronEIP()
+{
+  std::cout<<"drvOmronEIP shutting down"<<std::endl;
 }
 
 extern "C"
