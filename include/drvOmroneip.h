@@ -77,7 +77,7 @@ public:
               int debugLevel);
   ~drvOmronEIP();
   bool omronExiting_;
-  
+
   void readPoller();
   /* Takes a csv style file, where each line contains a structure name followed by a list of datatypes within the struct
      Stores the user input struct as a map containing Struct:field_list pairs. It then calls createStructMap and passes this map */   
