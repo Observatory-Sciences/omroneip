@@ -15,8 +15,9 @@ struct omronDrvUser_t
   std::string pollerName;
   size_t tagOffset;
   double timeout;
-  std::string offsetFlag;
+  std::string optimisationFlag;
   size_t strCapacity;
+  bool readFlag;
 };
 
 typedef struct
@@ -64,7 +65,8 @@ static int optimiseTagsC(void *drvPvt)
   {
     epicsThreadSleep(0.1);
   }
-  return pPvt->optimiseTags();
+  int status = pPvt->optimiseTags();
+  return status;
 }
 
 omronEIPPoller::omronEIPPoller(const char *portName, const char *pollerName, double updateRate):
@@ -107,7 +109,8 @@ drvOmronEIP::drvOmronEIP(const char *portName,
                      1,                                                                                                                                                  /* Autoconnect */
                      0,                                                                                                                                                  /* Default priority */
                      0),                                                                                                                                                 /* Default stack size*/
-      initialized_(false)
+      initialized_(false),
+      omronExiting_(false)
 
 {
   static const char *functionName = "drvOmronEIP";
@@ -122,7 +125,7 @@ drvOmronEIP::drvOmronEIP(const char *portName,
                           (EPICSTHREADFUNC)optimiseTagsC,
                           this) == NULL);
   if (status!=0){
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Returned asyn status: %i\n", driverName, functionName, status);
+    std::cout<< "Error, Driver initiation returned asyn status:" << status << std::endl;
   }
   initialized_ = true;
 }
@@ -137,7 +140,6 @@ asynStatus drvOmronEIP::createPoller(const char *portName, const char *pollerNam
                             epicsThreadGetStackSize(epicsThreadStackMedium),
                             (EPICSTHREADFUNC)readPollerC,
                             this) == NULL);
-  delete(pPoller);
   return (asynStatus)status;
 }
 
@@ -147,10 +149,12 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   std::string drvInfoString;
   std::string name;
   std::string tag;
-  int asynIndex = 0; //index of asyn parameterr
-  int32_t tagIndex; //index of libplctag tag
-  int addr;
+  bool dupeTag = false;
+  int asynIndex = -1; //index of asyn parameterr
+  int32_t tagIndex = -1; //index of libplctag tag
+  int addr = -1;
   asynStatus status = asynSuccess;
+  bool readFlag = true;
 
   if (initialized_ == false)
   {
@@ -174,46 +178,51 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   std::unordered_map<std::string, std::string> keyWords = drvInfoParser(drvInfo);
   if (keyWords.at("stringValid") != "true")
   {
-    printf("drvInfo string is invalid, record: %s was not created\n", drvInfo);
+    readFlag = false;
+    printf("Error! drvInfo string is invalid, record: %s was not created\n", drvInfo);
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s drvInfo string is invalid, record: %s was not created\n", driverName, functionName, drvInfo);
-    return asynError;
+    tag = "Invalid tag!";
   }
+  else {
 
-  tag = tagConnectionString_ +
-        "&name=" + keyWords.at("tagName") +
-        "&elem_count=" + keyWords.at("sliceSize")
-        + keyWords.at("tagExtras");
+    tag = tagConnectionString_ +
+          "&name=" + keyWords.at("tagName") +
+          "&elem_count=" + keyWords.at("sliceSize")
+          + keyWords.at("tagExtras");
 
-  //check if a duplicate tag has already been created
-  bool dupeTag = false;
-  for (auto previousTag: tagMap_)
-  {
-    if (tag == previousTag.second->tag)
+    //check if a duplicate tag has already been created, must use the same poller
+    for (auto previousTag: tagMap_)
     {
-      std::cout << "Duplicate tag exists, reusing tag " << previousTag.second->tagIndex << " for this parameter" <<std::endl;
-      tagIndex = previousTag.second->tagIndex; 
-      dupeTag = true;
-      break;
+      if (tag == previousTag.second->tag && keyWords.at("pollerName") == previousTag.second->pollerName)
+      {
+        /* Potential extension here to allow tags with different pollers to be combined, but must check the polling duration so that the shortest polling duration is used as the master tag */
+        std::cout << "Duplicate tag exists, reusing tag " << previousTag.second->tagIndex << " for this parameter" <<std::endl;
+        tagIndex = previousTag.second->tagIndex; 
+        dupeTag = true;
+        break;
+      }
+    }
+
+    if (!dupeTag)
+    {
+      tagIndex = plc_tag_create(tag.c_str(), CREATE_TAG_TIMEOUT);
+    }
+
+    /* Check and report failure codes. An Asyn param will be created even on failure but the record will be given error status */
+    if (tagIndex<0)
+    {
+      const char* error = plc_tag_decode_error(tagIndex);
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s  Tag not added! %s. drvInfo: %s\n", driverName, functionName, error, drvInfo);
+    }
+    else if (tagIndex == 1)
+    {
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag not added! Timeout while creating tag. drvInfo: %s\n", driverName, functionName, drvInfo);
     }
   }
 
-  if (!dupeTag)
-  {
-    tagIndex = plc_tag_create(tag.c_str(), CREATE_TAG_TIMEOUT);
-  }
 
-  /* Check and report failure codes. An Asyn param will be created even on failure but the record will be given error status */
-  if (tagIndex<0)
-  {
-    const char* error = plc_tag_decode_error(tagIndex);
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s  Tag not added! %s\n", driverName, functionName, error);
-  }
-  else if (tagIndex == 1)
-  {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag not added! Timeout while creating tag.\n", driverName, functionName);
-  }
-
-  /* Initialise each datatype*/
+  /* Initialise each datatype */
+  /* Some of these values may be updated during optimisations and some may become outdated */
   omronDrvUser_t *newDrvUser = (omronDrvUser_t *)callocMustSucceed(1, sizeof(omronDrvUser_t), functionName);
   newDrvUser->dataType = keyWords.at("dataType");
   newDrvUser->tag = tag;
@@ -224,7 +233,8 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   newDrvUser->timeout = pasynUser->timeout;
   newDrvUser->tagOffset = std::stoi(keyWords.at("offset"));
   newDrvUser->strCapacity = std::stoi(keyWords.at("strCapacity"));
-  newDrvUser->offsetFlag = keyWords.at("offsetFlag");
+  newDrvUser->optimisationFlag = keyWords.at("optimisationFlag");
+  newDrvUser->readFlag = readFlag;
 
   status = asynSuccess;
   { /* Take care of different datatypes */
@@ -346,60 +356,68 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
 asynStatus drvOmronEIP::optimiseTags()
 {
   const char * functionName = "drvOptimiseTags";
-  std::unordered_map<std::string, int> structIDList; //contains a map of struct paths to the id of the asyn index which gets that struct
-  std::unordered_map<std::string, std::vector<int>> commonStructMap; // Contains the structName and a vector of all the asyn Indexes which use this struct
+  std::unordered_map<std::string, int> structIDList; // Contains a map of struct paths along with the id of the asyn index which gets that struct
+  std::unordered_map<std::string, std::vector<int>> commonStructMap; // Contains the structName along with a vector of all the asyn Indexes which use this struct
+  std::vector<int> destroyList; // Contains a list of libplctag indexes to be destroyed as they are no longer used
   int status;
   this->lock();
-  // Look at the name used for each tag, if the name references a structure (contains a "."), added structure name to map
+  // Look at the name used for each tag, if the name references a structure (contains a "."), add the structure name to map
   // Each tag which references the structure adds its asyn index to the map under the same structure name key
   for (auto thisTag:tagMap_)
   {
-    // no optimisation is attempted if the user enters "none" for the offset
-    if (thisTag.second->offsetFlag == "false")
-    {
-      // we set this flag to tell the read poller that this tag should be read
-      thisTag.second->offsetFlag = "unique";
-      continue;
-    }
-    size_t pos = 0;
-    std::string parent;
-    std::string name = thisTag.second->tag;
-    name = name.substr(name.find("name=")+5);
-    if ((pos = name.find('&')) != std::string::npos) {
-      name = name.substr(0, pos);
-    }
-    // if the tag is a UDT type, then we just immediately add it to the structIDList as the entire struct is already being fetched
-    if (thisTag.second->dataType == "UDT"){
-      structIDList[name] = thisTag.first;
-      continue;
-    }
-    std::string remaining = name;
-    while ((pos = remaining.find('.')) != std::string::npos) {
-      parent = remaining.substr(0, pos);
-      remaining.erase(0, pos + 1);
-    }
-    // if parent exists
-    if (parent != ""){
-      // set the name to the original name minus the child/field part
-      name = name.substr(0,name.size()-(remaining.size()+1));
-      if (commonStructMap.find(name) == commonStructMap.end()){
-        // if struct does not exist in the map, then we add it with this tags asyn index
-        commonStructMap[name] = (std::vector<int>) {thisTag.first};
+    if (thisTag.second->pollerName!="none") { // Only interested in polled tags
+      // no optimisation is attempted if the user enters "dont optimise" for the offset
+      if (thisTag.second->optimisationFlag == "dont optimise")
+      {
+        // ensure that this flag is true
+        thisTag.second->readFlag = true;
+        continue;
+      }
+      size_t pos = 0;
+      std::string parent;
+      std::string name = thisTag.second->tag;
+      name = name.substr(name.find("name=")+5);
+      if ((pos = name.find('&')) != std::string::npos) {
+        name = name.substr(0, pos);
+      }
+      // if the tag is a UDT type, then we just immediately add it to the commonStructMap as the entire struct is already being fetched
+      if (thisTag.second->dataType == "UDT"){
+        commonStructMap[name].insert(commonStructMap[name].begin(), thisTag.first);
+        continue;
+      }
+      std::string remaining = name;
+      while ((pos = remaining.find('.')) != std::string::npos) {
+        parent = remaining.substr(0, pos);
+        remaining.erase(0, pos + 1);
+      }
+      // Check for a valid parent
+      if (parent != ""){
+        // Set the name to the original name minus the child/field part
+        name = name.substr(0,name.size()-(remaining.size()+1));
+        if (commonStructMap.find(name) == commonStructMap.end()){
+          // If struct does not exist in the map, then we add it with this tags asyn index
+          commonStructMap[name] = (std::vector<int>) {thisTag.first};
+        }
+        else {
+          commonStructMap.at(name).push_back(thisTag.first);
+        }
       }
       else {
-        commonStructMap.at(name).push_back(thisTag.first);
+        // This tag is not a UDT or a child, so it cant be optimised, therefor we set the optimisationFlag to "optimisation failed"
+        thisTag.second->optimisationFlag = "optimisation failed";
+        thisTag.second->readFlag = true;
       }
     }
   }
 
-  size_t countNeeded = 2; // number of tags which need to reference a struct before we decide to fetch the entire struct
-  // for each struct which is being referenced at least countNeeded times and which is not already in structIDList, create tag and add to list
+  size_t countNeeded = 2; // The number of tags which need to reference a struct before we decide it is more efficient to fetch the entire struct
+  // For each struct which is being referenced at least countNeeded times and which is not already in structIDList, create tag and add to list
   for (auto commonStruct : commonStructMap)
   {
     if (commonStruct.second.size()>= countNeeded)
     {
       if (structIDList.find(commonStruct.first) == structIDList.end()){
-        //we must create a new tag and then add it to structIDList if valid
+        // We must create a new libplctag tag and then add it to structIDList if valid
         std::string tag = this->tagConnectionString_ +
                         "&name=" + commonStruct.first +
                         "&elem_count=1&allow_packing=1&str_is_counted=0&str_count_word_bytes=0&str_is_zero_terminated=1";
@@ -415,34 +433,35 @@ asynStatus drvOmronEIP::optimiseTags()
           asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Attempting to optimise asyn index: %d, a tag was created with ID: %d and tag string: %s\n", driverName, functionName, commonStruct.second[0], tagIndex, tag.c_str());
         }
 
-        // we must designate one of the asyn Params which gets data from this UDT as the param which reads from the PLC
-        tagMap_.find(commonStruct.second[0])->second->offsetFlag = "unique";
+        // We arbitrarily designate the first asynIndex in the vector as the "master" index which has its libplctag tag read
+        tagMap_.find(commonStruct.second[0])->second->optimisationFlag = "master";
+        tagMap_.find(commonStruct.second[0])->second->readFlag = true;
       }
+    }
+    else {
+      // Case where a child is found, but it is the only one, therefor no optimisation is possible and it is made unique
+      tagMap_.find(commonStruct.second[0])->second->optimisationFlag = "optimisation failed";
+      tagMap_.find(commonStruct.second[0])->second->readFlag = true;
     }
   }
 
-  // print out maps
 
-  std::cout<<std::endl;
-  for (auto const& i : structIDList) {
-    std::cout << i.first << ": " << i.second <<std::endl;
-  }
-
-  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s The structs which are accessed by multiple records are (struct: libplctag tag index list):\n", driverName, functionName);
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s The structs which are accessed by multiple records are (struct: asyn index list):\n", driverName, functionName);
+  std::string flowString;
   for (auto const& i : commonStructMap) {
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s: ", i.first.c_str());
+    flowString += i.first + ": ";
     for (auto const& j : i.second)
-      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%d ", j);
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "\n");
+      flowString += std::to_string(j) + " ";
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", flowString.c_str());
+    flowString.clear();
   }
 
-  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s The structs alongside the libplctag tag index chosen to read them are:\n", driverName, functionName);
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s The structs alongside the libplctag index chosen to read them are:\n", driverName, functionName);
   for (auto const& i : structIDList) {
-    std::cout << i.first << ": " << i.second <<std::endl;
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s: %d \n", i.first.c_str());
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s: %d \n", i.first.c_str(), i.second);
   }
 
-  //now that we have a map of structs and which index gets them as well as a map of structs and which indexes need to access them, we can optimise
+  // Now that we have a map of structs and which index gets them as well as a map of structs and which indexes need to access them, we can optimise
   omronDrvUser_t * drvUser;
   for (auto commonStruct : commonStructMap)
   {
@@ -454,6 +473,8 @@ asynStatus drvOmronEIP::optimiseTags()
       }
       else {
         asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Attempt to optimise asyn index: %d failed.\n", driverName, functionName, asynIndex);
+        drvUser->optimisationFlag = "optimisation failed"; // Could not find an optimisation so this tag will be processed directly
+        drvUser->readFlag = true;
         break;
       }
 
@@ -461,28 +482,43 @@ asynStatus drvOmronEIP::optimiseTags()
       {
         if (commonStruct.first == masterStruct.first)
         {
-          matchFound = true;
-          if (asynIndex == masterStruct.second) {
-            // case where the asyn index we are optimising to, is our own index
-            // we set this flag to tell the read poller that this tag should be read
-            drvUser->offsetFlag = "unique";
-            break;
-          }
           // we have found a tag that already exists which gets this struct, so we piggy back off this
           // now we get the drvUser for the asyn parameter which is to be optimised and set its tagIndex to the tagIndex we piggy back off
-          status = plc_tag_destroy(drvUser->tagIndex); //destroy old tag
-          if (status!=0) {
-            asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s  libplctag tag destruction process failed for id %d\n", driverName, functionName, drvUser->tagIndex);
-          }
+          matchFound = true;
+          destroyList.push_back(drvUser->tagIndex);
+          //std::cout<<"Old value was: "<<drvUser->tagIndex<<std::endl;
           drvUser->tagIndex = masterStruct.second;
+          //std::cout<<"New value is: "<< this->tagMap_.find(asynIndex)->second->tagIndex<<std::endl;
           asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Asyn index: %d Optimised to use libplctag tag with libplctag index: %d\n", driverName, functionName, asynIndex, masterStruct.second);
+          if (drvUser->optimisationFlag != "master") {
+            // If we are the master then our tagIndex will be read, otherwise we will rely on the data read by the master         
+            drvUser->optimisationFlag = "optimised";
+            drvUser->readFlag = false;
+          }
         }
       }
       if (!matchFound && commonStruct.second.size() >= countNeeded)
       {
-        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s  Attempt to optimise asyn index: %d failed.\n", driverName, functionName, asynIndex);
+        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s  Warning, Attempt to optimise asyn index: %d failed. The driver will use a default setup.\n", driverName, functionName, asynIndex);
+        drvUser->optimisationFlag = "optimisation failed";
       }
     }
+  }
+
+  std::sort(destroyList.begin(), destroyList.end());
+  std::vector<int>::iterator it = std::unique(destroyList.begin(), destroyList.end());
+  destroyList.erase(it, destroyList.end());
+  for (auto index: destroyList) {
+    status = plc_tag_destroy(index); // Destroy old tags
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Destroyed redundant libplctag: %d\n", driverName, functionName, index);
+    if (status!=0) {
+      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s  Warning, libplctag tag destruction process failed for libplctag index %d\n", driverName, functionName, index);
+    }
+  }
+
+  for (auto tag: tagMap_)
+  {
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Asyn param: %d optimisationFlag: '%s' readFlag: %s\n", driverName, functionName, tag.first, tag.second->optimisationFlag.c_str(), tag.second->readFlag ? "true" : "false");
   }
 
   this->unlock();
@@ -505,7 +541,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
       {"offset", "0"},       
       {"tagExtras", "none"},
       {"strCapacity", "0"}, // only needed for getting strings from UDTs  
-      {"offsetFlag", "false"}, // set to true if the user enters a value for offset other than none, later set to "unique" to identify a tag as needing to be read from PLC
+      {"optimisationFlag", "not requested"}, // stores the status of optimisation, ("attempt optimisation","dont optimise","optimisation failed","optimised","master")
       {"stringValid", "true"} // set to false if errors are detected which aborts creation of tag and asyn parameter
   };
   std::list<std::string> words;
@@ -681,7 +717,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
       // user has chosen not to use an offset
       if (words.front() == "none")
       {
-        keyWords.at("offsetFlag") = "false";
+        keyWords.at("optimisationFlag") = "dont optimise";
         keyWords.at("offset") = "0";
       }
       else {
@@ -689,7 +725,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
         try
         {
           offset = std::stoi(words.front());
-          keyWords.at("offsetFlag") = "true";
+          keyWords.at("optimisationFlag") = "attempt optimisation";
         }
         catch(...)
         {
@@ -708,7 +744,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
                   {
                     //struct integer found
                     structIndex = std::stoi(offsetSubstring.substr(0,m));
-                    keyWords.at("offsetFlag") = "true";
+                    keyWords.at("optimisationFlag") = "attempt optimisation";
                     goto findOffsetFromStruct;
                   }
                   catch(...)
@@ -736,7 +772,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
                 structFound = true;
                 if (structIndex>=item.second.size())
                 {
-                  std::cout<<"Error, attempt to read index: " << structIndex << " from struct: " << item.first << " failed." << std::endl;
+                  std::cout<<"Error! Attempt to read index: " << structIndex << " from struct: " << item.first << " failed." << std::endl;
                   keyWords.at("stringValid") = "false";
                 }
                 else
@@ -867,41 +903,46 @@ asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * fileP
       row.erase(row.begin());
       structMap[structName] = row;
     } 
-
+    std::string flowString;
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Loading in struct file with the following definitions:\n", driverName, functionName);
     for (auto const& i : structMap) {
-      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s: ", i.first.c_str());
+      flowString += i.first + ": ";
       for (auto const& j : i.second)
-        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s ", j.c_str());
-      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "\n");
+        flowString += j + " ";
+      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", flowString.c_str());
+      flowString.clear();
     }
     this->createStructMap(structMap);
+    this->unlock();
     return asynSuccess;
 }
 
 asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vector<std::string>> rawMap)
 {
   const char * functionName = "createStructMap";
-  asynStatus status = asynSuccess;
+  size_t status = asynSuccess;
   std::unordered_map<std::string, std::vector<int>> structMap;
   for (auto kv: rawMap)
   {// look for kv.first in structMap through a recursive search
-    status = (asynStatus) findOffsetsRecursive(rawMap, kv.first, structMap);
+    status = findOffsetsRecursive(rawMap, kv.first, structMap);
   }
+
+  std::string flowString;
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s The processed struct definitions with their calculated offsets are:\n", driverName, functionName);
   for (auto const& i : structMap) {
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s: ", i.first.c_str());
+    flowString += i.first + ": ";
     for (auto const& j : i.second)
-      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%d ", j);
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "\n");
+      flowString += std::to_string(j) + " ";
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", flowString.c_str());
+    flowString.clear();
   }
+
   this->structMap_= structMap;
-  if (status != asynSuccess)
+  if (status < 0)
   {
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s An error occured while calculating the offsets within the loaded struct file\n", driverName, functionName);
     return asynError;
   }
-  this->unlock();
   return asynSuccess;
 }
 
@@ -918,9 +959,7 @@ size_t drvOmronEIP::findOffsetsRecursive(std::unordered_map<std::string, std::ve
   {
     offSetsCounted++;
     lastOffset = newRow.back();
-    if (dtype =="BOOL")
-      thisOffset = lastOffset+1;
-    else if (dtype =="UINT" || dtype =="INT" || dtype =="WORD")
+    if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL")
       thisOffset = lastOffset+2;
     else if (dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD")
       thisOffset = lastOffset+4;
@@ -958,7 +997,7 @@ size_t drvOmronEIP::findOffsetsRecursive(std::unordered_map<std::string, std::ve
         {
           structInvalid = true;
           std::cout<<"STRING type must specify size, " << structName << " definition is invalid" <<std::endl;
-          return asynError;
+          return -1;
         }
       }
       else
@@ -973,7 +1012,7 @@ size_t drvOmronEIP::findOffsetsRecursive(std::unordered_map<std::string, std::ve
           {
             structInvalid = true;
             std::cout<<"Error calculating the size of structure: " << dtype << ". Definition for " << structName << " is invalid" << std::endl; 
-            return asynError;
+            return -1;
           }
           thisOffset = structSize+lastOffset;
         }
@@ -981,7 +1020,7 @@ size_t drvOmronEIP::findOffsetsRecursive(std::unordered_map<std::string, std::ve
         {
           structInvalid = true;
           std::cout<<"Failed to find the standard datatype: " << dtype << ". Definition for " << structName << " and its dependents failed" << std::endl;
-          return asynError;
+          return -1;
         }
       }
     }
@@ -999,11 +1038,11 @@ size_t drvOmronEIP::findOffsetsRecursive(std::unordered_map<std::string, std::ve
         return thisOffset;
       }
       else
-        return asynError;
+        return -1;
     }
   }
   // Dont think its possible to get here
-  return asynError;
+  return -1;
 }
 
 void drvOmronEIP::readPoller()
@@ -1016,7 +1055,7 @@ void drvOmronEIP::readPoller()
   int still_pending = 1;
   int timeTaken = 0;
   //The poller may not be fully initialised until the startPollers_ flag is set to 1, do not attempt to get the pPoller yet
-  while (!this->startPollers_ || !omronExiting_) {epicsThreadSleep(0.1);}
+  while (!this->startPollers_ && !omronExiting_) {epicsThreadSleep(0.1);}
   omronEIPPoller* pPoller = pollerList_.at(threadName);
   double interval = pPoller->updateRate_;
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Starting poller: %s with interval: %f\n", driverName, functionName, threadName.c_str(), interval);
@@ -1033,7 +1072,7 @@ void drvOmronEIP::readPoller()
     auto startTime = std::chrono::system_clock::now();
     for (auto x : tagMap_)
     {
-      if (x.second->pollerName == threadName && x.second->offsetFlag == "unique")
+      if (x.second->pollerName == threadName && x.second->readFlag == true)
       {
         asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Reading tag: %d with polling interval: %f seconds\n", driverName, functionName, x.second->tagIndex, interval);
         plc_tag_read(x.second->tagIndex, 0); // read from plc as fast as possible, we will check status and timeouts later
@@ -1180,7 +1219,7 @@ void drvOmronEIP::readPoller()
           }
           else if (x.second->dataType == "WORD")
           {
-            int bytes = plc_tag_get_size(x.second->tagIndex);
+            int bytes = 2;
             uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
             status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
             if (status !=0){
@@ -1190,19 +1229,21 @@ void drvOmronEIP::readPoller()
             epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
             /* We flip around the hex numbers to match what is done in the PLC */
             int n = bytes-1;
+            char hexString[bytes*2+1]{};
             for (int i = 0; i < bytes; i++)
             {
+              sprintf(hexString+strlen(hexString), "%02X", rawData[n]);
               pData[i] = rawData[n];
               n--;
             }
             status = doCallbacksInt8Array(pData, bytes, x.first, 0);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %x My type %s\n", driverName, functionName, x.first, x.second->tagIndex, pData, x.second->dataType.c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
             free(rawData);
             free(pData);
           }
           else if (x.second->dataType == "DWORD")
           {
-            int bytes = plc_tag_get_size(x.second->tagIndex);
+            int bytes = 4;
             uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
             status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
             if (status !=0){
@@ -1212,19 +1253,21 @@ void drvOmronEIP::readPoller()
             epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
             /* We flip around the hex numbers to match what is done in the PLC */
             int n = bytes-1;
+            char hexString[bytes*2+1]{};
             for (int i = 0; i < bytes; i++)
             {
+              sprintf(hexString+strlen(hexString), "%02X", rawData[n]);
               pData[i] = rawData[n];
               n--;
             }
             status = doCallbacksInt8Array(pData, bytes, x.first, 0);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %x My type %s\n", driverName, functionName, x.first, x.second->tagIndex, pData, x.second->dataType.c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
             free(rawData);
             free(pData);
           }
           else if (x.second->dataType == "LWORD")
           {
-            int bytes = plc_tag_get_size(x.second->tagIndex);
+            int bytes = 8;
             uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
             status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
             if (status !=0){
@@ -1234,13 +1277,15 @@ void drvOmronEIP::readPoller()
             epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
             /* We flip around the hex numbers to match what is done in the PLC */
             int n = bytes-1;
+            char hexString[bytes*2+1]{};
             for (int i = 0; i < bytes; i++)
             {
+              sprintf(hexString+strlen(hexString), "%02X", rawData[n]);
               pData[i] = rawData[n];
               n--;
             }
             status = doCallbacksInt8Array(pData, bytes, x.first, 0);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %x My type %s\n", driverName, functionName, x.first, x.second->tagIndex, pData, x.second->dataType.c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
             free(rawData);
             free(pData);
           }

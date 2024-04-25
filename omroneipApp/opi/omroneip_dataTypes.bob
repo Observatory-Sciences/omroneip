@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--Saved on 2024-03-19 15:48:28 by epics-dev-->
+<!--Saved on 2024-04-24 16:06:11 by epics-dev-->
 <display version="2.0.0">
   <name>omroneip_datatypes</name>
   <macros>
@@ -194,7 +194,7 @@
     <x>130</x>
     <y>530</y>
     <width>2540</width>
-    <format>6</format>
+    <format>4</format>
   </widget>
   <widget type="label" version="2.0.0">
     <name>Label_19</name>
