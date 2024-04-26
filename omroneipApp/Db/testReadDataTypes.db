@@ -59,6 +59,12 @@ record(ai, "$(P)readFloat32") {
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)].PVValue REAL 1 PVData[2] none")
 }
 
+record(ai, "$(P)readFloat32(2)") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[$(I)].ZTC.PV REAL 1 UDT801_ZTC[5] none")
+}
+
 record(ai, "$(P)readFloat64") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")

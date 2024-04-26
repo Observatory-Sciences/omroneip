@@ -922,9 +922,15 @@ asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vec
   const char * functionName = "createStructMap";
   size_t status = asynSuccess;
   std::unordered_map<std::string, std::vector<int>> structMap;
+  std::unordered_map<std::string, std::vector<std::string>> expandedMap = rawMap;
+  for (auto& kv: expandedMap)
+  {// expand embedded structures so that the structure just contains standard dtypes
+    kv.second = expandStructs(expandedMap, kv.first);
+  }
+
   for (auto kv: rawMap)
   {// look for kv.first in structMap through a recursive search
-    status = findOffsetsRecursive(rawMap, kv.first, structMap);
+    status = findOffsetsRecursive(rawMap, expandedMap, kv.first, structMap, "none");
   }
 
   std::string flowString;
@@ -946,27 +952,133 @@ asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vec
   return asynSuccess;
 }
 
-size_t drvOmronEIP::findOffsetsRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap)
+std::vector<std::string> drvOmronEIP::expandStructs(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string structName)
+{
+  std::vector<std::string> row = rawMap.at(structName);
+  std::vector<std::string> expandedRow;
+  for (std::string dtype : row)
+  {
+    if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || dtype.substr(0,6) == "STRING")
+    {
+      expandedRow.push_back(dtype);
+    }
+    else
+    {
+      // If we get here, then we assume that we have a structure, but it could be a typo
+      try
+      {
+        //recursively call this function to get all of the embedded datatypes
+        std::vector<std::string> embeddedDtypes = expandStructs(rawMap, dtype);
+        expandedRow.insert(std::end(expandedRow), std::begin(embeddedDtypes), std::end(embeddedDtypes));
+      }
+      catch (...)
+      {
+        std::cout<<"Failed to find the standard datatype: " << dtype << ". Definition for " << structName << " and its dependents failed" << std::endl;
+      }
+    }
+  }
+  return expandedRow;
+}
+
+size_t drvOmronEIP::findOffsetsRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap, std::string parentNextDtype)
 {
   std::vector<int> newRow = {0};
   size_t offSetsCounted = 0;
   std::vector<std::string> row = rawMap.at(structName);
+  std::vector<std::string> expandedRow = expandedMap.at(structName);
   size_t lastOffset = 0;
   bool structInvalid = false;
   size_t thisOffset = 0;
+  size_t dtypeSize = 0;
+  std::string nextDtype = "none";
+  size_t consequitiveDtypes = 1;
+  size_t padSize = 0;
+  size_t index = 0;
+  size_t nextSize =0;
+  size_t consequitiveBools = 0;
+  bool found = false;
   // loop through each datatype and find its byte size
   for (std::string dtype : row)
   {
+    index++;
+    {
+      // Here we are searching for the next standard dtype so we can calculate if there will be padding
+      if (index < row.size()){
+        nextDtype = row[index];
+        nextDtype = findNextDtype(rawMap, nextDtype);
+        if (nextDtype == "no dtypes left") {
+          // Case where the next dtype is a custom struct but it contains no standard dtypes
+          continue;
+        }
+        else if ( nextDtype == "structName is neither a structure or a standard dtype") {
+          std::cout<<"Invalid dtype/struct name: " << structName <<std::endl;
+          return -1;
+        }
+      }
+      else {
+        // Padding may be required at the end of the structure
+        nextDtype=parentNextDtype;
+      }
+    }
+
+    if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL")
+      dtypeSize=2;
+    else if (dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD")
+      dtypeSize=4;
+    else if (dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD")
+      dtypeSize=8;
+
+    if (nextDtype =="UINT" || nextDtype =="INT" || nextDtype =="WORD" || nextDtype =="BOOL")
+      nextSize=2;
+    else if (nextDtype =="UDINT" || nextDtype =="DINT" || nextDtype =="REAL" || nextDtype =="DWORD")
+      nextSize=4;
+    else if (nextDtype =="ULINT" || nextDtype =="LINT" || nextDtype == "LREAL" || nextDtype =="LWORD")
+      nextSize=8;
+
     offSetsCounted++;
     lastOffset = newRow.back();
-    if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL")
-      thisOffset = lastOffset+2;
-    else if (dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD")
-      thisOffset = lastOffset+4;
-    else if (dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD")
-      thisOffset = lastOffset+8;
-    else if (dtype =="UINT")
-      thisOffset = lastOffset+2;
+    if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD") {
+      thisOffset = lastOffset+dtypeSize;
+      if (nextSize == dtypeSize) {
+        consequitiveDtypes++;
+        if (dtype =="BOOL"){
+          consequitiveBools++;
+        }
+      }
+      else if (nextSize!=dtypeSize) {
+      /*Additional PLC padding rules mean that data must be organised into 32-bit chunks, so if a 8-bit value is included in a structure followed
+        by a different type, 24 bits of padding would be added to seperate them. Bools are even more complicated, they normally take up 16-bits, if there
+        is a single bool followed by a different datatype it will take up 32-bits. If there are 2 or more consequtive bools they will be grouped into
+        a 64-bit array with as much padding as is required. If there are 5 bools in a row, then they will take up 64 bits for the first 4 bools and then 32
+        bits for the second bool which includes 16 bits of padding*/
+        /* We compare the current and previous dtypes and if they are different then we apply padding to thisOffset, which is actually 
+        the position of the next dtype, and the last offset which is the position of the current dtype*/
+        if (dtype =="BOOL"){
+          consequitiveBools++;
+          if (consequitiveBools==1) {
+            thisOffset += 2;
+          }
+          else {
+            if ((consequitiveBools*dtypeSize)>=8) {
+              thisOffset += (consequitiveBools*dtypeSize)%8;
+            }
+            else {
+              thisOffset += 8 - consequitiveBools*dtypeSize;
+            }
+          }
+        }
+        else {
+          consequitiveBools=0;
+          if ((consequitiveDtypes*dtypeSize)>=4) {
+            thisOffset += (consequitiveDtypes*dtypeSize)%4;
+          }
+          else {
+            thisOffset += 4 - consequitiveDtypes*dtypeSize;
+          }
+        }
+        consequitiveDtypes = 1;
+      }
+    }
     else
     {
       if (dtype.substr(0,7) == "STRING[")
@@ -992,12 +1104,22 @@ size_t drvOmronEIP::findOffsetsRecursive(std::unordered_map<std::string, std::ve
             break;
           }
         }
-        thisOffset = lastOffset+strLength;
         if (!intFound)
         {
           structInvalid = true;
           std::cout<<"STRING type must specify size, " << structName << " definition is invalid" <<std::endl;
           return -1;
+        }
+
+        dtypeSize = strLength;
+        thisOffset = lastOffset+dtypeSize;
+        consequitiveDtypes = 1;
+        consequitiveBools = 0;
+        if ((strLength)>=4) {
+          thisOffset += strLength%4;
+        }
+        else {
+          thisOffset += 4 - strLength;
         }
       }
       else
@@ -1007,7 +1129,13 @@ size_t drvOmronEIP::findOffsetsRecursive(std::unordered_map<std::string, std::ve
         {
           std::vector<std::string> nextRow = rawMap.at(dtype);
           //recursively call this function to calculate the size of the named structure
-          int structSize = findOffsetsRecursive(rawMap, dtype, structMap);
+          if (index+nextRow.size()<expandedRow.size()) {
+            parentNextDtype = expandedRow[index+nextRow.size()];
+          }
+          else {
+            parentNextDtype ="none";
+          }
+          int structSize = findOffsetsRecursive(rawMap, expandedMap, dtype, structMap, parentNextDtype);
           if (structSize <= 0)
           {
             structInvalid = true;
@@ -1043,6 +1171,35 @@ size_t drvOmronEIP::findOffsetsRecursive(std::unordered_map<std::string, std::ve
   }
   // Dont think its possible to get here
   return -1;
+}
+
+std::string drvOmronEIP::findNextDtype(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string structName)
+{
+  try
+  {
+    std::vector<std::string> row = rawMap.at(structName);
+    for (std::string dtype : row)
+    {
+      if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || dtype.substr(0,6) == "STRING") {
+        return dtype;
+      }
+      else {
+        // We need to find the next dtype within an embedded structure
+        std::string nextDtype = findNextDtype(rawMap, dtype);
+        return nextDtype;
+      }
+    }
+  }
+  catch (...)
+  {
+    if (structName =="UINT" || structName =="INT" || structName =="WORD" || structName =="BOOL" || structName =="UDINT" || structName =="DINT" || structName =="REAL" || structName =="DWORD" || structName =="ULINT" || structName =="LINT" || structName == "LREAL" || structName =="LWORD" || structName.substr(0,6) == "STRING" ){
+      return structName;
+    }
+    else {
+      return "structName is neither a structure or a standard dtype";
+    }
+  }
+  return "no dtypes left";
 }
 
 void drvOmronEIP::readPoller()
