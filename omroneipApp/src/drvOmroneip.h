@@ -84,11 +84,14 @@ public:
   asynStatus loadStructFile(const char * portName, const char * filePath);
   /* Loops through each structure within the map and calls findOffsetsRecursive which creates the final structure offset map */
   asynStatus createStructMap(std::unordered_map<std::string, std::vector<std::string>> rawMap);
+  std::vector<std::string> expandStructs(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string structName);
   /* A recursive function which is passed a row from the raw map and calculates the offset of each datatype in the row. If the datatype
      is the name of another structure, then the size of this structure must first be calculated by calling this function with the row for
      this structure. This process is repeated untill the offset for the lowest common structure is found which is returned by this function.
      The function then works its way back up. structMap is updated with the calculated offsets. */
-  size_t findOffsetsRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap);
+  size_t findOffsetsRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap, std::string parentNextDtype);
+  /* A recursive function which looks for the next standard dtype within embedded structures */
+  std::string findNextDtype(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string structName);
   /* Creates a new instance of the omronEIPPoller class and starts a new thread named after this new poller which reads data linked to the poller name.*/
   asynStatus createPoller(const char * portName, const char * pollerName, double updateRate);
   /* Reimplemented from asynDriver. This is called when each record is loaded into epics. It processes the drvInfo from the record and attempts

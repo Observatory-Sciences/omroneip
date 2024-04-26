@@ -19,8 +19,6 @@ drvOmronEIPConfigPoller("omronDriver", "fastPoller", 1) #This can be lowered to 
 drvOmronEIPConfigPoller("omronDriver", "mediumPoller", 2)
 drvOmronEIPConfigPoller("omronDriver", "slowPoller", 10)
 
-
-
 #drvOmronEIPStructDefine(driverPortName, pathToFile)
 drvOmronEIPStructDefine("omronDriver", "iocBoot/iocTest/structDefs.csv")
 
