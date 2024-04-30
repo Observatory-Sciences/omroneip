@@ -1,6 +1,5 @@
 import unittest
 import epics
-from run_iocsh import IOC
 from os import environ, chdir
 import subprocess
 import argparse
@@ -27,7 +26,7 @@ class TestSetup:
 
     def closeSimulator(self):
         print("Closing PLC server simulator!")
-        self.simulatorProc.terminate()
+        self.simulatorProc.kill()
         self.simulatorProc.wait(timeout=5)
 
     def startIOC(self):
@@ -39,4 +38,18 @@ class TestSetup:
         else:
             print("Invalid PLC name supplied!")
         chdir(self.iocPath + "/iocBoot/iocCITests/")
-        subprocess.run([self.IOC_EXECUTABLE, self.IOC_CMD])
+        self.iocProc = subprocess.Popen([self.IOC_EXECUTABLE, self.IOC_CMD], shell=False)
+
+    def closeIOC(self):
+        print("Closing IOC")
+        self.iocProc.kill()
+
+    def readPV(self, pvName):
+        val = epics.caget(pvName, timeout=2)
+        print(f"Read value={val} from simulator")
+        return val
+
+    def writePV(self, pvName, val):
+        print(f"Writing value={val} to simulator")
+        epics.caput(pvName, val, wait=True, timeout=2)
+
