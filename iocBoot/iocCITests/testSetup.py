@@ -14,7 +14,7 @@ class TestSetup:
         environ["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
         environ["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
         self.EPICS_HOST_ARCH = environ.get("EPICS_HOST_ARCH")
-        self.IOC_EXECUTABLE = (f"{self.iocPath}/bin/{self.EPICS_HOST_ARCH}/omroneipApp")
+        self.IOC_EXECUTABLE = (f"{self.iocPath}/bin/linux-x86_64/omroneipApp")
         self.IOC_CMD = (f"{self.iocPath}/iocBoot/iocCITests/testInt.cmd")
 
     def setupSimulator(self, simulatorArgs):
