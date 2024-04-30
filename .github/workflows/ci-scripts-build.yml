@@ -65,6 +65,12 @@ jobs:
     - name: Build main module
       run: python .ci/cue.py build
     - name: Run main module tests
-      run: python .ci/cue.py -T 15M test
+      run: python .ci/cue.py test
     - name: Collect and show test results
       run: python .ci/cue.py test-results
+    - name: Build end2end tests
+      run: |
+        sudo apt-get update
+        sudo pip3 install pytest pyepics
+    - name: Run end2end tests
+      run: python runTests.py
