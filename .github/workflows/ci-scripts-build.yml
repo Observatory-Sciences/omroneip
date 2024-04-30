@@ -73,4 +73,4 @@ jobs:
         sudo apt-get update
         sudo pip3 install pytest pyepics
     - name: Run end2end tests
-      run: python runTests.py
+      run: python iocBoot/iocCITests/runTests.py
