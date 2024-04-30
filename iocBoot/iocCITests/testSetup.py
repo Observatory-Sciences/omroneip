@@ -13,6 +13,7 @@ class TestSetup:
         self.plc = plc
         environ["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
         environ["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
+        environ["PATH"] = "/home/runner/.cache/base-R3.15.9" + environ.get("PATH")
         self.EPICS_HOST_ARCH = environ.get("EPICS_HOST_ARCH")
         self.IOC_EXECUTABLE = (f"{self.iocPath}/bin/linux-x86_64/omroneipApp")
         self.IOC_CMD = (f"{self.iocPath}/iocBoot/iocCITests/testInt.cmd")
@@ -46,6 +47,8 @@ class TestSetup:
 
     def readPV(self, pvName):
         val = epics.caget(pvName, timeout=2)
+        if (val == "None"):
+            val = 0
         print(f"Read value={val} from simulator")
         return val
 
