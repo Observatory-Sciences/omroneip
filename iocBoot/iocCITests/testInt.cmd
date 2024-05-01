@@ -1,4 +1,4 @@
-
+< envPaths
 epicsEnvSet("P", "omronEIP:")
 epicsEnvSet("EPICS_CAS_INTF_ADDR_LIST", "127.0.0.1")
 

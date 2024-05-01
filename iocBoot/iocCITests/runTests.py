@@ -21,7 +21,7 @@ class TestDriver(unittest.TestCase):
         self.plc = plc
         self.testOmronEIP = testSetup.TestSetup(simulatorPath, omroneipPath, plc)
         self.errorList = []
-        print("\n\n")
+        print("\n")
 
     def tearDown(self):
         try: self.assertEqual([], self.errorList)
@@ -49,7 +49,7 @@ class TestDriver(unittest.TestCase):
         else:
              print("---------------------"+inspect.stack()[0][3]+" success :) ---------------------\n")
 
-    def negative_test_int16(self):
+    def test_negative_int16(self):
         #Test reading and writing int16 to the simulator
         print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
         self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
@@ -71,5 +71,5 @@ if __name__ == '__main__':
     newTest = TestDriver()
     TestDriver.setUp(newTest, args.simulator, args.omroneip, args.plc)
     TestDriver.test_int16(newTest)
-    TestDriver.negative_test_int16(newTest)
+    TestDriver.test_negative_int16(newTest)
     TestDriver.tearDown(newTest)
