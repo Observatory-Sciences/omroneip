@@ -77,8 +77,5 @@ jobs:
         sudo pip3 install pytest pyepics
     - name: Run end2end tests
       run: |
-        echo $PATH
-        echo $EPICS_BASE
-        echo $EPICS_HOST_ARCH
-        python iocBoot/iocCITests/runTests.py -p Omron -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server -t /home/runner/work/omroneip/omroneip
+        python .ci/cue.py exec python iocBoot/iocCITests/runTests.py -p Omron -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server -t /home/runner/work/omroneip/omroneip
       if: matrix.test == 'true'
