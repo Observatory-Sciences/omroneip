@@ -33,7 +33,6 @@ jobs:
       test: ${{ matrix.test }}
       SET: "stable"
     strategy:
-      fail-fast: true
       matrix:
         # Job names also name artifacts, character limitations apply
         include:

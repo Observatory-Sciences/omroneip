@@ -29,6 +29,7 @@ class TestDriver(unittest.TestCase):
             for error in self.errorList:
                 print(error)
             print(str(len(self.errorList))+" test(s) failed")
+            exit(1)
         else:
             print("All tests passed!")
 
