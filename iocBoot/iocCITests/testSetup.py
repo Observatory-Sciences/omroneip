@@ -42,7 +42,7 @@ class TestSetup:
 
     def closeSimulator(self):
         print("Closing PLC server simulator!")
-        self.simulatorProc.terminate()
+        self.simulatorProc.kill()
         self.simulatorProc.wait(timeout=5)
 
     def startIOC(self):
@@ -55,12 +55,11 @@ class TestSetup:
             print("Invalid PLC name supplied!")
         chdir(self.IOC_TOP)
         self.iocProc = subprocess.Popen([self.IOC_EXECUTABLE, self.IOC_CMD], shell=False)
-        self.simulatorProc.wait(timeout=5)
         time.sleep(5)
 
     def closeIOC(self):
         print("Closing IOC")
-        self.iocProc.terminate()
+        self.iocProc.kill()
         self.iocProc.wait(timeout=5)
 
     def readPV(self, pvName):
