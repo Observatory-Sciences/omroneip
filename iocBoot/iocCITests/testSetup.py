@@ -39,7 +39,7 @@ class TestSetup:
         print("Setting up libplctag simulator with parameters: " + ', '.join(simulatorArgs))
         args = [self.simulatorPath]
         args.extend(simulatorArgs)
-        self.simulatorProc = subprocess.Popen(args=args, shell=False, stdout=subprocess.PIPE)
+        self.simulatorProc = subprocess.Popen(args=args, shell=False, stdout=subprocess.PIPE, env=environ.copy())
 
     def closeSimulator(self):
         print("Closing PLC server simulator!")
@@ -56,7 +56,7 @@ class TestSetup:
         else:
             print("Invalid PLC name supplied!")
         chdir(self.IOC_TOP)
-        self.iocProc = subprocess.Popen([self.IOC_EXECUTABLE, self.IOC_CMD], shell=False)
+        self.iocProc = subprocess.Popen([self.IOC_EXECUTABLE, self.IOC_CMD], shell=False, env=environ.copy())
         time.sleep(5)
         print("")
 
