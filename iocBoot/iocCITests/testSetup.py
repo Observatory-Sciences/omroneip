@@ -34,10 +34,10 @@ class TestSetup:
             print("New IOC top is: " + self.IOC_TOP)
         print("Libplctag simulator at: " + self.simulatorPath)
 
-        environ["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
-        environ["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
-        environ["EPICS_DB_INCLUDE_PATH"] = (f"{self.omroneipPath}/omroneipApp/db")
-        environ["LD_LIBRARY_PATH"] = self.EPICS_BASE + "/lib/" + self.EPICS_HOST_ARCH
+        self.ENV["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
+        self.ENV["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
+        self.ENV["EPICS_DB_INCLUDE_PATH"] = (f"{self.omroneipPath}/omroneipApp/db")
+        self.ENV["LD_LIBRARY_PATH"] = self.EPICS_BASE + "/lib/" + self.EPICS_HOST_ARCH
 
     def startSimulator(self, simulatorArgs):
         print("Setting up libplctag simulator with parameters: " + ', '.join(simulatorArgs))
@@ -75,8 +75,8 @@ class TestSetup:
     def readPV(self, pvName):
         pv = epics.PV(pvName)
         val = pv.get()
-        if (val == "None"):
-            val = 0
+        if (val == None):
+            print("Error, could not find PV")
         print(f"Read value={val} from simulator")
         return val
 
