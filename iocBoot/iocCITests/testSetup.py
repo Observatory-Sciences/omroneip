@@ -18,7 +18,11 @@ class TestSetup:
         self.IOC_TOP = environ.get("IOC_TOP")
         self.IOC_EXECUTABLE = (f"{self.omroneipPath}/bin/linux-x86_64/omroneipApp")
         self.IOC_CMD = (f"{self.omroneipPath}/iocBoot/iocCITests/testInt.cmd")
-
+        self.PATH = environ.get("PATH")
+        if self.PATH!=None:
+            print("Path is: " + self.PATH )
+        else:
+            print("Could not find PATH!")
         if self.EPICS_BASE!=None:
             print("Epics base is: " + self.EPICS_BASE )
         else:
