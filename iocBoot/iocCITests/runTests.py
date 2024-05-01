@@ -70,7 +70,7 @@ class TestDriver(unittest.TestCase):
 if __name__ == '__main__':
     args = options()
     newTest = TestDriver()
-    TestDriver.setUp(newTest, args.simulator, args.ioc, args.plc)
+    TestDriver.setUp(newTest, args.simulator, args.omroneip, args.plc)
     TestDriver.test_int16(newTest)
     TestDriver.negative_test_int16(newTest)
     TestDriver.tearDown(newTest)
