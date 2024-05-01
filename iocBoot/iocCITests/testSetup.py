@@ -12,17 +12,17 @@ class TestSetup:
         self.simulatorPath = simulatorPath
         self.omroneipPath = omroneip
         self.plc = plc
-
+        self.ENV = environ.copy()
         self.EPICS_HOST_ARCH = environ.get("EPICS_HOST_ARCH")
         self.EPICS_BASE = environ.get("EPICS_BASE")
         self.IOC_TOP = environ.get("IOC_TOP")
         self.IOC_EXECUTABLE = (f"{self.omroneipPath}/bin/linux-x86_64/omroneipApp")
         self.IOC_CMD = (f"{self.omroneipPath}/iocBoot/iocCITests/testInt.cmd")
-        self.PATH = environ.get("PATH")
-        if self.PATH!=None:
-            print("Path is: " + self.PATH )
+        if self.EPICS_BASE not in self.ENV["PATH"]:
+            self.ENV["PATH"] = f"{self.EPICS_BASE}:{self.ENV['PATH']}"
+            print("Added EPICS_BASE to path, path is now: " + self.ENV["PATH"])
         else:
-            print("Could not find PATH!")
+            print("Path is: " + self.ENV["PATH"])
         if self.EPICS_BASE!=None:
             print("Epics base is: " + self.EPICS_BASE )
         else:
@@ -43,7 +43,7 @@ class TestSetup:
         print("Setting up libplctag simulator with parameters: " + ', '.join(simulatorArgs))
         args = [self.simulatorPath]
         args.extend(simulatorArgs)
-        self.simulatorProc = subprocess.Popen(args=args, shell=False, stdout=subprocess.PIPE, env=environ.copy())
+        self.simulatorProc = subprocess.Popen(args=args, shell=False, stdout=subprocess.PIPE, env=self.ENV)
 
     def closeSimulator(self):
         print("Closing PLC server simulator!")
@@ -55,12 +55,14 @@ class TestSetup:
         epics.ca.initialize_libca()
         if (self.plc == "Omron"):
             environ["PLC"] = "omron-njnx"
+            self.ENV["PLC"] = "omron-njnx"
         elif (self.plc == "ControlLogix"):
             environ["PLC"] = "ControlLogix"
+            self.ENV["PLC"] = "ControlLogix"
         else:
             print("Invalid PLC name supplied!")
         chdir(self.IOC_TOP)
-        self.iocProc = subprocess.Popen([self.IOC_EXECUTABLE, self.IOC_CMD], shell=False, env=environ.copy())
+        self.iocProc = subprocess.Popen([self.IOC_EXECUTABLE, self.IOC_CMD], shell=False, env=self.ENV)
         time.sleep(5)
         print("")
 
