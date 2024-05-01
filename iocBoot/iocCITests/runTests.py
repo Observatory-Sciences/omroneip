@@ -8,7 +8,7 @@ import argparse
 def options():
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--simulator", default=os.environ.get("HOME")+"/libplctag-2.5.5/build/bin_dist/ab_server", help="path to libplctag PLC simulator")
-    parser.add_argument("-t", "--ioc", default=os.environ.get("HOME")+"/omroneip", help="path to the top directory of the omroneip driver")
+    parser.add_argument("-o", "--omroneip", default=os.getcwd() + "../..", help="path to the top directory of the omroneip driver")
     parser.add_argument("-p", "--plc", default="Omron", help="Choose either 'Omron' or 'ControlLogix'")
     args = parser.parse_args()
     return args
@@ -34,7 +34,7 @@ class TestDriver(unittest.TestCase):
 
     def test_int16(self):
         #Test reading and writing int16 to the simulator
-        print("------------------"+inspect.stack()[0][3]+"-----------------------")
+        print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
         self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
         self.testOmronEIP.startIOC()
         time.sleep(5)
@@ -51,7 +51,7 @@ class TestDriver(unittest.TestCase):
 
     def negative_test_int16(self):
         #Test reading and writing int16 to the simulator
-        print("------------------"+inspect.stack()[0][3]+"-----------------------")
+        print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
         self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
         self.testOmronEIP.startIOC()
         time.sleep(5)

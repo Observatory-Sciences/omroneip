@@ -77,8 +77,5 @@ jobs:
         sudo pip3 install pytest pyepics
     - name: Run end2end tests
       run: |
-        echo $EPICS_BASE
-        echo $LIBPLCTAG_PATH
-        echo $IOC_TOP
-        python .ci/cue.py exec python iocBoot/iocCITests/runTests.py -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server -t /home/runner/work/omroneip/omroneip
+        python .ci/cue.py exec python iocBoot/iocCITests/runTests.py -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server
       if: matrix.test == 'true'
