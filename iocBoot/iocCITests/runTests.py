@@ -16,11 +16,12 @@ def options():
 class TestDriver(unittest.TestCase):
     #Each test uses the same IOC, driver instance and libplctag simulator
     def setUp(self, simulatorPath, iocPath, plc):
+        print("------------------Setting up tests-----------------------\n")
         self.iocPath = iocPath
         self.plc = plc
         self.testOmronEIP = testSetup.TestSetup(simulatorPath, iocPath, plc)
-        print("------------------Setting up tests-----------------------")
         self.errorList = []
+        print("\n\n")
 
     def tearDown(self):
         try: self.assertEqual([], self.errorList)
@@ -34,7 +35,7 @@ class TestDriver(unittest.TestCase):
     def test_int16(self):
         #Test reading and writing int16 to the simulator
         print("------------------"+inspect.stack()[0][3]+"-----------------------")
-        self.testOmronEIP.setupSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
+        self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
         self.testOmronEIP.startIOC()
         time.sleep(5)
         writeVal = 5
