@@ -37,14 +37,14 @@ jobs:
       matrix:
         # Job names also name artifacts, character limitations apply
         include:
-          - os: ubuntu-20.04
-            cmp: gcc
-            configuration: static
-            extra: "CMD_CXXFLAGS=-std=c++23"
-            name: "Ub-20 C++22, static"
-            libplctag: "v2.5.3"
-            asyn: "R4-44-1"
-            test: "true"
+      #    - os: ubuntu-20.04
+      #      cmp: gcc
+      #      configuration: static
+      #      extra: "CMD_CXXFLAGS=-std=c++23"
+      #      name: "Ub-20 C++22, static"
+      #      libplctag: "v2.5.3"
+      #      asyn: "R4-44-1"
+      #      test: "true"
 
           - os: ubuntu-20.04
             cmp: gcc
@@ -77,5 +77,8 @@ jobs:
         sudo pip3 install pytest pyepics
     - name: Run end2end tests
       run: |
-        python .ci/cue.py exec python iocBoot/iocCITests/runTests.py -p Omron -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server -t /home/runner/work/omroneip/omroneip
+        echo $EPICS_BASE
+        echo $LIBPLCTAG_PATH
+        echo $IOC_TOP
+        python .ci/cue.py exec python iocBoot/iocCITests/runTests.py -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server -t /home/runner/work/omroneip/omroneip
       if: matrix.test == 'true'

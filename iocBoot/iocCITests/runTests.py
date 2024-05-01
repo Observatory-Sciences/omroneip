@@ -52,7 +52,7 @@ class TestDriver(unittest.TestCase):
     def negative_test_int16(self):
         #Test reading and writing int16 to the simulator
         print("------------------"+inspect.stack()[0][3]+"-----------------------")
-        self.testOmronEIP.setupSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
+        self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
         self.testOmronEIP.startIOC()
         time.sleep(5)
         writeVal = 3
