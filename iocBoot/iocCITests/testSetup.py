@@ -12,14 +12,14 @@ class TestSetup:
         self.simulatorPath = simulatorPath
         self.omroneipPath = omroneip
         self.plc = plc
-        self.ENV = environ.copy()
+        self.ENV = environ
         self.EPICS_HOST_ARCH = environ.get("EPICS_HOST_ARCH")
         self.EPICS_BASE = environ.get("EPICS_BASE")
         self.IOC_TOP = environ.get("IOC_TOP")
         self.IOC_EXECUTABLE = (f"{self.omroneipPath}/bin/linux-x86_64/omroneipApp")
         self.IOC_CMD = (f"{self.omroneipPath}/iocBoot/iocCITests/testInt.cmd")
         if self.EPICS_BASE not in self.ENV["PATH"]:
-            self.ENV["PATH"] = f"{self.EPICS_BASE}:{self.ENV['PATH']}"
+            self.ENV["PATH"] = f"{self.EPICS_BASE}/bin/{self.EPICS_HOST_ARCH}:{self.ENV['PATH']}"
             print("Added EPICS_BASE to path, path is now: " + self.ENV["PATH"])
         else:
             print("Path is: " + self.ENV["PATH"])
@@ -54,10 +54,8 @@ class TestSetup:
         print("Setting up test IOC!")
         epics.ca.initialize_libca()
         if (self.plc == "Omron"):
-            environ["PLC"] = "omron-njnx"
             self.ENV["PLC"] = "omron-njnx"
         elif (self.plc == "ControlLogix"):
-            environ["PLC"] = "ControlLogix"
             self.ENV["PLC"] = "ControlLogix"
         else:
             print("Invalid PLC name supplied!")
