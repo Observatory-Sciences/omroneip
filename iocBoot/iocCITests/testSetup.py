@@ -13,9 +13,11 @@ class TestSetup:
         self.plc = plc
         environ["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
         environ["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
-        environ["PATH"] = "/home/runner/.cache/base-R3.15.9" + environ.get("PATH")
+        #environ["PATH"] = "/home/runner/.cache/base-R3.15.9" + environ.get("PATH")
         self.EPICS_HOST_ARCH = environ.get("EPICS_HOST_ARCH")
         self.EPICS_BASE = environ.get("EPICS_BASE")
+        print("Epics base is: " +  environ.get("IOC_TOP"))
+        print("IOC top is: " + self.EPICS_BASE)
         self.IOC_EXECUTABLE = (f"{self.iocPath}/bin/linux-x86_64/omroneipApp")
         self.IOC_CMD = (f"{self.iocPath}/iocBoot/iocCITests/testInt.cmd")
         environ["EPICS_DB_INCLUDE_PATH"] = (f"{self.iocPath}/omroneipApp/db")
