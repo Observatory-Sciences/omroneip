@@ -8,18 +8,18 @@ import argparse
 def options():
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--simulator", default=os.environ.get("HOME")+"/libplctag-2.5.5/build/bin_dist/ab_server", help="path to libplctag PLC simulator")
-    parser.add_argument("-o", "--omroneip", default=os.getcwd() + "../..", help="path to the top directory of the omroneip driver")
+    parser.add_argument("-o", "--omroneip", default=os.getcwd() + "/../..", help="path to the top directory of the omroneip driver")
     parser.add_argument("-p", "--plc", default="Omron", help="Choose either 'Omron' or 'ControlLogix'")
     args = parser.parse_args()
     return args
 
 class TestDriver(unittest.TestCase):
     #Each test uses the same IOC, driver instance and libplctag simulator
-    def setUp(self, simulatorPath, iocPath, plc):
+    def setUp(self, simulatorPath, omroneipPath, plc):
         print("------------------Setting up tests-----------------------\n")
-        self.iocPath = iocPath
+        self.omroneipPath = omroneipPath
         self.plc = plc
-        self.testOmronEIP = testSetup.TestSetup(simulatorPath, iocPath, plc)
+        self.testOmronEIP = testSetup.TestSetup(simulatorPath, omroneipPath, plc)
         self.errorList = []
         print("\n\n")
 
@@ -37,7 +37,6 @@ class TestDriver(unittest.TestCase):
         print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
         self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
         self.testOmronEIP.startIOC()
-        time.sleep(5)
         writeVal = 5
         self.testOmronEIP.writePV("omronEIP:writeInt16",writeVal)
         time.sleep(1)
@@ -54,15 +53,14 @@ class TestDriver(unittest.TestCase):
         print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
         self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
         self.testOmronEIP.startIOC()
-        time.sleep(5)
-        writeVal = 3
+        writeVal = -22
         readVal = 0
         self.testOmronEIP.writePV("omronEIP:writeInt16",writeVal)
         time.sleep(1)
         readVal = self.testOmronEIP.readPV("omronEIP:readInt16")
         self.testOmronEIP.closeSimulator()
         self.testOmronEIP.closeIOC()
-        try: self.assertNotEqual(0,readVal)
+        try: self.assertTrue(writeVal==readVal)
         except AssertionError as e: self.errorList.append(str(e))
         else:
              print("---------------------"+inspect.stack()[0][3]+" success :) ---------------------\n")
