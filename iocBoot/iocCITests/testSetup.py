@@ -73,13 +73,15 @@ class TestSetup:
         self.iocProc.wait(timeout=5)
 
     def readPV(self, pvName):
-        val = epics.caget(pvName, timeout=2)
+        pv = epics.PV(pvName)
+        val = pv.get()
         if (val == "None"):
             val = 0
         print(f"Read value={val} from simulator")
         return val
 
     def writePV(self, pvName, val):
+        pv = epics.PV(pvName)
+        pv.put(val, wait=True)
         print(f"Writing value={val} to simulator")
-        epics.caput(pvName, val, wait=True, timeout=2)
 
