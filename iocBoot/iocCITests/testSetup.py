@@ -39,7 +39,6 @@ class TestSetup:
         args = [self.simulatorPath]
         args.extend(simulatorArgs)
         self.simulatorProc = subprocess.Popen(args=args, shell=False, stdout=subprocess.PIPE)
-        time.sleep(5)
 
     def closeSimulator(self):
         print("Closing PLC server simulator!")
@@ -57,6 +56,7 @@ class TestSetup:
         chdir(self.IOC_TOP)
         self.iocProc = subprocess.Popen([self.IOC_EXECUTABLE, self.IOC_CMD], shell=False)
         self.simulatorProc.wait(timeout=5)
+        time.sleep(5)
 
     def closeIOC(self):
         print("Closing IOC")

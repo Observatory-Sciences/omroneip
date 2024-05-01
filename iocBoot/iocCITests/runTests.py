@@ -8,7 +8,7 @@ import argparse
 def options():
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--simulator", default=os.environ.get("HOME")+"/libplctag-2.5.5/build/bin_dist/ab_server", help="path to libplctag PLC simulator")
-    parser.add_argument("-o", "--omroneip", default=os.getcwd() + "/../..", help="path to the top directory of the omroneip driver")
+    parser.add_argument("-o", "--omroneip", default=os.getcwd(), help="path to the top directory of the omroneip driver")
     parser.add_argument("-p", "--plc", default="Omron", help="Choose either 'Omron' or 'ControlLogix'")
     args = parser.parse_args()
     return args
