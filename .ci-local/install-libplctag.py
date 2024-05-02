@@ -14,6 +14,7 @@ cue.detect_context()
 sourcedir = os.path.join(cue.homedir, '.source/libplctag')
 sdkdir = os.path.join(sourcedir, os.environ['LIBPLCTAG'])
 os.environ["LIBPLCTAG_PATH"] = sdkdir
+print("SDK path = " + sdkdir)
 
 if 'LIBPLCTAG' in os.environ:
     with open(os.path.join(curdir, 'configure', 'CONFIG_SITE.local'), 'a') as f:
