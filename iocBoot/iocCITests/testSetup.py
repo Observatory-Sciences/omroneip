@@ -73,15 +73,18 @@ class TestSetup:
         self.iocProc.wait(timeout=5)
 
     def readPV(self, pvName):
-        pv = epics.PV(pvName, connection_timeout=5, verbose=True)
-        val = pv.get()
-        if (val == None):
+        pv = epics.PV(pvName)
+        status = pv.wait_for_connection(5)
+        if (status == True):
+            val = pv.get()
+            print(f"Read value={val} from simulator")
+        else:
             print("Error, could not find PV")
-        print(f"Read value={val} from simulator")
+            val = None
         return val
 
     def writePV(self, pvName, val):
-        pv = epics.PV(pvName, connection_timeout=5, verbose=True)
+        pv = epics.PV(pvName, connection_timeout=5)
         pv.put(val, wait=True)
         print(f"Writing value={val} to simulator")
 
