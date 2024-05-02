@@ -79,12 +79,16 @@ class TestSetup:
             val = pv.get()
             print(f"Read value={val} from simulator")
         else:
-            print("Error, could not find PV")
+            print("Error, could not find PV"+pvName)
             val = None
         return val
 
     def writePV(self, pvName, val):
         pv = epics.PV(pvName, connection_timeout=5)
-        pv.put(val, wait=True)
-        print(f"Writing value={val} to simulator")
+        status = pv.wait_for_connection(5)
+        if (status == True):
+            print(f"Writing value={val} to simulator")
+            pv.put(val, wait=True)
+        else:
+            print("Error, could not find pv "+pvName)
 
