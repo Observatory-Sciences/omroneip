@@ -18,7 +18,9 @@ print("SDK path = " + sdkdir)
 
 if 'LIBPLCTAG' in os.environ:
     with open(os.path.join(curdir, 'configure', 'CONFIG_SITE.local'), 'a') as f:
-        f.write('LIBPLCTAG = {0}'.format(sdkdir))
+        f.write(f'LIBPLCTAG = {sdkdir}\n' +
+                f'LIBPLCTAG_LIB = {sdkdir}/src/lib\n' +
+                f'LIBPLCTAG_BUILD = {sdkdir}/build/bin_dist')
     try:
         os.makedirs(sourcedir)
         os.makedirs(cue.toolsdir)
