@@ -22,3 +22,5 @@ dbLoadRecords("db/testInt.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
 iocInit()
 
 dbl()
+
+casr 6

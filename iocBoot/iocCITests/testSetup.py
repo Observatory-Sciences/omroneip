@@ -34,7 +34,7 @@ class TestSetup:
             print("New IOC top is: " + self.IOC_TOP)
         print("Libplctag simulator at: " + self.simulatorPath)
 
-        self.ENV["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
+        self.ENV["EPICS_CA_ADDR_LIST"] = "127.0.0.1:5064"
         self.ENV["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
         self.ENV["EPICS_DB_INCLUDE_PATH"] = (f"{self.omroneipPath}/omroneipApp/db")
         self.ENV["LD_LIBRARY_PATH"] = self.EPICS_BASE + "/lib/" + self.EPICS_HOST_ARCH
