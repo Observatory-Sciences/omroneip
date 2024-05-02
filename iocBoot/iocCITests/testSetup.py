@@ -51,7 +51,7 @@ class TestSetup:
         self.simulatorProc.wait(timeout=5)
 
     def startIOC(self):
-        print("Setting up test IOC!")
+        print("Setting up test IOC!", flush=True)
         epics.ca.initialize_libca()
         if (self.plc == "Omron"):
             self.ENV["PLC"] = "omron-njnx"
@@ -79,7 +79,7 @@ class TestSetup:
             val = pv.get()
             print(f"Read value={val} from simulator")
         else:
-            print("Error, could not find PV"+pvName)
+            print("Error, could not find PV "+pvName)
             val = None
         return val
 
@@ -90,5 +90,5 @@ class TestSetup:
             print(f"Writing value={val} to simulator")
             pv.put(val, wait=True)
         else:
-            print("Error, could not find pv "+pvName)
+            print("Error, could not find PV "+pvName)
 
