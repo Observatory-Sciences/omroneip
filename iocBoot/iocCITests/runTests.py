@@ -38,6 +38,7 @@ class TestDriver(unittest.TestCase):
         print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
         self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
         self.testOmronEIP.startIOC()
+        self.testOmronEIP.checkIOCStatus()
         writeVal = 5
         self.testOmronEIP.writePV("omronEIP:writeInt16",writeVal)
         time.sleep(1)
@@ -54,6 +55,7 @@ class TestDriver(unittest.TestCase):
         print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
         self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
         self.testOmronEIP.startIOC()
+        self.testOmronEIP.checkIOCStatus()
         writeVal = -22
         readVal = 0
         self.testOmronEIP.writePV("omronEIP:writeInt16",writeVal)
