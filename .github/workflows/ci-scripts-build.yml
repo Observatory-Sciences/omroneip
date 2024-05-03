@@ -36,14 +36,14 @@ jobs:
       matrix:
         # Job names also name artifacts, character limitations apply
         include:
-      #    - os: ubuntu-20.04
-      #      cmp: gcc
-      #      configuration: static
-      #      extra: "CMD_CXXFLAGS=-std=c++23"
-      #      name: "Ub-20 C++22, static"
-      #      libplctag: "v2.5.3"
-      #      asyn: "R4-44-1"
-      #      test: "true"
+          - os: ubuntu-20.04
+            cmp: gcc
+            configuration: static
+            extra: "CMD_CXXFLAGS=-std=c++23"
+            name: "Ub-20 C++22, static"
+            libplctag: "v2.5.3"
+            asyn: "R4-44-1"
+            test: "true"
 
           - os: ubuntu-20.04
             cmp: gcc

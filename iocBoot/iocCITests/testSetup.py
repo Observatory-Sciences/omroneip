@@ -104,5 +104,4 @@ class TestSetup:
             print(f"Writing value={val} to simulator")
             pv.put(val, wait=True)
         else:
-            print("Error, could not find PV "+pvName)
-
+            print("Invalid PLC name supplied!")

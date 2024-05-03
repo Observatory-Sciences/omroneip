@@ -1,0 +1,9 @@
+{
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/epics-dev/work/epics/modules/omroneip/omroneipApp/src/O.linux-x86_64",
+            "binaryPath": "/home/epics-dev/work/epics/modules/omroneip/omroneipApp/src/O.linux-x86_64/omroneipApp",
+            "binaryArgs": []
+        }
+    ]
+}
