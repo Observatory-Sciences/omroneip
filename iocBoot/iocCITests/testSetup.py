@@ -1,58 +1,107 @@
 import unittest
 import epics
-from os import environ, chdir
+from os import environ, chdir, getcwd
 import subprocess
 import argparse
+import time
+from run_iocsh import IOC
 
 #Startup the IOC and the driver and the libplctag simulator
 
 class TestSetup:
-    def __init__(self, simulatorPath, iocPath, plc):
+    def __init__(self, simulatorPath, omroneip, plc):
         self.simulatorPath = simulatorPath
-        self.iocPath = iocPath
+        self.omroneipPath = omroneip
         self.plc = plc
-        environ["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
-        environ["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
-        environ["PATH"] = "/home/runner/.cache/base-R3.15.9" + environ.get("PATH")
+        self.ENV = environ
         self.EPICS_HOST_ARCH = environ.get("EPICS_HOST_ARCH")
-        self.IOC_EXECUTABLE = (f"{self.iocPath}/bin/linux-x86_64/omroneipApp")
-        self.IOC_CMD = (f"{self.iocPath}/iocBoot/iocCITests/testInt.cmd")
+        self.EPICS_BASE = environ.get("EPICS_BASE")
+        self.IOC_TOP = environ.get("IOC_TOP")
+        epics.ca.initialize_libca()
+        if self.EPICS_BASE not in self.ENV["PATH"]:
+            self.ENV["PATH"] = f"{self.EPICS_BASE}/bin/{self.EPICS_HOST_ARCH}:{self.ENV['PATH']}"
+            print("Added EPICS_BASE to path, path is now: " + self.ENV["PATH"])
+        else:
+            print("Path is: " + self.ENV["PATH"])
+        if self.EPICS_BASE!=None:
+            print("Epics base is: " + self.EPICS_BASE )
+        else:
+            print("Could not find EPICS base!")
+        if self.IOC_TOP != None:
+            print("IOC top is: " + self.IOC_TOP)
+        else:
+            self.IOC_TOP = self.omroneipPath + "/iocBoot/iocCITests"
+            print("New IOC top is: " + self.IOC_TOP)
+        print("Libplctag simulator at: " + self.simulatorPath)
 
-    def setupSimulator(self, simulatorArgs):
-        print("Setting up libplctag simulator!")
-        print(simulatorArgs)
+        self.ENV["EPICS_CA_ADDR_LIST"] = "127.0.0.1:5064"
+        self.ENV["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
+        self.ENV["EPICS_DB_INCLUDE_PATH"] = (f"{self.omroneipPath}/omroneipApp/db")
+        self.ENV["LD_LIBRARY_PATH"] = self.EPICS_BASE + "/lib/" + self.EPICS_HOST_ARCH
+
+        if (plc == "Omron"):
+            self.ENV["PLC"] = "omron-njnx"
+            self.ENV["PLC_GATEWAY"] = "18,127.0.0.1"
+        elif (plc == "ControlLogix"):
+            self.ENV["PLC"] = "ControlLogix"
+            self.ENV["PLC_GATEWAY"] = "1,0"
+        else:
+            print("Invalid PLC name supplied!")
+
+    def startSimulator(self, simulatorArgs):
+        print("Setting up libplctag simulator with parameters: " + ', '.join(simulatorArgs))
         args = [self.simulatorPath]
         args.extend(simulatorArgs)
-        self.simulatorProc = subprocess.Popen(args=args, shell=False, stdout=subprocess.PIPE)
+        if (self.plc == "ControlLogix"):
+            args.append("--path=1,0")
+        self.simulatorProc = subprocess.Popen(args=args, shell=False, stdout=subprocess.PIPE, env=self.ENV)
+        if self.simulatorProc.returncode is not None:
+            print("Simulator should be running, but is not!")
 
     def closeSimulator(self):
         print("Closing PLC server simulator!")
         self.simulatorProc.kill()
         self.simulatorProc.wait(timeout=5)
+        if self.simulatorProc.returncode is None:
+            print("Simulator failed to close!")
 
-    def startIOC(self):
-        print("Setting up test IOC!")
-        if (self.plc == "Omron"):
-            environ["PLC"] = "omron-njnx"
-        elif (self.plc == "ControlLogix"):
-            environ["PLC"] = "ControlLogix"
-        else:
-            print("Invalid PLC name supplied!")
-        chdir(self.iocPath + "/iocBoot/iocCITests/")
-        self.iocProc = subprocess.Popen([self.IOC_EXECUTABLE, self.IOC_CMD], shell=False)
+    def get_ioc(self):
+        return IOC(ioc_executable=self.IOCSH_PATH)
+
+    def startIOC(self, iocsh):
+        print("Setting up test IOC!", flush=True)
+        self.IOCSH_PATH = (f"{self.omroneipPath}/iocBoot/iocCITests/{iocsh}")
+        chdir(self.IOC_TOP)
+        self.ioc = self.get_ioc()
+        self.ioc.start()
+        time.sleep(1)
+        assert self.ioc.is_running(), "Error, ioc not running!"
 
     def closeIOC(self):
         print("Closing IOC")
-        self.iocProc.kill()
+        epics.ca.flush_io()
+        self.ioc.exit()
+        time.sleep(1)
+        assert not self.ioc.is_running(), "Error, ioc is still running!"
 
     def readPV(self, pvName):
-        val = epics.caget(pvName, timeout=2)
-        if (val == "None"):
-            val = 0
-        print(f"Read value={val} from simulator")
+        assert self.ioc.is_running(), "Error, ioc not running!"
+        pv = epics.PV(pvName)
+        status = pv.wait_for_connection(10)
+        if (status == True):
+            val = pv.get()
+            print(f"Read value={val} from simulator")
+        else:
+            print("Error, could not find PV "+pvName)
+            val = None
         return val
 
     def writePV(self, pvName, val):
-        print(f"Writing value={val} to simulator")
-        epics.caput(pvName, val, wait=True, timeout=2)
-
+        assert self.ioc.is_running(), "Error, ioc not running!"
+        pv = epics.PV(pvName, connection_timeout=10)
+        status = pv.wait_for_connection(10)
+        if (status == True):
+            print(f"Writing value={val} to simulator")
+            pv.put(val, wait=True)
+        else:
+            print("Invalid PLC name supplied!")
