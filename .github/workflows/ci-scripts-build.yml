@@ -80,4 +80,4 @@ jobs:
       run: |
         python .ci/cue.py exec python iocBoot/iocCITests/runTests.py -p "Omron" -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server
         python .ci/cue.py exec python iocBoot/iocCITests/runTests.py -p "ControlLogix" -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server
-        if: matrix.test == 'true'
+      if: matrix.test == 'true'
