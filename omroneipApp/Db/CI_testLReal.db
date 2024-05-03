@@ -1,0 +1,15 @@
+# record(ai, "$(P)testRead) {
+#     field(DTYP, "asynInt32")
+#     field(INP, "asyn(PORT, ADDR, TIMEOUT)@poller name[start_index] datatype sliceSize offset extras")
+# }
+
+record(ai, "$(P)readFloat64") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) TestLREAL LREAL 1 none none")
+}
+
+record(ao, "$(P)writeFloat64") {
+    field(DTYP, "asynFloat64")
+    field(OUT, "@asyn($(PORT), 0, 1)TestLREAL LREAL 1 none none")
+}

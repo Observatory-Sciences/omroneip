@@ -33,7 +33,6 @@ jobs:
       test: ${{ matrix.test }}
       SET: "stable"
     strategy:
-      fail-fast: true
       matrix:
         # Job names also name artifacts, character limitations apply
         include:
@@ -62,6 +61,7 @@ jobs:
     - name: Download and unzip libplctag shared library
       run: |
         python .ci-local/install-libplctag.py
+        cat ./configure/CONFIG_SITE.local
       if: matrix.libplctag != ''
     - name: Prepare and compile dependencies
       run: python .ci/cue.py prepare
@@ -75,6 +75,9 @@ jobs:
       run: |
         sudo apt-get update
         sudo pip3 install pytest pyepics
+        sudo pip3 install run-iocsh -i https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple
     - name: Run end2end tests
-      run: python iocBoot/iocCITests/runTests.py -p Omron -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server -t /home/runner/work/omroneip/omroneip
+      run: |
+        python .ci/cue.py exec python iocBoot/iocCITests/runTests.py -p "Omron" -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server
+        python .ci/cue.py exec python iocBoot/iocCITests/runTests.py -p "ControlLogix" -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server
       if: matrix.test == 'true'

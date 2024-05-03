@@ -1,0 +1,59 @@
+2024/05/03 14:02:42.439 drvOmronEIP:drvInfoParser Processing drvInfo parameter: TestINT
+2024/05/03 14:02:42.439 drvOmronEIP:drvInfoParser Processing drvInfo parameter: INT
+2024/05/03 14:02:42.439 drvOmronEIP:drvInfoParser Processing drvInfo parameter: 1
+2024/05/03 14:02:42.440 drvOmronEIP:drvInfoParser Processing drvInfo parameter: none
+2024/05/03 14:02:42.440 drvOmronEIP:drvInfoParser Processing drvInfo parameter: none
+2024/05/03 14:02:42.440 drvOmronEIP:drvInfoParser Creating libplctag tag with the following parameters:
+2024/05/03 14:02:42.440 optimisationFlag 			 dont optimise
+2024/05/03 14:02:42.440 strCapacity 			 0
+2024/05/03 14:02:42.440 tagExtras 			 &allow_packing=1
+2024/05/03 14:02:42.440 sliceSize 			 1
+2024/05/03 14:02:42.440 offset 			 0
+2024/05/03 14:02:42.440 startIndex 			 1
+2024/05/03 14:02:42.440 stringValid 			 true
+2024/05/03 14:02:42.440 dataType 			 INT
+2024/05/03 14:02:42.440 tagName 			 TestINT
+2024/05/03 14:02:42.440 pollerName 			 none
+2024/05/03 14:02:42.440 drvOmronEIP:drvUserCreate  Tag not added! PLCTAG_ERR_CREATE. drvInfo: TestINT INT 1 none none
+2024/05/03 14:02:42.440 asynPortDriver:drvUserCreate: drvInfo=TestINT INT 1 none none, index=0
+2024/05/03 14:02:42.441 omronDriver asynManager::queueLockPort locking port
+2024/05/03 14:02:42.441 omronDriver asynManager::queueLockPort created queueLockPortPvt=0xa02270
+2024/05/03 14:02:42.443 omronDriver asynManager::queueLockPort created queueLockPortPvt=0xa02270, event=0xa019c0, mutex=0xa052c0
+2024/05/03 14:02:42.443 omronDriver asynManager::queueLockPort taking mutex 0xa052c0
+2024/05/03 14:02:42.443 omronDriver asynManager::queueLockPort queueing request
+2024/05/03 14:02:42.443 omronDriver addr 0 queueRequest priority 0 not lockHolder
+2024/05/03 14:02:42.443 omronDriver schedule queueRequest timeout in 2.000000 seconds
+2024/05/03 14:02:42.443 omronDriver asynManager::queueLockPort waiting for event
+2024/05/03 14:02:42.443 omronDriver 0 autoConnect
+2024/05/03 14:02:42.443 asynPortDriver:connect:, pasynUser=0x9ee618
+2024/05/03 14:02:42.443 asynManager::portThread port=omronDriver callback
+2024/05/03 14:02:42.443 omronDriver asynManager::queueLockPortCallback signaling begin event
+2024/05/03 14:02:42.443 omronDriver asynManager::queueLockPortCallback waiting for mutex from queueUnlockPort
+2024/05/03 14:02:42.443 omronDriver asynManager::queueLockPort got event from callback
+2024/05/03 14:02:42.444 asynPortDriver:getIntegerParam: port=omronDriver error getting parameter 0 TestINT INT 1 none none, in list 0, value undefined
+2024/05/03 14:02:42.444 omronDriver queueUnlockPort
+2024/05/03 14:02:42.444 omronDriver asynManager::queueUnlockPort waiting for event
+2024/05/03 14:02:42.444 omronDriver queueUnlockPort unlock mutex 0xa052c0 complete.
+2024/05/03 14:02:42.444 drvOmronEIP:drvInfoParser Processing drvInfo parameter: TestINT
+2024/05/03 14:02:42.444 drvOmronEIP:drvInfoParser Processing drvInfo parameter: INT
+2024/05/03 14:02:42.444 drvOmronEIP:drvInfoParser Processing drvInfo parameter: 1
+2024/05/03 14:02:42.444 drvOmronEIP:drvInfoParser Processing drvInfo parameter: none
+2024/05/03 14:02:42.444 drvOmronEIP:drvInfoParser Processing drvInfo parameter: none
+2024/05/03 14:02:42.444 drvOmronEIP:drvInfoParser Creating libplctag tag with the following parameters:
+2024/05/03 14:02:42.444 optimisationFlag 			 dont optimise
+2024/05/03 14:02:42.444 strCapacity 			 0
+2024/05/03 14:02:42.444 tagExtras 			 &allow_packing=1
+2024/05/03 14:02:42.444 sliceSize 			 1
+2024/05/03 14:02:42.444 offset 			 0
+2024/05/03 14:02:42.444 startIndex 			 1
+2024/05/03 14:02:42.444 stringValid 			 true
+2024/05/03 14:02:42.444 dataType 			 INT
+2024/05/03 14:02:42.444 tagName 			 TestINT
+2024/05/03 14:02:42.444 pollerName 			 fastPoller
+2024/05/03 14:02:42.444 drvOmronEIP:drvUserCreate  Tag not added! PLCTAG_ERR_CREATE. drvInfo: @fastPoller TestINT INT 1 none none
+2024/05/03 14:02:42.445 asynPortDriver:drvUserCreate: drvInfo=@fastPoller TestINT INT 1 none none, index=1
+2024/05/03 14:02:42.447 omronEIP:readInt16 devAsynInt32::getIoIntInfo registering interrupt
+2024/05/03 14:02:42.447 omronDriver 0 registerInterruptUser
+2024/05/03 14:02:43.052 drvOmronEIP:drvOptimiseTags The structs which are accessed by multiple records are (struct: asyn index list):
+2024/05/03 14:02:43.052 drvOmronEIP:drvOptimiseTags The structs alongside the libplctag index chosen to read them are:
+2024/05/03 14:02:43.152 drvOmronEIP:readPoller Starting poller: fastPoller with interval: 1.000000
