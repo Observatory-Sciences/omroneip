@@ -75,9 +75,8 @@ jobs:
       run: |
         sudo apt-get update
         sudo pip3 install pytest pyepics
+        sudo pip3 install run-iocsh -i https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple
     - name: Run end2end tests
       run: |
-        export PLC=Omron
-        ./bin/linux-x86_64/omroneipApp ./iocBoot/iocCITests/testInt.cmd
         python .ci/cue.py exec python iocBoot/iocCITests/runTests.py -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server
       if: matrix.test == 'true'

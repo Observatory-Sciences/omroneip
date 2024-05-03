@@ -33,12 +33,24 @@ class TestDriver(unittest.TestCase):
         else:
             print("All tests passed!")
 
+    def test_test_setup(self):
+        #Testing simulator and ioc startup and shutdown
+        print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
+        self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]', '--debug'])
+        self.testOmronEIP.startIOC()
+        self.testOmronEIP.closeSimulator()
+        self.testOmronEIP.closeIOC()
+        self.testOmronEIP.ioc.check_output()
+        output = self.testOmronEIP.ioc.outs
+        print("IOC stdout:\n"+output)
+        output = self.testOmronEIP.ioc.errs
+        print("IOC stderr:\n"+output)
+
     def test_int16(self):
         #Test reading and writing int16 to the simulator
         print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
         self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
         self.testOmronEIP.startIOC()
-        self.testOmronEIP.checkIOCRunning()
         writeVal = 5
         self.testOmronEIP.writePV("omronEIP:writeInt16",writeVal)
         time.sleep(1)
@@ -51,11 +63,10 @@ class TestDriver(unittest.TestCase):
              print("---------------------"+inspect.stack()[0][3]+" success :) ---------------------\n")
 
     def test_negative_int16(self):
-        #Test reading and writing int16 to the simulator
+        #Test reading and writing a negative int16 to the simulator
         print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
         self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
         self.testOmronEIP.startIOC()
-        self.testOmronEIP.checkIOCRunning()
         writeVal = -22
         readVal = 0
         self.testOmronEIP.writePV("omronEIP:writeInt16",writeVal)
@@ -72,6 +83,7 @@ if __name__ == '__main__':
     args = options()
     newTest = TestDriver()
     TestDriver.setUp(newTest, args.simulator, args.omroneip, args.plc)
+    TestDriver.test_test_setup(newTest)
     TestDriver.test_int16(newTest)
     TestDriver.test_negative_int16(newTest)
     TestDriver.tearDown(newTest)
