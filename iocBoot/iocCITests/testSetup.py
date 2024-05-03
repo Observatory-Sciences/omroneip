@@ -17,6 +17,7 @@ class TestSetup:
         self.EPICS_HOST_ARCH = environ.get("EPICS_HOST_ARCH")
         self.EPICS_BASE = environ.get("EPICS_BASE")
         self.IOC_TOP = environ.get("IOC_TOP")
+        epics.ca.initialize_libca()
         if self.EPICS_BASE not in self.ENV["PATH"]:
             self.ENV["PATH"] = f"{self.EPICS_BASE}/bin/{self.EPICS_HOST_ARCH}:{self.ENV['PATH']}"
             print("Added EPICS_BASE to path, path is now: " + self.ENV["PATH"])
@@ -69,25 +70,24 @@ class TestSetup:
 
     def startIOC(self, iocsh):
         print("Setting up test IOC!", flush=True)
-        epics.ca.initialize_libca()
         self.IOCSH_PATH = (f"{self.omroneipPath}/iocBoot/iocCITests/{iocsh}")
         chdir(self.IOC_TOP)
         self.ioc = self.get_ioc()
         self.ioc.start()
+        time.sleep(1)
         assert self.ioc.is_running(), "Error, ioc not running!"
 
     def closeIOC(self):
         print("Closing IOC")
         epics.ca.flush_io()
-        epics.ca.clear_cache()
-        epics.ca.finalize_libca()
         self.ioc.exit()
+        time.sleep(1)
         assert not self.ioc.is_running(), "Error, ioc is still running!"
 
     def readPV(self, pvName):
         assert self.ioc.is_running(), "Error, ioc not running!"
         pv = epics.PV(pvName)
-        status = pv.wait_for_connection(5)
+        status = pv.wait_for_connection(10)
         if (status == True):
             val = pv.get()
             print(f"Read value={val} from simulator")
@@ -98,8 +98,8 @@ class TestSetup:
 
     def writePV(self, pvName, val):
         assert self.ioc.is_running(), "Error, ioc not running!"
-        pv = epics.PV(pvName, connection_timeout=5)
-        status = pv.wait_for_connection(5)
+        pv = epics.PV(pvName, connection_timeout=10)
+        status = pv.wait_for_connection(10)
         if (status == True):
             print(f"Writing value={val} to simulator")
             pv.put(val, wait=True)

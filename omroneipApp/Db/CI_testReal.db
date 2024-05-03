@@ -6,10 +6,10 @@
 record(ai, "$(P)readFloat32") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) TestReal REAL 1 none none")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) TestREAL REAL 1 none none")
 }
 
 record(ao, "$(P)writeFloat32") {
     field(DTYP, "asynFloat64")
-    field(OUT, "@asyn($(PORT), 0, 1)TestReal REAL 1 none none")
+    field(OUT, "@asyn($(PORT), 0, 1)TestREAL REAL 1 none none")
 }

@@ -11,7 +11,7 @@ record(lsi, "$(P)readString") {
 }
 
 record(lso, "$(P)writeString") {
-    field(DTYP, "asynOctetRead")
-    field(OUT, "@asyn($(PORT), 0, 1)TestSTRING STRING 1 none none")
+    field(DTYP, "asynOctetWrite")
+    field(OUT, "@asyn($(PORT), 0, 1)TestSTRING STRING 1 none &str_is_zero_terminated=0&str_is_fixed_length=0&str_pad_bytes=0&str_is_counted=1&str_count_word_bytes=2&str_max_capacity=82")
     field(SIZV, "41")
 }

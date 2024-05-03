@@ -4,6 +4,7 @@ import unittest
 import epics
 import time, inspect
 import argparse
+import numpy as np
 
 def options():
     parser = argparse.ArgumentParser()
@@ -24,6 +25,9 @@ class TestDriver(unittest.TestCase):
         print("\n")
 
     def tearDown(self):
+        epics.ca.flush_io()
+        epics.ca.clear_cache()
+        epics.ca.finalize_libca()
         try: self.assertEqual([], self.errorList)
         except:
             for error in self.errorList:
@@ -58,8 +62,12 @@ class TestDriver(unittest.TestCase):
         readVal = self.testOmronEIP.readPV("omronEIP:readInt16")
         self.testOmronEIP.closeSimulator()
         self.testOmronEIP.closeIOC()
+        output = self.testOmronEIP.ioc.errs
+        print("IOC stderr:\n"+output)
         try: self.assertTrue(writeVal==readVal)
-        except AssertionError as e: self.errorList.append(str(e))
+        except AssertionError as e: 
+            self.errorList.append(str(e))
+            print("---------------------"+inspect.stack()[0][3]+" fail :( ---------------------\n")
         else:
              print("---------------------"+inspect.stack()[0][3]+" success :) ---------------------\n")
 
@@ -75,8 +83,12 @@ class TestDriver(unittest.TestCase):
         readVal = self.testOmronEIP.readPV("omronEIP:readInt16")
         self.testOmronEIP.closeSimulator()
         self.testOmronEIP.closeIOC()
+        output = self.testOmronEIP.ioc.errs
+        print("IOC stderr:\n"+output)
         try: self.assertTrue(writeVal==readVal)
-        except AssertionError as e: self.errorList.append(str(e))
+        except AssertionError as e: 
+            self.errorList.append(str(e))
+            print("---------------------"+inspect.stack()[0][3]+" fail :( ---------------------\n")
         else:
              print("---------------------"+inspect.stack()[0][3]+" success :) ---------------------\n")
             
@@ -91,8 +103,12 @@ class TestDriver(unittest.TestCase):
         readVal = self.testOmronEIP.readPV("omronEIP:readInt32")
         self.testOmronEIP.closeSimulator()
         self.testOmronEIP.closeIOC()
+        output = self.testOmronEIP.ioc.errs
+        print("IOC stderr:\n"+output)
         try: self.assertTrue(writeVal==readVal)
-        except AssertionError as e: self.errorList.append(str(e))
+        except AssertionError as e: 
+            self.errorList.append(str(e))
+            print("---------------------"+inspect.stack()[0][3]+" fail :( ---------------------\n")
         else:
              print("---------------------"+inspect.stack()[0][3]+" success :) ---------------------\n")
 
@@ -107,8 +123,12 @@ class TestDriver(unittest.TestCase):
         readVal = self.testOmronEIP.readPV("omronEIP:readInt64")
         self.testOmronEIP.closeSimulator()
         self.testOmronEIP.closeIOC()
+        output = self.testOmronEIP.ioc.errs
+        print("IOC stderr:\n"+output)
         try: self.assertTrue(writeVal==readVal)
-        except AssertionError as e: self.errorList.append(str(e))
+        except AssertionError as e: 
+            self.errorList.append(str(e))
+            print("---------------------"+inspect.stack()[0][3]+" fail :( ---------------------\n")
         else:
              print("---------------------"+inspect.stack()[0][3]+" success :) ---------------------\n")
     
@@ -117,14 +137,18 @@ class TestDriver(unittest.TestCase):
         print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
         self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestREAL:REAL[1,1]'])
         self.testOmronEIP.startIOC("testReal.iocsh")
-        writeVal = -12.580238505
+        writeVal = np.float32(-12.580238505)
         self.testOmronEIP.writePV("omronEIP:writeFloat32",writeVal)
         time.sleep(1)
-        readVal = self.testOmronEIP.readPV("omronEIP:readFloat32")
+        readVal = np.float32(self.testOmronEIP.readPV("omronEIP:readFloat32"))
         self.testOmronEIP.closeSimulator()
         self.testOmronEIP.closeIOC()
+        output = self.testOmronEIP.ioc.errs
+        print("IOC stderr:\n"+output)
         try: self.assertTrue(writeVal==readVal)
-        except AssertionError as e: self.errorList.append(str(e))
+        except AssertionError as e: 
+            self.errorList.append(str(e))
+            print("---------------------"+inspect.stack()[0][3]+" fail :( ---------------------\n")
         else:
              print("---------------------"+inspect.stack()[0][3]+" success :) ---------------------\n")
 
@@ -139,8 +163,12 @@ class TestDriver(unittest.TestCase):
         readVal = float(self.testOmronEIP.readPV("omronEIP:readFloat64"))
         self.testOmronEIP.closeSimulator()
         self.testOmronEIP.closeIOC()
+        output = self.testOmronEIP.ioc.errs
+        print("IOC stderr:\n"+output)
         try: self.assertTrue(writeVal==readVal)
-        except AssertionError as e: self.errorList.append(str(e))
+        except AssertionError as e: 
+            self.errorList.append(str(e))
+            print("---------------------"+inspect.stack()[0][3]+" fail :( ---------------------\n")
         else:
              print("---------------------"+inspect.stack()[0][3]+" success :) ---------------------\n")
 
@@ -155,8 +183,12 @@ class TestDriver(unittest.TestCase):
         readVal = self.testOmronEIP.readPV("omronEIP:readString")
         self.testOmronEIP.closeSimulator()
         self.testOmronEIP.closeIOC()
+        output = self.testOmronEIP.ioc.errs
+        print("IOC stderr:\n"+output)
         try: self.assertTrue(writeVal==readVal)
-        except AssertionError as e: self.errorList.append(str(e))
+        except AssertionError as e: 
+            self.errorList.append(str(e))
+            print("---------------------"+inspect.stack()[0][3]+" fail :( ---------------------\n")
         else:
              print("---------------------"+inspect.stack()[0][3]+" success :) ---------------------\n")
 
@@ -171,4 +203,5 @@ if __name__ == '__main__':
     TestDriver.test_int64(newTest)
     TestDriver.test_float32(newTest)
     TestDriver.test_float64(newTest)
+    TestDriver.test_string(newTest)
     TestDriver.tearDown(newTest)
