@@ -60,7 +60,7 @@ class TestSetup:
         else:
             print("Invalid PLC name supplied!")
         chdir(self.IOC_TOP)
-        self.iocProc = subprocess.Popen([self.IOC_EXECUTABLE, self.IOC_CMD], text=True, shell=False, env=self.ENV)
+        self.iocProc = subprocess.run([self.IOC_EXECUTABLE, self.IOC_CMD], text=True, shell=False, stdin=subprocess.PIPE, env=self.ENV)
         time.sleep(3)
         print("")
 
@@ -92,4 +92,7 @@ class TestSetup:
         else:
             print("Error, could not find PV "+pvName)
 
-
+    def checkIOCRunning(self):
+        print("Checking IOC status...")
+        print(self.iocProc.returncode)
+        print(self.iocProc.communicate(input='asynReport 5')[0])
