@@ -61,6 +61,7 @@ jobs:
     - name: Download and unzip libplctag shared library
       run: |
         python .ci-local/install-libplctag.py
+        cat ./configure/CONFIG_SITE.local
       if: matrix.libplctag != ''
     - name: Prepare and compile dependencies
       run: python .ci/cue.py prepare
