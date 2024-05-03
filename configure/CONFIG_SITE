@@ -36,23 +36,13 @@ CHECK_RELEASE = YES
 #CROSS_OPT = NO
 
 # Path to libplctag installation
+# Libplctag shared libraries will be copied into this module
 LIBPLCTAG = /home/epics-dev/work/epics/external/libplctag-2.5.5
 LIBPLCTAG_LIB = $(LIBPLCTAG)/src/lib
 LIBPLCTAG_BUILD = $(LIBPLCTAG)/build/bin_dist
 STATIC_BUILD = NO
 SHARED_LIBRARIES = YES
 
-#debugging
-Host_OPT=NO
-CROSS_OPT=NO
-USR_CXXFLAGS+=-g
-USR_LDFLAGS+=-L$(LIBPLCTAG)/src/lib
-USR_CPPFLAGS_Linux+=-g
-USR_CFLAGS_Linux+=-g
-USR_LDFLAGS_Linux+=-g
-# Enable these to use memory sanitizer
-USR_LDFLAGS_Linux+=-fsanitize=address -fsanitize=leak -fsanitize=undefined
-USR_CXXFLAGS+=-fsanitize=address -fsanitize=leak -fsanitize=undefined
 # These allow developers to override the CONFIG_SITE variable
 # settings without having to modify the configure/CONFIG_SITE
 # file itself.

@@ -14,7 +14,7 @@ cue.detect_context()
 sourcedir = os.path.join(cue.homedir, '.source/libplctag')
 sdkdir = os.path.join(sourcedir, os.environ['LIBPLCTAG'])
 os.environ["LIBPLCTAG_PATH"] = sdkdir
-print("SDK path = " + sdkdir)
+print(f'Defining: LIBPLCTAG = {sdkdir}\n')
 
 if 'LIBPLCTAG' in os.environ:
     with open(os.path.join(curdir, 'configure', 'CONFIG_SITE.local'), 'a') as f:
@@ -25,7 +25,7 @@ if 'LIBPLCTAG' in os.environ:
         os.makedirs(sourcedir)
         os.makedirs(cue.toolsdir)
     except:
-        pass
+        print("Failed to created CONFIG_SITE.local")
 
     tar_name = '{0}.tar.gz'.format(os.environ['LIBPLCTAG'])
     print('Downloading libplctag {0}'.format(os.environ['LIBPLCTAG']))
