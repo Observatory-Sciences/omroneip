@@ -1,7 +1,7 @@
 omroneip
 =======
 
-An [EPICS](http://www.aps.anl.gov/epics) [asyn](https://github.com/epics-modules/asyn) driver for communicating with OmronNJ PLCs using etherIP. This driver will support the _large forward open_ CIP specification as well as _packing_ of CIP responses. This driver is being developed as an alternative to the current EPICS [etherIP](https://github.com/epics-modules/ether_ip) module for the OmronNJ implementation of CIP and may or may not be compatible with CIP running on Alan-Bradley PLCs.
+An [EPICS](http://www.aps.anl.gov/epics) [asyn](https://github.com/epics-modules/asyn) driver for communicating with OmronNJ PLCs using etherIP. This driver is still under development, but once complete will support the _large forward open_ CIP specification as well as _packing_ of CIP responses. This driver is being developed as an alternative to the current EPICS [etherIP](https://github.com/epics-modules/ether_ip) module for the OmronNJ implementation of CIP and may or may not be compatible with CIP running on Alan-Bradley PLCs.
 
 Credits
 ---------------------

@@ -4,10 +4,14 @@ TOP = ../..
 include $(TOP)/configure/CONFIG
 
 # Point the build system to libplctags header and shared library files
-# The name "plctag" must be used instead of "libplctag" or there will be problems
+# The name "plctag" must be used instead of "libplctag" or there will be problems!
 #==================================================
+
+$(info $$LIBPLCTAG_LIB is [${LIBPLCTAG_LIB}])
+
 SRC_DIRS += $(LIBPLCTAG_LIB)
 PROD_LIBS += plctag
+LIB_LIBS += plctag
 plctag_DIR = $(LIBPLCTAG_BUILD)
 
 #==================================================
