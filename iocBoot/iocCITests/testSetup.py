@@ -17,9 +17,6 @@ class TestSetup:
         self.EPICS_HOST_ARCH = environ.get("EPICS_HOST_ARCH")
         self.EPICS_BASE = environ.get("EPICS_BASE")
         self.IOC_TOP = environ.get("IOC_TOP")
-        self.IOC_EXECUTABLE = (f"{self.omroneipPath}/bin/linux-x86_64/omroneipApp")
-        #self.IOC_CMD = (f"{self.omroneipPath}/iocBoot/iocCITests/testInt.cmd")
-        self.IOCSH_PATH = (f"{self.omroneipPath}/iocBoot/iocCITests/testInt.iocsh")
         if self.EPICS_BASE not in self.ENV["PATH"]:
             self.ENV["PATH"] = f"{self.EPICS_BASE}/bin/{self.EPICS_HOST_ARCH}:{self.ENV['PATH']}"
             print("Added EPICS_BASE to path, path is now: " + self.ENV["PATH"])
@@ -41,20 +38,21 @@ class TestSetup:
         self.ENV["EPICS_DB_INCLUDE_PATH"] = (f"{self.omroneipPath}/omroneipApp/db")
         self.ENV["LD_LIBRARY_PATH"] = self.EPICS_BASE + "/lib/" + self.EPICS_HOST_ARCH
 
-        if (self.plc == "Omron"):
+        if (plc == "Omron"):
             self.ENV["PLC"] = "omron-njnx"
-        elif (self.plc == "ControlLogix"):
+            self.ENV["PLC_GATEWAY"] = "18,127.0.0.1"
+        elif (plc == "ControlLogix"):
             self.ENV["PLC"] = "ControlLogix"
+            self.ENV["PLC_GATEWAY"] = "1,0"
         else:
             print("Invalid PLC name supplied!")
-
-        self.TestArgs = []
-        self.cmd = ""
 
     def startSimulator(self, simulatorArgs):
         print("Setting up libplctag simulator with parameters: " + ', '.join(simulatorArgs))
         args = [self.simulatorPath]
         args.extend(simulatorArgs)
+        if (self.plc == "ControlLogix"):
+            args.append("--path=1,0")
         self.simulatorProc = subprocess.Popen(args=args, shell=False, stdout=subprocess.PIPE, env=self.ENV)
         if self.simulatorProc.returncode is not None:
             print("Simulator should be running, but is not!")
@@ -66,18 +64,13 @@ class TestSetup:
         if self.simulatorProc.returncode is None:
             print("Simulator failed to close!")
 
-    def get_ioc(self, cmd=None):
-        if cmd is None:
-            cmd = self.cmd
-        return IOC(
-            *self.TestArgs,
-            cmd,
-            ioc_executable=self.IOCSH_PATH,
-        )
+    def get_ioc(self):
+        return IOC(ioc_executable=self.IOCSH_PATH)
 
-    def startIOC(self):
+    def startIOC(self, iocsh):
         print("Setting up test IOC!", flush=True)
         epics.ca.initialize_libca()
+        self.IOCSH_PATH = (f"{self.omroneipPath}/iocBoot/iocCITests/{iocsh}")
         chdir(self.IOC_TOP)
         self.ioc = self.get_ioc()
         self.ioc.start()
@@ -90,6 +83,7 @@ class TestSetup:
         epics.ca.finalize_libca()
         self.ioc.exit()
         assert not self.ioc.is_running(), "Error, ioc is still running!"
+        self.ioc.exit()
 
     def readPV(self, pvName):
         assert self.ioc.is_running(), "Error, ioc not running!"

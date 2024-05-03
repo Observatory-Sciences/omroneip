@@ -14,7 +14,7 @@ drvOmronEIPConfigure("omronDriver", "127.0.0.1", "${PLC_GATEWAY}", "${PLC}", "1"
 #drvOmronEIPConfigPoller(driverPortName, pollerName, updateRate)
 drvOmronEIPConfigPoller("omronDriver", "fastPoller", 1) #This can be lowered to 0.1
 
-dbLoadRecords("db/CI_testInt.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
+dbLoadRecords("db/CI_testReal.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
 
 iocInit()
 

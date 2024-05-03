@@ -36,8 +36,9 @@ class TestDriver(unittest.TestCase):
     def test_test_setup(self):
         #Testing simulator and ioc startup and shutdown
         print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
-        self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]', '--debug'])
-        self.testOmronEIP.startIOC()
+        self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
+        self.testOmronEIP.startIOC("testInt.iocsh")
+        time.sleep(1)
         self.testOmronEIP.closeSimulator()
         self.testOmronEIP.closeIOC()
         self.testOmronEIP.ioc.check_output()
@@ -50,7 +51,7 @@ class TestDriver(unittest.TestCase):
         #Test reading and writing int16 to the simulator
         print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
         self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
-        self.testOmronEIP.startIOC()
+        self.testOmronEIP.startIOC("testInt.iocsh")
         writeVal = 5
         self.testOmronEIP.writePV("omronEIP:writeInt16",writeVal)
         time.sleep(1)
@@ -66,12 +67,92 @@ class TestDriver(unittest.TestCase):
         #Test reading and writing a negative int16 to the simulator
         print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
         self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestINT:INT[1,1]'])
-        self.testOmronEIP.startIOC()
+        self.testOmronEIP.startIOC("testInt.iocsh")
         writeVal = -22
         readVal = 0
         self.testOmronEIP.writePV("omronEIP:writeInt16",writeVal)
         time.sleep(1)
         readVal = self.testOmronEIP.readPV("omronEIP:readInt16")
+        self.testOmronEIP.closeSimulator()
+        self.testOmronEIP.closeIOC()
+        try: self.assertTrue(writeVal==readVal)
+        except AssertionError as e: self.errorList.append(str(e))
+        else:
+             print("---------------------"+inspect.stack()[0][3]+" success :) ---------------------\n")
+            
+    def test_int32(self):
+        #Test reading and writing int32 to the simulator
+        print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
+        self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestDINT:DINT[1,1]'])
+        self.testOmronEIP.startIOC("testDInt.iocsh")
+        writeVal = 99999
+        self.testOmronEIP.writePV("omronEIP:writeInt32",writeVal)
+        time.sleep(1)
+        readVal = self.testOmronEIP.readPV("omronEIP:readInt32")
+        self.testOmronEIP.closeSimulator()
+        self.testOmronEIP.closeIOC()
+        try: self.assertTrue(writeVal==readVal)
+        except AssertionError as e: self.errorList.append(str(e))
+        else:
+             print("---------------------"+inspect.stack()[0][3]+" success :) ---------------------\n")
+
+    def test_int64(self):
+        #Test reading and writing int64 to the simulator
+        print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
+        self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestLINT:LINT[1,1]'])
+        self.testOmronEIP.startIOC("testLInt.iocsh")
+        writeVal = -200000000001
+        self.testOmronEIP.writePV("omronEIP:writeInt64",writeVal)
+        time.sleep(1)
+        readVal = self.testOmronEIP.readPV("omronEIP:readInt64")
+        self.testOmronEIP.closeSimulator()
+        self.testOmronEIP.closeIOC()
+        try: self.assertTrue(writeVal==readVal)
+        except AssertionError as e: self.errorList.append(str(e))
+        else:
+             print("---------------------"+inspect.stack()[0][3]+" success :) ---------------------\n")
+    
+    def test_float32(self):
+        #Test reading and writing float32 to the simulator
+        print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
+        self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestREAL:REAL[1,1]'])
+        self.testOmronEIP.startIOC("testReal.iocsh")
+        writeVal = -12.580238505
+        self.testOmronEIP.writePV("omronEIP:writeFloat32",writeVal)
+        time.sleep(1)
+        readVal = self.testOmronEIP.readPV("omronEIP:readFloat32")
+        self.testOmronEIP.closeSimulator()
+        self.testOmronEIP.closeIOC()
+        try: self.assertTrue(writeVal==readVal)
+        except AssertionError as e: self.errorList.append(str(e))
+        else:
+             print("---------------------"+inspect.stack()[0][3]+" success :) ---------------------\n")
+
+    def test_float64(self):
+        #Test reading and writing float64 to the simulator
+        print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
+        self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestLREAL:LREAL[1,1]'])
+        self.testOmronEIP.startIOC("testLReal.iocsh")
+        writeVal = 1.23456789e-302
+        self.testOmronEIP.writePV("omronEIP:writeFloat64", float(writeVal))
+        time.sleep(1)
+        readVal = float(self.testOmronEIP.readPV("omronEIP:readFloat64"))
+        self.testOmronEIP.closeSimulator()
+        self.testOmronEIP.closeIOC()
+        try: self.assertTrue(writeVal==readVal)
+        except AssertionError as e: self.errorList.append(str(e))
+        else:
+             print("---------------------"+inspect.stack()[0][3]+" success :) ---------------------\n")
+
+    def test_string(self):
+        #Test reading and writing a string to the simulator
+        print("------------------"+inspect.stack()[0][3]+"-----------------------", flush=True)
+        self.testOmronEIP.startSimulator([f'--plc={self.plc}', '--tag=TestSTRING:STRING[1,1]'])
+        self.testOmronEIP.startIOC("testString.iocsh")
+        writeVal = "hello!"
+        self.testOmronEIP.writePV("omronEIP:writeString",writeVal)
+        time.sleep(1)
+        readVal = self.testOmronEIP.readPV("omronEIP:readString")
         self.testOmronEIP.closeSimulator()
         self.testOmronEIP.closeIOC()
         try: self.assertTrue(writeVal==readVal)
@@ -86,4 +167,8 @@ if __name__ == '__main__':
     TestDriver.test_test_setup(newTest)
     TestDriver.test_int16(newTest)
     TestDriver.test_negative_int16(newTest)
+    TestDriver.test_int32(newTest)
+    TestDriver.test_int64(newTest)
+    TestDriver.test_float32(newTest)
+    TestDriver.test_float64(newTest)
     TestDriver.tearDown(newTest)
