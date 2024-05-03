@@ -83,7 +83,6 @@ class TestSetup:
         epics.ca.finalize_libca()
         self.ioc.exit()
         assert not self.ioc.is_running(), "Error, ioc is still running!"
-        self.ioc.exit()
 
     def readPV(self, pvName):
         assert self.ioc.is_running(), "Error, ioc not running!"
