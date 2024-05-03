@@ -11,6 +11,7 @@ $(info $$LIBPLCTAG_LIB is [${LIBPLCTAG_LIB}])
 
 SRC_DIRS += $(LIBPLCTAG_LIB)
 PROD_LIBS += plctag
+LIB_LIBS += plctag
 plctag_DIR = $(LIBPLCTAG_BUILD)
 
 #==================================================
