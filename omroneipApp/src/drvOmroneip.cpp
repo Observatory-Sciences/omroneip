@@ -34,9 +34,6 @@ static omronDataTypeStruct omronDataTypes[MAX_OMRON_DATA_TYPES] = {
     {dataTypeUInt, "UINT"},
     {dataTypeUDInt, "UDINT"},
     {dataTypeULInt, "ULINT"},
-    {dataTypeUInt_BCD, "UINT_BCD"},
-    {dataTypeUDInt_BCD, "UDINT_BCD"},
-    {dataTypeULInt_BCD, "ULINT_BCD"},
     {dataTypeReal, "REAL"},
     {dataTypeLReal, "LREAL"},
     {dataTypeString, "STRING"},
@@ -540,7 +537,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
       {"offset", "0"},       
       {"tagExtras", "none"},
       {"strCapacity", "0"}, // only needed for getting strings from UDTs  
-      {"optimisationFlag", "not requested"}, // stores the status of optimisation, ("attempt optimisation","dont optimise","optimisation failed","optimised","master")
+      {"optimisationFlag", "not requested"}, // stores the status of optimisation, ("not requested", "attempt optimisation","dont optimise","optimisation failed","optimised","master")
       {"stringValid", "true"} // set to false if errors are detected which aborts creation of tag and asyn parameter
   };
   std::list<std::string> words;
@@ -924,12 +921,12 @@ asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vec
   std::unordered_map<std::string, std::vector<std::string>> expandedMap = rawMap;
   for (auto& kv: expandedMap)
   {// expand embedded structures so that the structure just contains standard dtypes
-    kv.second = expandStructs(expandedMap, kv.first);
+    kv.second = expandStructsRecursive(expandedMap, kv.first);
   }
 
   for (auto kv: rawMap)
   {// look for kv.first in structMap through a recursive search
-    status = findOffsetsRecursive(rawMap, expandedMap, kv.first, structMap, "none");
+    status = findOffsets(expandedMap, kv.first, structMap);
   }
 
   std::string flowString;
@@ -951,24 +948,100 @@ asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vec
   return asynSuccess;
 }
 
-std::vector<std::string> drvOmronEIP::expandStructs(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string structName)
+std::vector<std::string> drvOmronEIP::expandArrayRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string arrayDesc)
+{
+  // "ARRAY[x..y] OF z"
+  std::vector<std::string> expandedData;
+  std::string ss = arrayDesc.substr(7,arrayDesc.size()-7);
+  size_t arrayLength = 0;
+  bool dimsFound = false;
+  std::string dtype;
+
+  // Get the size of the array
+  for (size_t i = 0; i<ss.size(); i++)
+  {
+    if (ss.substr(i,1)== "]")
+    {
+      // Get the x..y part and find x and y in order to get the array size
+      std::string arrayDims = ss.substr(7, i);
+      std::string arrayStartString = arrayDims.substr(0, arrayDims.size()-arrayDims.find(".."));
+      std::string arrayEndString = arrayDims.substr(arrayDims.find("..")+2);
+      try
+      {
+        size_t arrayStart = std::stoi(arrayStartString);
+        size_t arrayEnd = std::stoi(arrayEndString);
+        arrayLength = arrayEnd-arrayStart+1;
+        if (arrayStart < 0 || arrayEnd < 0 || arrayLength < 0) throw 1;
+        dimsFound = true;
+      }
+      catch (...)
+      {
+        std::cout<<"Array dimensions are invalid"<<std::endl;
+      }
+      break;
+    }
+  }
+  if (!dimsFound)
+  {
+    std::cout<<"ARRAY type must be of the following format: \"ARRAY[x..y] OF z\", " << arrayDesc << " definition is invalid" <<std::endl;
+    expandedData.push_back("Invalid");
+    return expandedData;
+  }
+  
+  // Get the datatype of the array
+  dtype = ss.substr(ss.find_last_of(' ')+1, ss.size()-(ss.find_last_of(' ')+1)-1); // We dont want the closing "
+  std::vector<std::string> singleExpandedData;
+  if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || dtype =="UDINT" || 
+      dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || dtype =="ULINT" || dtype =="LINT" || 
+        dtype == "LREAL" || dtype =="LWORD" || dtype.substr(0,6) == "STRING")
+  {
+    singleExpandedData.push_back(dtype);
+  }
+  else
+  {
+    // We assume that we have an array of structs and so we call the expandStructsRecursive function to get the raw dtypes from the struct
+    std::vector<std::string> embeddedDtypes = expandStructsRecursive(rawMap, dtype);
+    singleExpandedData.push_back(dtype);
+    singleExpandedData.insert(std::end(singleExpandedData), std::begin(embeddedDtypes), std::end(embeddedDtypes));
+    singleExpandedData.push_back("end:struct"+dtype);
+  }
+
+  for (size_t i = 0; i<arrayLength; i++) {
+    expandedData.insert(std::end(expandedData), std::begin(singleExpandedData), std::end(singleExpandedData));
+  }
+  return expandedData;
+}
+
+std::vector<std::string> drvOmronEIP::expandStructsRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string structName)
 {
   std::vector<std::string> row = rawMap.at(structName);
   std::vector<std::string> expandedRow;
+  const std::string arrayIdentifier = "\"ARRAY[";
   for (std::string dtype : row)
   {
     if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || dtype.substr(0,6) == "STRING")
     {
       expandedRow.push_back(dtype);
     }
+    else if (dtype.substr(0,7)==arrayIdentifier)
+    {
+      // Expand array and add "start:array" and "end:array" either side
+      std::vector<std::string> arrayDtypes = expandArrayRecursive(rawMap, dtype);
+      expandedRow.push_back("start:array");
+      expandedRow.insert(std::end(expandedRow), std::begin(arrayDtypes), std::end(arrayDtypes));
+      expandedRow.push_back("end:array");
+    }
     else
     {
       // If we get here, then we assume that we have a structure, but it could be a typo
       try
       {
-        //recursively call this function to get all of the embedded datatypes
-        std::vector<std::string> embeddedDtypes = expandStructs(rawMap, dtype);
+        // Recursively call this function to get all of the embedded datatypes
+        // Before each embedded struct we add the struct name and after we add "end", this is so we know when to apply extra padding required for embedded structs
+        std::vector<std::string> embeddedDtypes = expandStructsRecursive(rawMap, dtype);
+        expandedRow.push_back(dtype);
         expandedRow.insert(std::end(expandedRow), std::begin(embeddedDtypes), std::end(embeddedDtypes));
+        expandedRow.push_back("end:struct"+dtype);
       }
       catch (...)
       {
@@ -979,226 +1052,251 @@ std::vector<std::string> drvOmronEIP::expandStructs(std::unordered_map<std::stri
   return expandedRow;
 }
 
-size_t drvOmronEIP::findOffsetsRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap, std::string parentNextDtype)
+std::string drvOmronEIP::findArrayDtype(std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string arrayDesc)
 {
-  std::vector<int> newRow = {0};
-  size_t offSetsCounted = 0;
-  std::vector<std::string> row = rawMap.at(structName);
-  std::vector<std::string> expandedRow = expandedMap.at(structName);
-  size_t lastOffset = 0;
-  bool structInvalid = false;
-  size_t thisOffset = 0;
-  size_t dtypeSize = 0;
-  std::string nextDtype = "none";
-  size_t consequitiveDtypes = 1;
-  size_t padSize = 0;
-  size_t index = 0;
-  size_t nextSize =0;
-  size_t consequitiveBools = 0;
-  bool found = false;
-  // loop through each datatype and find its byte size
-  for (std::string dtype : row)
-  {
-    index++;
-    {
-      // Here we are searching for the next standard dtype so we can calculate if there will be padding
-      if (index < row.size()){
-        nextDtype = row[index];
-        nextDtype = findNextDtype(rawMap, nextDtype);
-        if (nextDtype == "no dtypes left") {
-          // Case where the next dtype is a custom struct but it contains no standard dtypes
-          continue;
-        }
-        else if ( nextDtype == "structName is neither a structure or a standard dtype") {
-          std::cout<<"Invalid dtype/struct name: " << structName <<std::endl;
-          return -1;
-        }
-      }
-      else {
-        // Padding may be required at the end of the structure
-        nextDtype=parentNextDtype;
-      }
-    }
-
-    if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL")
-      dtypeSize=2;
-    else if (dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD")
-      dtypeSize=4;
-    else if (dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD")
-      dtypeSize=8;
-
-    if (nextDtype =="UINT" || nextDtype =="INT" || nextDtype =="WORD" || nextDtype =="BOOL")
-      nextSize=2;
-    else if (nextDtype =="UDINT" || nextDtype =="DINT" || nextDtype =="REAL" || nextDtype =="DWORD")
-      nextSize=4;
-    else if (nextDtype =="ULINT" || nextDtype =="LINT" || nextDtype == "LREAL" || nextDtype =="LWORD")
-      nextSize=8;
-
-    offSetsCounted++;
-    lastOffset = newRow.back();
-    if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD") {
-      thisOffset = lastOffset+dtypeSize;
-      if (nextSize == dtypeSize) {
-        consequitiveDtypes++;
-        if (dtype =="BOOL"){
-          consequitiveBools++;
-        }
-      }
-      else if (nextSize!=dtypeSize) {
-      /*Additional PLC padding rules mean that data must be organised into 32-bit chunks, so if a 8-bit value is included in a structure followed
-        by a different type, 24 bits of padding would be added to seperate them. Bools are even more complicated, they normally take up 16-bits, if there
-        is a single bool followed by a different datatype it will take up 32-bits. If there are 2 or more consequtive bools they will be grouped into
-        a 64-bit array with as much padding as is required. If there are 5 bools in a row, then they will take up 64 bits for the first 4 bools and then 32
-        bits for the second bool which includes 16 bits of padding*/
-        /* We compare the current and previous dtypes and if they are different then we apply padding to thisOffset, which is actually 
-        the position of the next dtype, and the last offset which is the position of the current dtype*/
-        if (dtype =="BOOL"){
-          consequitiveBools++;
-          if (consequitiveBools==1) {
-            thisOffset += 2;
-          }
-          else {
-            if ((consequitiveBools*dtypeSize)>=8) {
-              thisOffset += (consequitiveBools*dtypeSize)%8;
-            }
-            else {
-              thisOffset += 8 - consequitiveBools*dtypeSize;
-            }
-          }
-        }
-        else {
-          consequitiveBools=0;
-          if ((consequitiveDtypes*dtypeSize)>=4) {
-            thisOffset += (consequitiveDtypes*dtypeSize)%4;
-          }
-          else {
-            thisOffset += 4 - consequitiveDtypes*dtypeSize;
-          }
-        }
-        consequitiveDtypes = 1;
-      }
-    }
-    else
-    {
-      if (dtype.substr(0,7) == "STRING[")
-      {
-        auto ss = dtype.substr(7,dtype.size()-7);
-        size_t strLength = 0;
-        bool intFound = false;
-        for (size_t i = 0; i<ss.size(); i++)
-        {
-          if (ss.substr(i,1)== "]")
-          {
-            intFound = true;
-            try
-            {
-              strLength = std::stoi(ss.substr(0,i+1));
-              if (strLength < 0) throw 1;
-            }
-            catch (...)
-            {
-              std::cout<<"STRING length must be an integer"<<std::endl;
-              strLength = 0;
-            }
-            break;
-          }
-        }
-        if (!intFound)
-        {
-          structInvalid = true;
-          std::cout<<"STRING type must specify size, " << structName << " definition is invalid" <<std::endl;
-          return -1;
-        }
-
-        dtypeSize = strLength;
-        thisOffset = lastOffset+dtypeSize;
-        consequitiveDtypes = 1;
-        consequitiveBools = 0;
-        if ((strLength)>=4) {
-          thisOffset += strLength%4;
-        }
-        else {
-          thisOffset += 4 - strLength;
-        }
-      }
-      else
-      {
-        // If we get here, then we assume that we have a structure, but it could be a typo
-        try
-        {
-          std::vector<std::string> nextRow = rawMap.at(dtype);
-          //recursively call this function to calculate the size of the named structure
-          if (index+nextRow.size()<expandedRow.size()) {
-            parentNextDtype = expandedRow[index+nextRow.size()];
-          }
-          else {
-            parentNextDtype ="none";
-          }
-          int structSize = findOffsetsRecursive(rawMap, expandedMap, dtype, structMap, parentNextDtype);
-          if (structSize <= 0)
-          {
-            structInvalid = true;
-            std::cout<<"Error calculating the size of structure: " << dtype << ". Definition for " << structName << " is invalid" << std::endl; 
-            return -1;
-          }
-          thisOffset = structSize+lastOffset;
-        }
-        catch (...)
-        {
-          structInvalid = true;
-          std::cout<<"Failed to find the standard datatype: " << dtype << ". Definition for " << structName << " and its dependents failed" << std::endl;
-          return -1;
-        }
-      }
-    }
-    if (offSetsCounted < row.size())
-    {
-      newRow.push_back(thisOffset);
-    }
-    else
-    {
-      // if this is the last offset, then do not add it to the row as it points to the end of the struct
-      // instead we return thisOffset
-      if (!structInvalid)
-      {
-        structMap[structName] = newRow;
-        return thisOffset;
-      }
-      else
-        return -1;
+  std::list<std::string> dtypeSet = {"INT","DINT","LINT","UINT","UDINT","ULINT","REAL","LREAL","STRING","WORD","DWORD","LWORD","TIME"};
+  std::string dtypeData = arrayDesc.substr(arrayDesc.find("] OF ")+5, arrayDesc.size()-(arrayDesc.find("] OF ")+5));
+  for (std::string dtype : dtypeSet) {
+    // Check to see if array contains a standard dtype
+    if (dtypeData.find(dtype) != std::string::npos){
+      return dtype;
     }
   }
-  // Dont think its possible to get here
-  return -1;
+  // Check to see if array contains a valid struct
+  if (expandedMap.find(dtypeData)!=expandedMap.end()){
+    return dtypeData;
+  }
+
+  // If we get here then we have an invalid array definition
+  std::cout<<"Invalid array definition: "<< arrayDesc <<std::endl;
+  return "Invalid";
 }
 
-std::string drvOmronEIP::findNextDtype(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string structName)
+size_t drvOmronEIP::getBiggestDtype(std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string structName)
 {
-  try
-  {
-    std::vector<std::string> row = rawMap.at(structName);
-    for (std::string dtype : row)
-    {
-      if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || dtype.substr(0,6) == "STRING") {
-        return dtype;
-      }
-      else {
-        // We need to find the next dtype within an embedded structure
-        std::string nextDtype = findNextDtype(rawMap, dtype);
-        return nextDtype;
+  size_t thisSize = 0;
+  size_t biggestSize = 0;
+  std::string arrayDtype;
+  std::vector<std::string> expandedRow = expandedMap.at(structName);
+  const std::string arrayIdentifier = "\"ARRAY[";
+  for (std::string dtype : expandedRow) {
+    // Extract the dtype from an array definition string
+    if (dtype.substr(0,7) == arrayIdentifier) {
+      dtype = findArrayDtype(expandedMap, dtype);
+      if (dtype == "Invalid")
+      {
+        return -1;
       }
     }
-  }
-  catch (...)
-  {
-    if (structName =="UINT" || structName =="INT" || structName =="WORD" || structName =="BOOL" || structName =="UDINT" || structName =="DINT" || structName =="REAL" || structName =="DWORD" || structName =="ULINT" || structName =="LINT" || structName == "LREAL" || structName =="LWORD" || structName.substr(0,6) == "STRING" ){
-      return structName;
+    if (dtype == "LREAL" || dtype == "ULINT" || dtype == "LINT" || dtype == "TIME" || dtype == "DATE_AND_TIME") {return 8;}
+    else if (dtype == "DWORD" || dtype == "UDINT" || dtype == "DINT" || dtype == "REAL") {thisSize = 4;}
+    else if (dtype == "BOOL" || dtype == "WORD" || dtype == "UINT" || dtype == "INT") {thisSize = 2;}
+    else if (dtype.substr(0,6) == "STRING") {thisSize = 1;}
+    else if (expandedMap.find(dtype)!=expandedMap.end()){
+      // Check to see if any element within the expandedRow is a structure name. If it is then we must lookup the biggest dtype in this struct
+      thisSize = getBiggestDtype(expandedMap, dtype);
     }
     else {
-      return "structName is neither a structure or a standard dtype";
+      std::cout <<"Could not find the size of dtype: " << dtype <<std::endl;
+      return -1;
+    }
+    if (thisSize>biggestSize)
+    {
+      biggestSize=thisSize;
     }
   }
-  return "no dtypes left";
+  return biggestSize;
+}
+
+size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap)
+{
+  // Calculate the size of each datatype
+  // Special case for strings which are sized based on their length
+  // Special case for arrays where their size is based on the number of elements and their type, special case for bool arrays
+  // Calculate the size of padding
+  // For simple situations where the next item is a dtype then we just pad to the alignment of that dtype
+  // If this item is a struct definition, then this offset is skipped and the next offset is padded based off biggest item in struct
+  // If the next item is "end" then this offset is skipped and the next offset is padded based off biggest item in struct
+  // Arrays are padded as normal based off the alignment rules for their dtype
+
+  // I will need the next and previous dtypes. I will need the previous offset
+
+  std::vector<int> newRow = {0}; // Stores the offsets as they are calculated
+  std::vector<std::string> expandedRow = expandedMap.at(structName); // The row of datatypes that we are calculating the offsets for
+  std::string nextItem;
+  std::string prevItem;
+  size_t thisOffset = 0; // offset position of the next item
+  size_t dtypeSize = 0; // size of the basic dtype
+  size_t paddingSize = 0; // size of padding
+  size_t alignment = 0; // required alignment for thisOffset, can be 1,2,4,8
+  bool insideArray = false;
+  size_t arrayBools = 0;
+  int i = 0;
+  const std::string arrayIdentifier = "\"ARRAY[";
+
+  for (std::string dtype : expandedRow){
+    
+    // Get next item
+    if (i < expandedRow.size()){
+      nextItem = expandedRow[i+1];
+    }
+    else {nextItem="none";}
+    
+    // Get prev item
+    if (i >0){
+      prevItem = expandedRow[i-1];
+      if (prevItem == "start:array") { insideArray = true; }
+      else if (prevItem == "end:array") { 
+          insideArray = false; 
+          arrayBools = 0;
+        }
+    }
+    else {prevItem="none";}
+
+
+    // If this item is "end" or a struct name, then no offset is required so we skip to the next item
+    if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
+          dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || 
+            dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || 
+              dtype.substr(0,6) == "STRING" || dtype.substr(0,7)==arrayIdentifier)
+    { /* Nothing to do */ }
+    else if (dtype.substr(0,4) == "end:struct"){
+      continue;
+    }
+    else 
+    {
+      //See if the item is a struct name, if it is then we skip to the next item, otherwise continue with break out
+      try
+      {
+        expandedMap.at(dtype);
+        continue;
+      }
+      catch(...)
+      {
+        std::cout<<"Invalid datatype: " << dtype << ". Definition for " << structName << " is invalid" << std::endl;
+        return -1;
+      }
+    }
+
+    newRow.push_back(thisOffset);
+
+    if (dtype.substr(0,7)==arrayIdentifier){
+      // Work out which dtype the array contains, we then follow standard rules of that dtype
+      std::string arrayType = findArrayDtype(expandedMap, dtype);
+      if (arrayType=="Invalid"){
+        std::cout<<"Error parsing dtype: " << dtype << " In struct: " << structName << std::endl;
+        return -1;
+      }
+      else {dtype = arrayType;}
+    }
+
+    else if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
+              dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || 
+                dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD")
+    {
+      if (dtype == "BOOL" && insideArray) {
+        // When a bool is inside an array instead of taking up 2 bytes, they actually take up 1 bit and are stored together inside bytes
+        // If the number of bools inside the same array is divisible by 8, then we move to the next byte
+        // We calculate the bit offset elsewhere
+        size_t remainder = arrayBools % 8;
+        if (remainder == 0) {
+          dtypeSize = 1;
+        }
+        else {
+          dtypeSize = 0;
+        }
+        if (alignment < 1){alignment=1;}
+      }
+      else if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL"){
+        dtypeSize=2;
+        if (alignment < 2){alignment=2;}
+      }
+      else if (dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD"){
+        dtypeSize=4;
+        if (alignment < 4){alignment=4;}
+      }
+      else if (dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD"){
+        dtypeSize=8;
+        alignment=8;
+      }
+    }
+    else if (dtype.substr(0,7) == "STRING[")
+    {
+      auto ss = dtype.substr(7,dtype.size()-7);
+      size_t strLength = 0;
+      bool intFound = false;
+      for (size_t i = 0; i<ss.size(); i++)
+      {
+        if (ss.substr(i,1)== "]")
+        {
+          intFound = true;
+          try
+          {
+            strLength = std::stoi(ss.substr(0,i+1));
+            if (strLength < 0) throw 1;
+          }
+          catch (...)
+          {
+            std::cout<<"STRING length must be an integer"<<std::endl;
+            strLength = 0;
+          }
+          break;
+        }
+      }
+      if (!intFound)
+      {
+        std::cout<<"STRING type must specify size, " << structName << " definition is invalid" <<std::endl;
+        return -1;
+      }
+      dtypeSize = strLength;
+      if (alignment < 1){alignment=1;}
+    }
+    else {
+      std::cout<<"Failed to parse user input datatype: " << dtype << ". Definition for " << structName << " invalid." << std::endl;
+      return -1;
+    }
+
+    //allow for alignment rules around embedded structs
+    if (prevItem =="UINT" || prevItem =="INT" || prevItem =="WORD" || prevItem =="BOOL" || 
+          prevItem =="UDINT" || prevItem =="DINT" || prevItem =="REAL" || prevItem =="DWORD" || 
+            prevItem =="ULINT" || prevItem =="LINT" || prevItem == "LREAL" || prevItem =="LWORD" || 
+              prevItem.substr(0,6) == "STRING" || prevItem.substr(0,7)==arrayIdentifier || prevItem.substr(0,4) =="end:struct" || prevItem == "none")
+      { /* Nothing to do*/}
+    else
+    {
+      // prevItem should be a struct name within the expandedMap, get its alignment rule
+      try
+      {
+        expandedMap.at(prevItem);
+        alignment = getBiggestDtype(expandedMap, prevItem);
+      }
+      catch (...)
+      {
+        std::cout<<"Invalid datatype: " << prevItem << ". Definition for " << structName << " is invalid" << std::endl;
+        return -1;
+      }
+    }
+
+    if (nextItem.substr(0,4) == "end:struct"){
+      std::string nextStruct = nextItem.substr(4,nextItem.size()-4);
+      // get the alignment rule from the previous struct
+      try
+      {
+        expandedMap.at(nextStruct);
+        alignment = getBiggestDtype(expandedMap, nextStruct);
+      }
+      catch (...)
+      {
+        std::cout<<"Invalid datatype: " << nextItem << ". Definition for " << structName << " is invalid" << std::endl;
+        return -1;
+      }
+    }
+    //get size of padding
+    paddingSize = thisOffset % alignment;
+    thisOffset += paddingSize + dtypeSize;
+    i++;
+  }
+  structMap[structName] = newRow;
 }
 
 void drvOmronEIP::readPoller()
