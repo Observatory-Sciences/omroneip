@@ -83,11 +83,11 @@
 #    field(NELM, "1996")
 #}
 
-record(waveform, "$(P)readISIS2") {
+record(waveform, "$(P)readZones") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[8] UDT 10 none &elem_size=1428&allow_packing=1")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1] UDT none none none")
     field(NELM, "1996")
 }
 
