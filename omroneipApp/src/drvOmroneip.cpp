@@ -707,9 +707,10 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
     else if (i == 3)
     {
       // Checking for valid offset
-      size_t structIndex = 0; // will store user supplied index into user supplied struct
+      size_t structIndex = 0; // will store user supplied indexes which are used to index user supplied struct
       size_t indexStartPos = 0; // stores the position of the first '[' within the user supplied string
       size_t offset = 0;
+      bool indexFound = false;
       // user has chosen not to use an offset
       if (words.front() == "none")
       {
@@ -739,9 +740,9 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
                   try
                   {
                     //struct integer found
-                    structIndex = std::stoi(offsetSubstring.substr(0,m));
+                    structIndex += std::stoi(offsetSubstring.substr(0,m));
                     keyWords.at("optimisationFlag") = "attempt optimisation";
-                    goto findOffsetFromStruct;
+                    indexFound = true;
                   }
                   catch(...)
                   {
@@ -752,37 +753,38 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
               }
             }
           }
-          std::cout<<"Invalid index for requested structure: " << words.front() << std::endl;
-          keyWords.at("stringValid") = "false";
+          if (!indexFound){
+            std::cout<<"Invalid index for requested structure: " << words.front() << std::endl;
+            keyWords.at("stringValid") = "false";
+          }
           
           //look for matching structure in structMap_
           //if found, look for the offset at the structIndex within the structure
-          findOffsetFromStruct:
-            std::string structName = words.front().substr(0,indexStartPos);
-            bool structFound = false;
-            for (auto item: this->structMap_)
+          std::string structName = words.front().substr(0,indexStartPos);
+          bool structFound = false;
+          for (auto item: this->structMap_)
+          {
+            if (item.first == structName)
             {
-              if (item.first == structName)
+              //requested structure found
+              structFound = true;
+              if (structIndex>=item.second.size())
               {
-                //requested structure found
-                structFound = true;
-                if (structIndex>=item.second.size())
-                {
-                  std::cout<<"Error! Attempt to read index: " << structIndex << " from struct: " << item.first << " failed." << std::endl;
-                  keyWords.at("stringValid") = "false";
-                }
-                else
-                {
-                  offset = item.second[structIndex];
-                  break;
-                }
+                std::cout<<"Error! Attempt to read index: " << structIndex << " from struct: " << item.first << " failed." << std::endl;
+                keyWords.at("stringValid") = "false";
+              }
+              else
+              {
+                offset = item.second[structIndex];
+                break;
               }
             }
-            if (!structFound)
-            {
-              std::cout << "Could not find structure requested: " << words.front() << ". Have you loaded a struct file?" << std::endl;
-              keyWords.at("stringValid") = "false";
-            }
+          }
+          if (!structFound)
+          {
+            std::cout << "Could not find structure requested: " << words.front() << ". Have you loaded a struct file?" << std::endl;
+            keyWords.at("stringValid") = "false";
+          }
         }
         keyWords.at("offset") = std::to_string(offset);
       }
