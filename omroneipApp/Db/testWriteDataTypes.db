@@ -1,0 +1,98 @@
+# record(ao, "$(P)testRead) {
+#     field(DTYP, "asynInt32")
+#     field(OUT, "asyn(PORT, ADDR, TIMEOUT)@poller tag_name[start_index] data_type sliceSize offset extras")
+# }
+
+############################ Write Records #######################################
+#Test each datatype
+
+record(bo, "$(P)writeBool") {
+    field(DTYP, "asynUInt32Digital")
+    field(OUT, "@asynMask($(PORT), 0, 1)testBOOL BOOL 1 0 0")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+
+record(longout, "$(P)writeInt16") {
+    field(DTYP, "asynInt32")
+    field(OUT, "@asyn($(PORT), 0, 1)transportArray1[$(I)] INT 1 0 0")
+}
+
+record(longout, "$(P)writeInt32") {
+    field(DTYP, "asynInt32")
+    field(OUT, "@asyn($(PORT), 0, 1)testDint DINT 1 0 0")
+}
+
+#Should be int64in but not supported in epics base 3.15
+record(ao, "$(P)writeInt64") {
+    field(DTYP, "asynInt64")
+    field(OUT, "@asyn($(PORT), 0, 1)Zones[1].ZTC.SampleTimeL LINT 1 0 0")
+}
+
+record(longout, "$(P)writeUInt16") {
+    field(DTYP, "asynInt32")
+    field(OUT, "@asyn($(PORT), 0, 1)statusChannels[1].status UINT 1 0 0")
+}
+
+record(longout, "$(P)writeUInt32") {
+    field(DTYP, "asynInt32")
+    field(OUT, "@asyn($(PORT), 0, 1)testUDINT UDINT 1 0 0")
+}
+
+#Should be int64in but not supported in epics base 3.15
+record(ao, "$(P)writeUInt64") {
+    field(DTYP, "asynInt64")
+    field(OUT, "@asyn($(PORT), 0, 1)testULINT ULINT 1 0 0")
+}
+
+record(ao, "$(P)writeFloat32") {
+    field(DTYP, "asynFloat64")
+    field(OUT, "@asyn($(PORT), 0, 1)Zone_Heaters.Zone_01.Zone_Circuit_01.CT_Heater_Current REAL 1 0 0")
+}
+
+record(ao, "$(P)writeFloat64") {
+    field(DTYP, "asynFloat64")
+    field(OUT, "@asyn($(PORT), 0, 1)testLREAL LREAL 1 0 0")
+}
+
+record(lso, "$(P)writeString") {
+    field(DTYP, "asynOctetWrite")
+    field(OUT, "@asyn($(PORT), 0, 1)ISISTestMultiple[1].PVName STRING 1 0 &str_is_zero_terminated=0&str_is_fixed_length=0&str_pad_bytes=0&str_is_counted=1&str_count_word_bytes=2&str_max_capacity=60")
+    field(SIZV, "61")
+}
+
+record(waveform, "$(P)writeWord") {
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)Zones[$(I)].ZTC.ErrorID WORD 1 0 0")
+    field(NELM, "2")
+}
+
+record(waveform, "$(P)writeDWord") {
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)testDWORD DWORD 1 0 0")
+    field(NELM, "4")
+}
+
+record(waveform, "$(P)writeLWord") {
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)testLWORD LWORD 1 0 0")
+    field(NELM, "8")
+}
+
+record(waveform, "$(P)writeUDT") {
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)ISISTestMultiple[$(I)] UDT 1 0 0")
+    field(NELM, "1996")
+}
+
+#Not currently working as the Omron PLC seems to be returning TIME data as TIME_NSEC data which libplctag doesnt understand
+record(stringout, "$(P)writeTime"){
+    field(DTYP, "asynOctetWrite")
+    field(OUT, "@asyn($(PORT), 0, 1)testTime TIME 1 0 0")
+}
+
+

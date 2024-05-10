@@ -1,0 +1,39 @@
+record(waveform, "$(P)readUDTPacking") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[1] UDT 9 0 &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readUDTPackingElement1") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[1] UDT 1 0 &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readUDTPackingElement2") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[2] UDT 1 0 &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readUDTPackingElement3") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[3] UDT 1 0 &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readUDTPackingElement4") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[4] UDT 1 0 &allow_packing=1")
+    field(NELM, "1996")
+}

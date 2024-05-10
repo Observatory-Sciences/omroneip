@@ -1,0 +1,118 @@
+# record(ai, "$(P)testRead) {
+#     field(DTYP, "asynInt32")
+#     field(INP, "asyn(PORT, ADDR, TIMEOUT)@poller name[start_index] datatype sliceSize offset extras")
+# }
+
+############################ Read Records #######################################
+#Test each datatype
+
+# I havent implementated the mask bit yet
+record(bi, "$(P)readBool") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynUInt32Digital")
+    field(INP, "@asynMask($(PORT), 0, 1)@$(POLLER) testBOOL BOOL 1 0 0")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+
+record(longin, "$(P)readInt16") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) transportArray1[$(I)] INT 1 0 0")
+}
+
+record(longin, "$(P)readInt32") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testDint DINT 1 0 0")
+}
+
+#Should be int64in but not supported in epics base 3.15
+record(ai, "$(P)readInt64") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[$(I)].ZTC.SampleTimeL LINT 1 UDT801_ZTC[13] 0")
+}
+
+record(longin, "$(P)readUInt16") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels[$(I)].status UINT 1 StatusChannel[0] 0")
+}
+
+record(longin, "$(P)readUInt32") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testUDINT UDINT 1 none none")
+}
+
+#Should be int64in but not supported in epics base 3.15
+record(ai, "$(P)readUInt64") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testULINT ULINT 1 none none")
+}
+
+record(ai, "$(P)readFloat32") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)].PVValue REAL 1 PVData[2] none")
+}
+
+record(ai, "$(P)readFloat32(2)") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[$(I)].ZTC.PV REAL 1 UDT801_ZTC[5] none")
+}
+
+record(ai, "$(P)readFloat64") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testLREAL LREAL 1 0 0")
+}
+
+record(lsi, "$(P)readString") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)].PVName STRING 1 PVData[0] none")
+    field(SIZV, "61")
+}
+
+record(waveform, "$(P)readWord") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[$(I)].ZTC.ErrorID WORD 1 UDT801_ZTC[28] 0")
+    field(NELM, "2")
+}
+
+record(waveform, "$(P)readDWord") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testDWORD DWORD 1 0 0")
+    field(NELM, "4")
+}
+
+record(waveform, "$(P)readLWord") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testLWORD LWORD 1 0 0")
+    field(NELM, "8")
+}
+
+record(waveform, "$(P)readUDT") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)] UDT 1 0 0")
+    field(NELM, "1996")
+}
+
+#Not currently working as the Omron PLC seems to be returning TIME data as TIME_NSEC data which libplctag doesnt understand
+record(stringin, "$(P)readTime"){
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime TIME 1 0 0")
+}

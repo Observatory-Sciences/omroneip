@@ -1,0 +1,71 @@
+record(waveform, "$(P)readHeatingZones0") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1] UDT 7 none &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readHeatingZones1") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[8] UDT 7 none &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readHeatingZones2") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[15] UDT 7 none &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readHeatingZones3") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[22] UDT 7 none &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readHeatingZones4") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[29] UDT 7 none &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readHeatingZones5") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[36] UDT 7 none &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readHeatingZones6") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[43] UDT 3 none &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readTCRaw") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) TC_RAW UDT 1 none &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readZoneHeaters") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zone_Heaters UDT 1 none &allow_packing=1")
+    field(NELM, "1996")
+}
