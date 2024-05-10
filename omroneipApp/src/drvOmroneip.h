@@ -50,9 +50,6 @@ typedef enum {
   dataTypeUInt,
   dataTypeUDInt,
   dataTypeULInt,
-  dataTypeUInt_BCD,
-  dataTypeUDInt_BCD,
-  dataTypeULInt_BCD,
   dataTypeReal,
   dataTypeLReal,
   dataTypeString,
@@ -89,6 +86,10 @@ public:
   std::vector<std::string> expandArrayRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string arrayDesc);
   /* Recursively extract datatypes from embedded structures and list them in the correct order */
   std::vector<std::string> expandStructsRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string structName);
+  /* Calculate the alignment rules of an embedded structure or array, if nextItem is a structure then lookup the largest item in the structure.
+     If nextItem is an array, then follow the alignment rule of the item after nextItem, it this item is a struct, then look up the largest
+     item in this struct */
+  size_t getEmbeddedAlignment(std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string structName, std::string nextItem, size_t i);
   /* A recursive function which is passed a row from the raw map and calculates the offset of each datatype in the row. If the datatype
      is the name of another structure, then the size of this structure must first be calculated by calling this function with the row for
      this structure. This process is repeated untill the offset for the lowest common structure is found which is returned by this function.
