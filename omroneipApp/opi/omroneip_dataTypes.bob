@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--Saved on 2024-04-24 16:06:11 by epics-dev-->
+<display version="2.0.0">
+  <name>omroneip_datatypes</name>
+  <macros>
+    <P>omronEIP:</P>
+  </macros>
+  <widget type="label" version="2.0.0">
+    <name>Label</name>
+    <class>TITLE</class>
+    <text>My Display</text>
+    <x use_class="true">0</x>
+    <y use_class="true">0</y>
+    <width>550</width>
+    <height>31</height>
+    <font use_class="true">
+      <font name="Header 1" family="Liberation Sans" style="BOLD" size="22.0">
+      </font>
+    </font>
+    <foreground_color use_class="true">
+      <color name="Text" red="0" green="0" blue="0">
+      </color>
+    </foreground_color>
+    <transparent use_class="true">true</transparent>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update</name>
+    <pv_name>$(P)readInt16</pv_name>
+    <x>120</x>
+    <y>130</y>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_1</name>
+    <pv_name>$(P)readInt32</pv_name>
+    <x>120</x>
+    <y>160</y>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_2</name>
+    <pv_name>$(P)readInt64</pv_name>
+    <x>120</x>
+    <y>190</y>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_3</name>
+    <pv_name>$(P)readUInt16</pv_name>
+    <x>400</x>
+    <y>130</y>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_4</name>
+    <pv_name>$(P)readUInt32</pv_name>
+    <x>400</x>
+    <y>160</y>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_5</name>
+    <pv_name>$(P)readUInt64</pv_name>
+    <x>400</x>
+    <y>190</y>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_9</name>
+    <pv_name>$(P)readFloat32</pv_name>
+    <x>130</x>
+    <y>230</y>
+    <precision>5</precision>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_10</name>
+    <pv_name>$(P)readFloat64</pv_name>
+    <x>130</x>
+    <y>260</y>
+    <precision>8</precision>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_11</name>
+    <pv_name>$(P)readString</pv_name>
+    <x>130</x>
+    <y>300</y>
+    <width>520</width>
+    <format>6</format>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_12</name>
+    <pv_name>$(P)readWord</pv_name>
+    <x>130</x>
+    <y>340</y>
+    <width>1270</width>
+    <format>4</format>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_13</name>
+    <pv_name>$(P)readDWord</pv_name>
+    <x>130</x>
+    <y>400</y>
+    <width>1270</width>
+    <format>4</format>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_14</name>
+    <pv_name>$(P)readLWord</pv_name>
+    <x>130</x>
+    <y>460</y>
+    <width>1270</width>
+    <format>4</format>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_1</name>
+    <text>Int16</text>
+    <x>70</x>
+    <y>130</y>
+    <width>50</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_2</name>
+    <text>Int32</text>
+    <x>70</x>
+    <y>160</y>
+    <width>50</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_3</name>
+    <text>Int64</text>
+    <x>70</x>
+    <y>190</y>
+    <width>50</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_7</name>
+    <text>UInt16</text>
+    <x>350</x>
+    <y>130</y>
+    <width>50</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_8</name>
+    <text>UInt32</text>
+    <x>350</x>
+    <y>160</y>
+    <width>50</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_9</name>
+    <text>UInt64</text>
+    <x>350</x>
+    <y>190</y>
+    <width>50</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_13</name>
+    <text>Float32</text>
+    <x>70</x>
+    <y>230</y>
+    <width>60</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_14</name>
+    <text>Float64</text>
+    <x>70</x>
+    <y>260</y>
+    <width>60</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_15</name>
+    <text>String</text>
+    <x>70</x>
+    <y>300</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_16</name>
+    <text>Word</text>
+    <x>70</x>
+    <y>340</y>
+    <width>60</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_17</name>
+    <text>DWord</text>
+    <x>70</x>
+    <y>400</y>
+    <width>60</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_18</name>
+    <text>LWord</text>
+    <x>70</x>
+    <y>460</y>
+    <width>60</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_15</name>
+    <pv_name>$(P)readUDT</pv_name>
+    <x>130</x>
+    <y>530</y>
+    <width>2540</width>
+    <format>4</format>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_19</name>
+    <text>UDT</text>
+    <x>70</x>
+    <y>530</y>
+    <width>60</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry</name>
+    <pv_name>$(P)writeInt16</pv_name>
+    <x>230</x>
+    <y>130</y>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_1</name>
+    <pv_name>$(P)writeInt32</pv_name>
+    <x>230</x>
+    <y>160</y>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_2</name>
+    <pv_name>$(P)writeInt64</pv_name>
+    <x>230</x>
+    <y>190</y>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_3</name>
+    <pv_name>$(P)writeUInt16</pv_name>
+    <x>510</x>
+    <y>130</y>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_4</name>
+    <pv_name>$(P)writeUInt32</pv_name>
+    <x>510</x>
+    <y>160</y>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_5</name>
+    <pv_name>$(P)writeUInt64</pv_name>
+    <x>510</x>
+    <y>190</y>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_6</name>
+    <pv_name>$(P)writeFloat32</pv_name>
+    <x>240</x>
+    <y>230</y>
+    <precision>8</precision>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_7</name>
+    <pv_name>$(P)writeFloat64</pv_name>
+    <x>240</x>
+    <y>260</y>
+    <precision>8</precision>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_8</name>
+    <pv_name>$(P)writeString</pv_name>
+    <x>660</x>
+    <y>300</y>
+    <width>500</width>
+    <format>6</format>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_16</name>
+    <pv_name>$(P)readTime</pv_name>
+    <x>150</x>
+    <y>610</y>
+    <width>520</width>
+    <format>6</format>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_20</name>
+    <text>Date/Time</text>
+    <x>70</x>
+    <y>610</y>
+    <width>70</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_17</name>
+    <pv_name>$(P)readBool</pv_name>
+    <x>120</x>
+    <y>100</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_21</name>
+    <text>Bool</text>
+    <x>70</x>
+    <y>100</y>
+    <width>50</width>
+  </widget>
+  <widget type="bool_button" version="2.0.0">
+    <name>Boolean Button</name>
+    <pv_name>$(P)writeBool</pv_name>
+    <x>230</x>
+    <y>100</y>
+    <height>20</height>
+    <labels_from_pv>true</labels_from_pv>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_9</name>
+    <pv_name>$(P)writeWord</pv_name>
+    <x>130</x>
+    <y>370</y>
+    <width>1270</width>
+    <format>1</format>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_10</name>
+    <pv_name>$(P)writeDWord</pv_name>
+    <x>130</x>
+    <y>430</y>
+    <width>1270</width>
+    <format>4</format>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_11</name>
+    <pv_name>$(P)writeLWord</pv_name>
+    <x>130</x>
+    <y>490</y>
+    <width>1270</width>
+    <format>4</format>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_12</name>
+    <pv_name>$(P)writeUDT</pv_name>
+    <x>130</x>
+    <y>560</y>
+    <width>1270</width>
+    <format>4</format>
+  </widget>
+</display>

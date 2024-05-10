@@ -1,0 +1,119 @@
+# record(ai, "$(P)testRead) {
+#     field(DTYP, "asynInt32")
+#     field(INP, "asyn(PORT, ADDR, TIMEOUT)@POLLER tag_name[start_index] data_type length offset extras")
+#     field(INP, "asyn(PORT, ADDR, TIMEOUT)@POLLER tag_name[1] REAL 1 0 0")
+# }
+
+#record(ai, "$(P)testReadPassive") {
+#    #field(SCAN, "1 second")
+#    field(SCAN, "Passive")
+#    field(DTYP, "asynFloat64")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVValue REAL 1")
+#}
+
+#record(ai, "$(P)testReadIntr") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynFloat64")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[2].PVValue REAL 1")
+#}
+
+#record(ai, "$(P)testReadIntr3") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynFloat64")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[3].PVValue LREAL 1")
+#}
+
+#record(waveform, "$(P)readUDT") {
+#    field(SCAN, "I/O Intr")
+#    field(FTVL, "UCHAR")
+#    field(DTYP, "asynInt8ArrayIn")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels UDT 1 $(P)")
+#    field(NELM, "1996")
+#}
+
+# Gets a WORD from the start of the statusChannels UDT
+#record(subArray, "$(P)getSubUInt16"){
+#    field(SCAN, "1 second")
+#    field(FTVL, "ULONG")
+#    field(NELM, "2")
+#    field(MALM, "1996")
+#    field(INP, "$(P)readUDT.VAL")
+#    field(INDX, "0")
+#}
+
+#record(lso, "$(P)writeString") {
+#    field(DTYP, "asynOctetWrite")
+#    field(OUT, "@asyn($(PORT), 0, 1)TestString STRING 1 none &str_max_capacity=60&str_pad_to_16_bits=1")
+#    field(SIZV, "61")
+#}
+
+#record(lsi, "$(P)readString") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynOctetRead")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) TestString STRING 1 none 0")
+#    field(SIZV, "61")
+#}
+
+#record(bo, "$(P)writeBool") {
+#    field(DTYP, "asynUInt32Digital")
+#    field(OUT, "@asynMask($(PORT), 0, 1)testBOOL BOOL 1 none 0")
+#    field(ZNAM, "Off")
+#    field(ONAM, "On")
+#}
+
+#record(ai, "$(P)readFloat32Test") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynFloat64")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zone_Heaters.Zone_01.Zone_Circuit_01.CT_Heater_Current REAL 1 0 0")
+#}
+
+#record(lsi, "$(P)readStringOffset") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynOctetRead")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVName STRING 1 0 0")
+#    field(SIZV, "61")
+#}
+
+
+#record(waveform, "$(P)readISIS") {
+#    field(SCAN, "I/O Intr")
+#    field(FTVL, "UCHAR")
+#    field(DTYP, "asynInt8ArrayIn")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] UDT 7 0 &elem_size=1428&allow_packing=1")
+#    field(NELM, "1996")
+#}
+
+record(waveform, "$(P)readISIS2") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[8] UDT 10 none &elem_size=1428&allow_packing=1")
+    field(NELM, "1996")
+}
+
+#record(waveform, "$(P)writeUDT") {
+#    field(FTVL, "UCHAR")
+#    field(DTYP, "asynInt8ArrayOut")
+#    field(INP, "@asyn($(PORT), 0, 1)ISISTestMultiple[1] UDT 1 none 0")
+#    field(NELM, "1996")
+#}
+
+#record(lso, "$(P)writeString") {
+#    field(DTYP, "asynOctetWrite")
+#    field(OUT, "@asyn($(PORT), 0, 1)myStringArray[1] STRING 1 none &str_max_capacity=60")
+#    field(SIZV, "61")
+#}
+
+#record(waveform, "$(P)writeUDT2") {
+#    field(FTVL, "UCHAR")
+#    field(DTYP, "asynInt8ArrayOut")
+#    field(INP, "@asyn($(PORT), 0, 1)stringUDT UDT 1 none &allow_packing=1")
+#    field(NELM, "1996")
+#}
+
+#record(bo, "$(P)writeBool") {
+#    field(DTYP, "asynUInt32Digital")
+#    field(OUT, "@asynMask($(PORT), 0, 1)testBOOL BOOL 1 0 0")
+#    field(ZNAM, "Off")
+#    field(ONAM, "On")
+#}

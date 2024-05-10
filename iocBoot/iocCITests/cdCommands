@@ -1,0 +1,11 @@
+startup = "/home/epics-dev/work/epics/modules/omroneip/iocBoot/iocCITests"
+putenv("IOC=iocCITests")
+top = "/home/epics-dev/work/epics/modules/omroneip"
+putenv("TOP=/home/epics-dev/work/epics/modules/omroneip")
+topbin = "/home/epics-dev/work/epics/modules/omroneip/bin/linux-x86_64"
+asyn = "/home/epics-dev/work/epics/modules/asyn/asyn-R4-44-2"
+putenv("ASYN=/home/epics-dev/work/epics/modules/asyn/asyn-R4-44-2")
+asynbin = "/home/epics-dev/work/epics/modules/asyn/asyn-R4-44-2/bin/linux-x86_64"
+epics_base = "/home/epics-dev/work/epics/base/base-3.15.9"
+putenv("EPICS_BASE=/home/epics-dev/work/epics/base/base-3.15.9")
+epics_basebin = "/home/epics-dev/work/epics/base/base-3.15.9/bin/linux-x86_64"

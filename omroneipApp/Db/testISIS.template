@@ -1,0 +1,7 @@
+record(waveform, "$(P)$(R)readISIS") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(INDEX)] UDT $(SLICE) none &elem_size=204&allow_packing=1")
+    field(NELM, "1996")
+}
