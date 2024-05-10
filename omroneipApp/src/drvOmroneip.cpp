@@ -908,6 +908,7 @@ asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * fileP
       asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", flowString.c_str());
       flowString.clear();
     }
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "\n");
     this->createStructMap(structMap);
     this->unlock();
     return asynSuccess;
@@ -924,12 +925,22 @@ asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vec
     kv.second = expandStructsRecursive(expandedMap, kv.first);
   }
 
+  std::string flowString;
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Struct defs with expanded embedded structs and arrays:\n", driverName, functionName);
+  for (auto const& i : expandedMap) {
+    flowString += i.first + ": ";
+    for (auto const& j : i.second)
+      flowString += j + " ";
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", flowString.c_str());
+    flowString.clear();
+  }
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "\n");
+
   for (auto kv: rawMap)
   {// look for kv.first in structMap through a recursive search
     status = findOffsets(expandedMap, kv.first, structMap);
   }
 
-  std::string flowString;
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s The processed struct definitions with their calculated offsets are:\n", driverName, functionName);
   for (auto const& i : structMap) {
     flowString += i.first + ": ";
@@ -938,6 +949,7 @@ asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vec
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", flowString.c_str());
     flowString.clear();
   }
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "\n");
 
   this->structMap_= structMap;
   if (status < 0)
@@ -1031,6 +1043,11 @@ std::vector<std::string> drvOmronEIP::expandStructsRecursive(std::unordered_map<
       expandedRow.insert(std::end(expandedRow), std::begin(arrayDtypes), std::end(arrayDtypes));
       expandedRow.push_back("end:array");
     }
+    else if (dtype.substr(0,6)=="start:" || dtype.substr(0,4)=="end:")
+    {
+      // The struct we are looking through has already been expanded and this is a tag denoting the struct, therefore we just copy it in
+      expandedRow.push_back(dtype);
+    }
     else
     {
       // If we get here, then we assume that we have a structure, but it could be a typo
@@ -1039,9 +1056,9 @@ std::vector<std::string> drvOmronEIP::expandStructsRecursive(std::unordered_map<
         // Recursively call this function to get all of the embedded datatypes
         // Before each embedded struct we add the struct name and after we add "end", this is so we know when to apply extra padding required for embedded structs
         std::vector<std::string> embeddedDtypes = expandStructsRecursive(rawMap, dtype);
-        expandedRow.push_back(dtype);
+        expandedRow.push_back("start:"+dtype);
         expandedRow.insert(std::end(expandedRow), std::begin(embeddedDtypes), std::end(embeddedDtypes));
-        expandedRow.push_back("end:struct"+dtype);
+        expandedRow.push_back("end:"+dtype);
       }
       catch (...)
       {
@@ -1081,7 +1098,7 @@ size_t drvOmronEIP::getBiggestDtype(std::unordered_map<std::string, std::vector<
   const std::string arrayIdentifier = "\"ARRAY[";
   for (std::string dtype : expandedRow) {
     // Extract the dtype from an array definition string
-    if (dtype.substr(0,7) == arrayIdentifier) {
+    if (dtype.substr(0,7) == arrayIdentifier) { //FIX ME !!!!!!
       dtype = findArrayDtype(expandedMap, dtype);
       if (dtype == "Invalid")
       {
@@ -1092,9 +1109,10 @@ size_t drvOmronEIP::getBiggestDtype(std::unordered_map<std::string, std::vector<
     else if (dtype == "DWORD" || dtype == "UDINT" || dtype == "DINT" || dtype == "REAL") {thisSize = 4;}
     else if (dtype == "BOOL" || dtype == "WORD" || dtype == "UINT" || dtype == "INT") {thisSize = 2;}
     else if (dtype.substr(0,6) == "STRING") {thisSize = 1;}
-    else if (expandedMap.find(dtype)!=expandedMap.end()){
-      // Check to see if any element within the expandedRow is a structure name. If it is then we must lookup the biggest dtype in this struct
-      thisSize = getBiggestDtype(expandedMap, dtype);
+    else if (dtype.substr(0,4)=="end:") {continue;} // We find the size of the struct from the start: tag, so the end: tag is skipped
+    else if (expandedMap.find(dtype.substr(dtype.find("start:")+6))!=expandedMap.end()){
+      // Check to see if any element within the expandedRow is a start:structName. If it is then we must lookup the biggest dtype in this struct
+      thisSize = getBiggestDtype(expandedMap, dtype.substr(dtype.find("start:")+6));
     }
     else {
       std::cout <<"Could not find the size of dtype: " << dtype <<std::endl;
@@ -1106,6 +1124,53 @@ size_t drvOmronEIP::getBiggestDtype(std::unordered_map<std::string, std::vector<
     }
   }
   return biggestSize;
+}
+
+// Return first raw dtype encountered, update alignment if we encounter the start or end of a struct
+size_t drvOmronEIP::getEmbeddedAlignment(std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string structName, std::string nextItem, size_t i){
+  std::vector<std::string> expandedRow = expandedMap.at(structName);
+  std::string nextNextItem;
+  size_t alignment = 0;
+  std::string nextStruct = nextItem.substr(nextItem.find(':')+1,nextItem.size()-(nextItem.find(':')+1)); // removes start: and end: from the string
+  // get the bit after : If this string is a valid struct name, lookup the alignment from that struct. If it is an array, then the alignment is calculated
+  // based off the next dtype which may be raw or a struct. If a struct then get biggest from struct
+  // Get next raw dtype
+
+  if (nextItem == "array"){
+    // If the next item is an array start tag, then we need to get the alignment of the first item in the array, this may be a struct
+    if (i+2 < expandedRow.size()){
+      nextNextItem = expandedRow[i+2];
+    }
+    else {nextNextItem="none";}
+    
+    if (nextNextItem == "none") {alignment=0;}
+    else if (nextNextItem == "LREAL" || nextNextItem == "ULINT" || nextNextItem == "LINT" || nextNextItem == "TIME" || nextNextItem == "DATE_AND_TIME") {alignment = 8;}
+    else if (nextNextItem == "DWORD" || nextNextItem == "UDINT" || nextNextItem == "DINT" || nextNextItem == "REAL") {alignment = 4;}
+    else if (nextNextItem == "BOOL" || nextNextItem == "WORD" || nextNextItem == "UINT" || nextNextItem == "INT") {alignment = 2;}
+    else if (nextNextItem.substr(0,6) == "STRING") {alignment = 1;}
+    else if (expandedMap.find(nextNextItem.substr(nextNextItem.find("start:")+6))!=expandedMap.end()){
+      // Check to see if the array dtype is a start:structName. If it is then we must lookup the biggest dtype in this struct
+      alignment = getBiggestDtype(expandedMap, nextNextItem.substr(nextNextItem.find("start:")+6));
+    }
+    else {
+      std::cout <<"Could not find the alignment rule for: " << nextNextItem <<std::endl;
+      return -1;
+    }
+  }
+  else {
+    // If the nextItem is a struct start or end, then we look up the largest item in the struct and use this to calculate alignment/padding
+    try
+    {
+      expandedMap.at(nextStruct);
+      alignment = getBiggestDtype(expandedMap, nextStruct);
+    }
+    catch (...)
+    {
+      std::cout<<"Invalid datatype: " << nextStruct << ". Definition for " << structName << " is invalid" << std::endl;
+      return -1;
+    }
+  }
+  return alignment;
 }
 
 size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap)
@@ -1121,7 +1186,7 @@ size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std:
 
   // I will need the next and previous dtypes. I will need the previous offset
 
-  std::vector<int> newRow = {0}; // Stores the offsets as they are calculated
+  std::vector<int> newRow; // Stores the offsets as they are calculated
   std::vector<std::string> expandedRow = expandedMap.at(structName); // The row of datatypes that we are calculating the offsets for
   std::string nextItem;
   std::string prevItem;
@@ -1129,68 +1194,49 @@ size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std:
   size_t dtypeSize = 0; // size of the basic dtype
   size_t paddingSize = 0; // size of padding
   size_t alignment = 0; // required alignment for thisOffset, can be 1,2,4,8
+  size_t thisAlignment = 0; // temporarily stores the alignment returned from other functions which search for alignment
   bool insideArray = false;
   size_t arrayBools = 0;
   int i = 0;
-  const std::string arrayIdentifier = "\"ARRAY[";
 
   for (std::string dtype : expandedRow){
-    
-    // Get next item
-    if (i < expandedRow.size()){
+    // If this item is end:structName, start:structName, end:array or start:array, then no offset is required so we skip to the next item
+    if (dtype == "start:array"){
+      insideArray=true;
+      i++;
+      continue;
+    }
+    else if (dtype == "end:array"){
+      insideArray=false;
+      i++;
+      continue;
+    }
+    else if (dtype.substr(0,4) == "end:" || dtype.substr(0,6) == "start:"){
+      i++;
+      continue;
+    }
+
+    // Get next raw dtype
+    if (i+1 < expandedRow.size()){
       nextItem = expandedRow[i+1];
     }
     else {nextItem="none";}
-    
-    // Get prev item
-    if (i >0){
-      prevItem = expandedRow[i-1];
-      if (prevItem == "start:array") { insideArray = true; }
-      else if (prevItem == "end:array") { 
-          insideArray = false; 
-          arrayBools = 0;
-        }
+
+    // Calculate size of the padding
+    thisOffset += dtypeSize;
+    if (thisOffset != 0){
+      if (thisOffset % alignment != 0){
+        paddingSize = alignment-(thisOffset % alignment);
+      }
+      else {paddingSize=0;}
     }
-    else {prevItem="none";}
+    else {paddingSize=0;}
+    thisOffset += paddingSize;
+    newRow.push_back(thisOffset); // This is the important bit which actually adds the start offset of the dtype currently being processed
+    alignment = 0; // Reset alignment ready for next item
 
-
-    // If this item is "end" or a struct name, then no offset is required so we skip to the next item
+    // Calculate size of this dtype
     if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
-          dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || 
-            dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || 
-              dtype.substr(0,6) == "STRING" || dtype.substr(0,7)==arrayIdentifier)
-    { /* Nothing to do */ }
-    else if (dtype.substr(0,4) == "end:struct"){
-      continue;
-    }
-    else 
-    {
-      //See if the item is a struct name, if it is then we skip to the next item, otherwise continue with break out
-      try
-      {
-        expandedMap.at(dtype);
-        continue;
-      }
-      catch(...)
-      {
-        std::cout<<"Invalid datatype: " << dtype << ". Definition for " << structName << " is invalid" << std::endl;
-        return -1;
-      }
-    }
-
-    newRow.push_back(thisOffset);
-
-    if (dtype.substr(0,7)==arrayIdentifier){
-      // Work out which dtype the array contains, we then follow standard rules of that dtype
-      std::string arrayType = findArrayDtype(expandedMap, dtype);
-      if (arrayType=="Invalid"){
-        std::cout<<"Error parsing dtype: " << dtype << " In struct: " << structName << std::endl;
-        return -1;
-      }
-      else {dtype = arrayType;}
-    }
-
-    else if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
               dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || 
                 dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD")
     {
@@ -1205,19 +1251,15 @@ size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std:
         else {
           dtypeSize = 0;
         }
-        if (alignment < 1){alignment=1;}
       }
       else if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL"){
         dtypeSize=2;
-        if (alignment < 2){alignment=2;}
       }
       else if (dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD"){
         dtypeSize=4;
-        if (alignment < 4){alignment=4;}
       }
       else if (dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD"){
         dtypeSize=8;
-        alignment=8;
       }
     }
     else if (dtype.substr(0,7) == "STRING[")
@@ -1249,51 +1291,44 @@ size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std:
         return -1;
       }
       dtypeSize = strLength;
-      if (alignment < 1){alignment=1;}
     }
     else {
       std::cout<<"Failed to parse user input datatype: " << dtype << ". Definition for " << structName << " invalid." << std::endl;
       return -1;
     }
 
-    //allow for alignment rules around embedded structs
-    if (prevItem =="UINT" || prevItem =="INT" || prevItem =="WORD" || prevItem =="BOOL" || 
-          prevItem =="UDINT" || prevItem =="DINT" || prevItem =="REAL" || prevItem =="DWORD" || 
-            prevItem =="ULINT" || prevItem =="LINT" || prevItem == "LREAL" || prevItem =="LWORD" || 
-              prevItem.substr(0,6) == "STRING" || prevItem.substr(0,7)==arrayIdentifier || prevItem.substr(0,4) =="end:struct" || prevItem == "none")
-      { /* Nothing to do*/}
-    else
-    {
-      // prevItem should be a struct name within the expandedMap, get its alignment rule
-      try
-      {
-        expandedMap.at(prevItem);
-        alignment = getBiggestDtype(expandedMap, prevItem);
-      }
-      catch (...)
-      {
-        std::cout<<"Invalid datatype: " << prevItem << ". Definition for " << structName << " is invalid" << std::endl;
-        return -1;
-      }
-    }
+    // Calculate the alignment rule of the next dtype, from this we can calculate the amount of padding required
+    // nextItem should only be one of the raw dtypes at this point
 
-    if (nextItem.substr(0,4) == "end:struct"){
-      std::string nextStruct = nextItem.substr(4,nextItem.size()-4);
-      // get the alignment rule from the previous struct
-      try
-      {
-        expandedMap.at(nextStruct);
-        alignment = getBiggestDtype(expandedMap, nextStruct);
-      }
-      catch (...)
-      {
-        std::cout<<"Invalid datatype: " << nextItem << ". Definition for " << structName << " is invalid" << std::endl;
-        return -1;
-      }
+    if (nextItem =="BOOL" && insideArray){
+      if (alignment < 1){alignment=1;}
     }
-    //get size of padding
-    paddingSize = thisOffset % alignment;
-    thisOffset += paddingSize + dtypeSize;
+    else if (nextItem =="UINT" || nextItem =="INT" || nextItem =="WORD" || nextItem =="BOOL"){
+      if (alignment < 2){alignment=2;}
+    }
+    else if (nextItem =="UDINT" || nextItem =="DINT" || nextItem =="REAL" || nextItem =="DWORD"){
+      if (alignment < 4){alignment=4;}
+    }
+    else if (nextItem =="ULINT" || nextItem =="LINT" || nextItem == "LREAL" || nextItem =="LWORD"){
+      alignment=8;
+    }
+    else if (nextItem.substr(0,7) == "STRING["){
+      if (alignment < 1){alignment=1;}
+    }
+    else if (nextItem == "none"){} // We need no additional padding
+    else if (nextItem.substr(0,4) == "end:" || nextItem.substr(0,6) == "start:")
+    {
+      // If nextItem is an arrayStart or end, then set nextItem to the item after, this must be done recursively as that item could also be a struct
+      // We keep searching until we find a raw dtype or the end of the map. If we find the end, then return none and no additional alignment is given
+      // based on the next dtype. While searching we also update the alignment if we come across a struct start or end with a larger internal
+      // dtype than the current alignment.
+      thisAlignment = getEmbeddedAlignment(expandedMap, structName, nextItem, i);
+      if (alignment < thisAlignment){alignment=thisAlignment;} // Alignment should be 0 at this point, but we check just in case
+    }
+    else {
+      std::cout<<"Failed to calculate the alignment of: " << nextItem << ". Definition for " << structName << " invalid." << std::endl;
+      return -1;
+    }
     i++;
   }
   structMap[structName] = newRow;
