@@ -83,7 +83,9 @@ public:
   /* Loops through each structure within the map and calls findOffsets which creates the final structure offset map */
   asynStatus createStructMap(std::unordered_map<std::string, std::vector<std::string>> rawMap);
   /* Takes the elements of a user defined structure requested by the user in the drvInfo string and finds their offsets
-     from the structMap_ */
+     from the structMap_. The main purpose of this algorithm is to skip over embedded structs/arrays as we count through the map.
+     For example, if I had a structure A with 2 elements, but the first was a 100byte structure, referencing A[1] would need to skip over this
+     100 byte structure. */
   size_t findRequestedOffset(std::vector<size_t> indices, std::string structMap);
   /* Recursively extract datatypes from an embedded array, this array may contain embedded structs in which case expandStructsRecursive is called */
   std::vector<std::string> expandArrayRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string arrayDesc);
