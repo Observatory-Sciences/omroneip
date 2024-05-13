@@ -882,12 +882,12 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
 
 size_t drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string structName)
 {
-  size_t j = 0; // Element within sturctDtypeMap
+  size_t j = 0; // The element within structDtypeMap (this map includes start: and end: tags)
   size_t m = 0; // Element within structMap
-  size_t i = 0; // User supplied element, essentially it keeps count within one "level" of the struct, each index within indices is on a different "level"
+  size_t i = 0; // User supplied element, essentially it keeps count within one "level" of the struct, each index within the indices vector is on a different "level"
   size_t n = 0; // Used to count through arrays to work out how big they are
   size_t k = 0; // Used to count through structs to work out how big they are
-  size_t l = 0; // Used to keep track which index we are currently on
+  size_t currentIndex = 0; // Used to keep track of which index we are currently on
   size_t offset; // The offset found from structMap based off user requested indices.
   std::string dtype;
   std::vector<std::string> dtypeRow; // check for error
@@ -900,11 +900,11 @@ size_t drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string
 
   for (size_t index : indices){
     std::cout << index << std::endl;
-    l++;
+    currentIndex++;
     for (i = 0; i<=index; i++){
       if (i==index){
         j++; //if we have more than 1 index, we must have a start:structName or start:array, this skips that item
-        if (l == indices.size()-1 && dtypeRow[j].substr(0,6) == "start:"){
+        if (currentIndex == indices.size()-1 && dtypeRow[j].substr(0,6) == "start:"){
           /* if we are in the deepest layer (l== indices.size-1) and the current dtype would be the start of that layer, 
             we must skip the tag so that we are processing the raw dtypes within it */
           j++; 
