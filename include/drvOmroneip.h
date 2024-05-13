@@ -82,6 +82,9 @@ public:
   asynStatus loadStructFile(const char * portName, const char * filePath);
   /* Loops through each structure within the map and calls findOffsets which creates the final structure offset map */
   asynStatus createStructMap(std::unordered_map<std::string, std::vector<std::string>> rawMap);
+  /* Takes the elements of a user defined structure requested by the user in the drvInfo string and finds their offsets
+     from the structMap_ */
+  size_t findRequestedOffset(std::vector<size_t> indices, std::string structMap);
   /* Recursively extract datatypes from an embedded array, this array may contain embedded structs in which case expandStructsRecursive is called */
   std::vector<std::string> expandArrayRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string arrayDesc);
   /* Recursively extract datatypes from embedded structures and list them in the correct order */
@@ -128,7 +131,12 @@ private:
   bool startPollers_;
   bool initialized_; // Tracks if the driver successfully initialized
   std::string tagConnectionString_; // Stores the basic PLC connection information common to all read/write requests
-  std::unordered_map<std::string, std::vector<int>> structMap_; // They key is the name of the struct, the vector is a list of byte offsets within the structure
+  // The key is the name of the struct, the vector is a list of byte offsets within the structure
+  std::unordered_map<std::string, std::vector<int>> structMap_;
+  /* The key is the name of the struct, the vector contains strings representing the dtypes and embbed structs/arrays. 
+  Used to match user requests to offsets in the structMap */
+  std::unordered_map<std::string, std::vector<std::string>> structDtypeMap_;
+  std::unordered_map<std::string, std::vector<std::string>> structRawMap_;
   std::unordered_map<std::string, omronEIPPoller*> pollerList_ = {}; // Stores the name of each registered poller
   std::unordered_map<int, omronDrvUser_t*> tagMap_;
   /* Maps the index of each registered asynParameter to essential communications data for the parameter */

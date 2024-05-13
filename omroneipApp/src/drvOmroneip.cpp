@@ -707,10 +707,11 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
     else if (i == 3)
     {
       // Checking for valid offset
-      size_t structIndex = 0; // will store user supplied indexes which are used to index user supplied struct
       size_t indexStartPos = 0; // stores the position of the first '[' within the user supplied string
-      size_t offset = 0;
+      size_t offset;
+      std::vector<size_t> structIndices; // the indice(s) within the structure specified by the user
       bool indexFound = false;
+      bool firstIndex = true;
       // user has chosen not to use an offset
       if (words.front() == "none")
       {
@@ -732,7 +733,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
             if (words.front().c_str()[n] == '[')
             {
               std::string offsetSubstring = words.front().substr(n+1,words.front().size()-(n+1));
-              indexStartPos = n;
+              if (firstIndex) {indexStartPos = n;} //only want to update indexStartPos, when we find the first index
               for (size_t m = 0; m<offsetSubstring.size(); m++)
               {
                 if (offsetSubstring.c_str()[m] == ']')
@@ -740,15 +741,17 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
                   try
                   {
                     //struct integer found
-                    structIndex += std::stoi(offsetSubstring.substr(0,m));
+                    structIndices.push_back(std::stoi(offsetSubstring.substr(0,m)));
                     keyWords.at("optimisationFlag") = "attempt optimisation";
                     indexFound = true;
+                    firstIndex = false;
                   }
                   catch(...)
                   {
                     std::cout << "Error, could not find a valid index for the requested structure: " << words.front() << std::endl;
                     keyWords.at("stringValid") = "false";
                   }
+                  break;
                 }
               }
             }
@@ -768,16 +771,13 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
             {
               //requested structure found
               structFound = true;
-              if (structIndex>=item.second.size())
-              {
-                std::cout<<"Error! Attempt to read index: " << structIndex << " from struct: " << item.first << " failed." << std::endl;
+              offset = findRequestedOffset(structIndices, structName);
+              if (offset == -1){
+                offset=0;
+                std::cout<<"Invalid index or structure name: " <<words.front() << std::endl;
                 keyWords.at("stringValid") = "false";
               }
-              else
-              {
-                offset = item.second[structIndex];
-                break;
-              }
+              break;
             }
           }
           if (!structFound)
@@ -880,6 +880,96 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
   return keyWords;
 }
 
+size_t drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string structName)
+{
+  size_t j = 0; // Element within sturctDtypeMap
+  size_t m = 0; // Element within structMap
+  size_t i = 0; // User supplied element, essentially it keeps count within one "level" of the struct, each index within indices is on a different "level"
+  size_t n = 0; // Used to count through arrays to work out how big they are
+  size_t k = 0; // Used to count through structs to work out how big they are
+  size_t l = 0; // Used to keep track which index we are currently on
+  size_t offset; // The offset found from structMap based off user requested indices.
+  std::string dtype;
+  std::vector<std::string> dtypeRow; // check for error
+  try {
+    dtypeRow = structDtypeMap_.at(structName);
+  }
+  catch (...) {
+    return -1;
+  }
+
+  for (size_t index : indices){
+    std::cout << index << std::endl;
+    l++;
+    for (i = 0; i<=index; i++){
+      if (i==index){
+        j++; //if we have more than 1 index, we must have a start:structName or start:array, this skips that item
+        if (l == indices.size()-1 && dtypeRow[j].substr(0,6) == "start:"){
+          /* if we are in the deepest layer (l== indices.size-1) and the current dtype would be the start of that layer, 
+            we must skip the tag so that we are processing the raw dtypes within it */
+          j++; 
+        }
+        break;
+      }
+      
+      if (j < dtypeRow.size()){
+        dtype = dtypeRow[j];
+      }
+      else {
+        std::cout<<"Invalid index: " << index << " for structure: " << structName << std::endl;
+        return -1; 
+      }
+
+      if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
+          dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || 
+            dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || 
+              dtype =="TIME" || dtype =="DATE_AND_TIME"){
+        j++;m++;
+      }
+      else if ((structMap_.find(dtype.substr(6)))!=structMap_.end()){
+        // look for the next instance of end:structMap and calculate the number of raw dtypes between it and start:structMap
+        size_t structDtypes = 0;
+        k=j+1; // set k to the first element after start:structMap
+        while (dtypeRow[k]!="end:"+dtypeRow[j].substr(6))
+        {
+          dtype = dtypeRow[k];
+          if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
+                dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || 
+                  dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || 
+                    dtype =="TIME" || dtype =="DATE_AND_TIME"){
+            structDtypes++;
+          }
+          k++;
+          if (k>=dtypeRow.size()){
+            break;
+          }
+        }
+        j=k; // j should now be set to the dtype after the end:structName tag
+        m+=structDtypes;
+      }
+      else if (dtype=="start:array"){
+        // if this dtype is the start of an array, we get the number of dtypes in the array and skip over these
+        for (n = j; n<dtypeRow.size(); n++){
+          if (dtypeRow[n]=="end:array"){
+            break;
+          }
+        }
+        j += n + 2;
+        m += n;
+        n=0;
+      }
+      else if (dtype.substr(0,4)=="end:"){
+        j++;
+      }
+      else {
+        std::cout<<"Error"<<std::endl;
+      }
+    }
+  }
+  offset = structMap_.at(structName)[m];
+  return offset;
+}
+
 asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * filePath)
 {
   const char * functionName = "loadStructFile";
@@ -922,10 +1012,12 @@ asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vec
   size_t status = asynSuccess;
   std::unordered_map<std::string, std::vector<int>> structMap;
   std::unordered_map<std::string, std::vector<std::string>> expandedMap = rawMap;
+  this->structRawMap_ = rawMap;
   for (auto& kv: expandedMap)
   {// expand embedded structures so that the structure just contains standard dtypes
     kv.second = expandStructsRecursive(expandedMap, kv.first);
   }
+  this->structDtypeMap_ = expandedMap;
 
   std::string flowString;
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Struct defs with expanded embedded structs and arrays:\n", driverName, functionName);
@@ -1240,7 +1332,7 @@ size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std:
     // Calculate size of this dtype
     if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
               dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || 
-                dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD")
+                dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || dtype =="TIME" || dtype =="DATE_AND_TIME")
     {
       if (dtype == "BOOL" && insideArray) {
         // When a bool is inside an array instead of taking up 2 bytes, they actually take up 1 bit and are stored together inside bytes
