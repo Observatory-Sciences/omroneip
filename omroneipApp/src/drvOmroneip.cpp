@@ -121,7 +121,7 @@ drvOmronEIP::drvOmronEIP(const char *portName,
                           (EPICSTHREADFUNC)optimiseTagsC,
                           this) == NULL);
   if (status!=0){
-    std::cout<< "Error, Driver initiation returned asyn status:" << status << std::endl;
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Driver initialisation failed.\n", driverName, functionName);
   }
   initialized_ = true;
 }
@@ -175,7 +175,6 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   if (keyWords.at("stringValid") != "true")
   {
     readFlag = false;
-    printf("Error! drvInfo string is invalid, record: %s was not created\n", drvInfo);
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s drvInfo string is invalid, record: %s was not created\n", driverName, functionName, drvInfo);
     tag = "Invalid tag!";
   }
@@ -192,7 +191,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
       if (tag == previousTag.second->tag && keyWords.at("pollerName") == previousTag.second->pollerName)
       {
         /* Potential extension here to allow tags with different pollers to be combined, but must check the polling duration so that the shortest polling duration is used as the master tag */
-        std::cout << "Duplicate tag exists, reusing tag " << previousTag.second->tagIndex << " for this parameter" <<std::endl;
+        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Duplicate tag exists, reusing tag %d for this parameter.\n", driverName, functionName, previousTag.second->tagIndex);
         tagIndex = previousTag.second->tagIndex; 
         dupeTag = true;
         break;
@@ -482,9 +481,7 @@ asynStatus drvOmronEIP::optimiseTags()
           // now we get the drvUser for the asyn parameter which is to be optimised and set its tagIndex to the tagIndex we piggy back off
           matchFound = true;
           destroyList.push_back(drvUser->tagIndex);
-          //std::cout<<"Old value was: "<<drvUser->tagIndex<<std::endl;
           drvUser->tagIndex = masterStruct.second;
-          //std::cout<<"New value is: "<< this->tagMap_.find(asynIndex)->second->tagIndex<<std::endl;
           asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Asyn index: %d Optimised to use libplctag tag with libplctag index: %d\n", driverName, functionName, asynIndex, masterStruct.second);
           if (drvUser->optimisationFlag != "master") {
             // If we are the master then our tagIndex will be read, otherwise we will rely on the data read by the master         
@@ -587,13 +584,13 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
 
   if (escaped)
   {
-    std::cout << "Escape character never closed! Record invalid" << std::endl;
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Escape character never closed. Record invalid\n", driverName, functionName);
     keyWords.at("stringValid") = "false";
   }
 
   if (words.size() < 1)
   {
-    std::cout << "No arguments supplied to driver" << std::endl;
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s No arguments supplied to driver\n", driverName, functionName);
     keyWords.at("stringValid") = "false";
   }
 
@@ -606,7 +603,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
 
   if (words.size() < 5)
   {
-    std::cout << "Record is missing parameters. Expected 5 space seperated terms (or 6 including poller) but recieved " << words.size() << std::endl;
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Record is missing parameters. Expected 5 space seperated terms (or 6 including poller) but recieved: %d\n", driverName, functionName, words.size());
     keyWords.at("stringValid") = "false";
   }
 
@@ -639,13 +636,13 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
         {                
           if (std::stoi(startIndex) < 1)
           {
-            std::cout << "A startIndex of < 1 is forbidden" << std::endl;
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s A startIndex of < 1 is forbidden\n", driverName, functionName);
             keyWords.at("stringValid") = "false";
           }
         }
         catch(...)
         {
-          std::cout << "startIndex must be an integer" << std::endl;
+          asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s startIndex must be an integer.\n", driverName, functionName);
           keyWords.at("stringValid") = "false";
         }
       }
@@ -666,7 +663,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
       }
       if (!validDataType)
       {
-        std::cout << "Datatype invalid" << std::endl;
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Datatype invalid.\n", driverName, functionName);
         keyWords.at("stringValid") = "false";
       }
       words.pop_front();
@@ -692,13 +689,13 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
           }
           else if (words.front() != "1")
           {
-            std::cout << "You cannot get a slice whole tag. Try tag_name[startIndex] to specify elements for slice" << std::endl;
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s You cannot get a slice of a whole tag. Try tag_name[startIndex] to specify elements for slice.\n", driverName, functionName);
             keyWords.at("stringValid") = "false";
           }
         }
         else
         {
-          std::cout << "Invalid sliceSize, must be integer." << std::endl;
+          asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid sliceSize, must be integer.\n", driverName, functionName);
           keyWords.at("stringValid") = "false";
         }
       }
@@ -746,10 +743,8 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
                     indexFound = true;
                     firstIndex = false;
                   }
-                  catch(...)
-                  {
-                    std::cout << "Error, could not find a valid index for the requested structure: " << words.front() << std::endl;
-                    keyWords.at("stringValid") = "false";
+                  catch(...){
+                    indexFound = false;
                   }
                   break;
                 }
@@ -757,7 +752,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
             }
           }
           if (!indexFound){
-            std::cout<<"Invalid index for requested structure: " << words.front() << std::endl;
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find a valid index for the requested structure: %s\n", driverName, functionName, words.front().c_str());
             keyWords.at("stringValid") = "false";
           }
           
@@ -771,10 +766,10 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
             {
               //requested structure found
               structFound = true;
-              offset = findRequestedOffset(structIndices, structName);
+              offset = findRequestedOffset(structIndices, structName); //lookup byte offset based off user supplied indice(s)
               if (offset == -1){
                 offset=0;
-                std::cout<<"Invalid index or structure name: " <<words.front() << std::endl;
+                asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid index or structure name: %s\n", driverName, functionName, words.front().c_str());
                 keyWords.at("stringValid") = "false";
               }
               break;
@@ -782,7 +777,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
           }
           if (!structFound)
           {
-            std::cout << "Could not find structure requested: " << words.front() << ". Have you loaded a struct file?" << std::endl;
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find structure requested: %s. Have you loaded a struct file?\n", driverName, functionName, words.front().c_str());
             keyWords.at("stringValid") = "false";
           }
         }
@@ -891,6 +886,7 @@ size_t drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string
   size_t offset; // The offset found from structMap based off user requested indices.
   std::string dtype;
   std::vector<std::string> dtypeRow; // check for error
+  std::stringstream indicesPrintString;
   try {
     dtypeRow = structDtypeMap_.at(structName);
   }
@@ -898,8 +894,10 @@ size_t drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string
     return -1;
   }
 
+  std::copy(indices.begin(), indices.end(), std::ostream_iterator<int>(indicesPrintString, " "));
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Finding offset for struct: %s at the indices: %s\n", driverName, functionName, structName.c_str(), indicesPrintString.str().c_str());
+
   for (size_t index : indices){
-    std::cout << index << std::endl;
     currentIndex++;
     for (i = 0; i<=index; i++){
       if (i==index){
@@ -916,7 +914,7 @@ size_t drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string
         dtype = dtypeRow[j];
       }
       else {
-        std::cout<<"Invalid index: " << index << " for structure: " << structName << std::endl;
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid index: %d for structure: %s\n", driverName, functionName, index, structName.c_str());
         return -1; 
       }
 
@@ -962,7 +960,8 @@ size_t drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string
         j++;
       }
       else {
-        std::cout<<"Error"<<std::endl;
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Failed to calculate offset due to invalid datatype: %s\n", driverName, functionName, dtype.c_str());
+        return -1;
       }
     }
   }
@@ -978,6 +977,7 @@ asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * fileP
   std::unordered_map<std::string, std::vector<std::string>> structMap;
   std::vector<std::string> row; 
   std::string line, word; 
+  asynStatus status = 0;
 
   while (std::getline(infile, line)) { 
 
@@ -1001,9 +1001,9 @@ asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * fileP
       flowString.clear();
     }
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "\n");
-    this->createStructMap(structMap);
+    status = this->createStructMap(structMap);
     this->unlock();
-    return asynSuccess;
+    return status;
 }
 
 asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vector<std::string>> rawMap)
@@ -1016,7 +1016,13 @@ asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vec
   for (auto& kv: expandedMap)
   {// expand embedded structures so that the structure just contains standard dtypes
     kv.second = expandStructsRecursive(expandedMap, kv.first);
+    if (std::find(kv.second.begin(), kv.second.end(), "Invalid") != v.end()){
+      //If either expandStructsRecursive or expandArrayRecursive returned "Invalid" then return asynError
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Encountered an error while expanding struct: %s\n", driverName, functionName, kv.first.c_str());
+      return asynError;
+    }
   }
+
   this->structDtypeMap_ = expandedMap;
 
   std::string flowString;
@@ -1082,14 +1088,14 @@ std::vector<std::string> drvOmronEIP::expandArrayRecursive(std::unordered_map<st
       }
       catch (...)
       {
-        std::cout<<"Array dimensions are invalid"<<std::endl;
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Array dimensions are invalid.\n", driverName, functionName);
       }
       break;
     }
   }
   if (!dimsFound)
   {
-    std::cout<<"ARRAY type must be of the following format: \"ARRAY[x..y] OF z\", " << arrayDesc << " definition is invalid" <<std::endl;
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s ARRAY type must be of the following format: \"ARRAY[x..y] OF z\", definition: %s is invalid\n", driverName, functionName, arrayDesc.c_str());
     expandedData.push_back("Invalid");
     return expandedData;
   }
@@ -1156,7 +1162,9 @@ std::vector<std::string> drvOmronEIP::expandStructsRecursive(std::unordered_map<
       }
       catch (...)
       {
-        std::cout<<"Failed to find the standard datatype: " << dtype << ". Definition for " << structName << " and its dependents failed" << std::endl;
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Failed to find the standard datatype: %s. Definition for %s and its dependents failed.\n", driverName, functionName, dtype.c_str(), structName.c_str());
+        expandedData.push_back("Invalid");
+        return expandedData;
       }
     }
   }
@@ -1179,7 +1187,7 @@ std::string drvOmronEIP::findArrayDtype(std::unordered_map<std::string, std::vec
   }
 
   // If we get here then we have an invalid array definition
-  std::cout<<"Invalid array definition: "<< arrayDesc <<std::endl;
+  asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid array definition: %s\n", driverName, functionName, arrayDesc.c_str());
   return "Invalid";
 }
 
@@ -1209,7 +1217,7 @@ size_t drvOmronEIP::getBiggestDtype(std::unordered_map<std::string, std::vector<
       thisSize = getBiggestDtype(expandedMap, dtype.substr(dtype.find("start:")+6));
     }
     else {
-      std::cout <<"Could not find the size of dtype: " << dtype <<std::endl;
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find the size of dtype: %s\n", driverName, functionName, dtype.c_str());
       return -1;
     }
     if (thisSize>biggestSize)
@@ -1247,7 +1255,7 @@ size_t drvOmronEIP::getEmbeddedAlignment(std::unordered_map<std::string, std::ve
       alignment = getBiggestDtype(expandedMap, nextNextItem.substr(nextNextItem.find("start:")+6));
     }
     else {
-      std::cout <<"Could not find the alignment rule for: " << nextNextItem <<std::endl;
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find the alignment rule for: %s\n", driverName, functionName, nextNextItem.c_str());
       return -1;
     }
   }
@@ -1260,7 +1268,7 @@ size_t drvOmronEIP::getEmbeddedAlignment(std::unordered_map<std::string, std::ve
     }
     catch (...)
     {
-      std::cout<<"Invalid datatype: " << nextStruct << ". Definition for " << structName << " is invalid" << std::endl;
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid datatype: %s. Definition for: %s is invalid.\n", driverName, functionName, nextStruct.c_str(), structName.c_str());
       return -1;
     }
   }
@@ -1373,7 +1381,7 @@ size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std:
           }
           catch (...)
           {
-            std::cout<<"STRING length must be an integer"<<std::endl;
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s STRING length must be an integer\n", driverName, functionName);
             strLength = 0;
           }
           break;
@@ -1381,13 +1389,13 @@ size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std:
       }
       if (!intFound)
       {
-        std::cout<<"STRING type must specify size, " << structName << " definition is invalid" <<std::endl;
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s STRING definition: %s does not specify size, definition for struct: %s is invalid.\n", driverName, functionName, dtype.c_str(), structName.c_str());
         return -1;
       }
       dtypeSize = strLength;
     }
     else {
-      std::cout<<"Failed to parse user input datatype: " << dtype << ". Definition for " << structName << " invalid." << std::endl;
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Failed to parse user input datatype: %s. Definition for struct: %s is invalid.\n", driverName, functionName, dtype.c_str(), structName.c_str());
       return -1;
     }
 
@@ -1420,7 +1428,7 @@ size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std:
       if (alignment < thisAlignment){alignment=thisAlignment;} // Alignment should be 0 at this point, but we check just in case
     }
     else {
-      std::cout<<"Failed to calculate the alignment of: " << nextItem << ". Definition for " << structName << " invalid." << std::endl;
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Failed to calculate the alignment of: %s. Definition for struct: %s is invalid.\n", driverName, functionName, nextItem.c_str(), structName.c_str());
       return -1;
     }
     i++;
