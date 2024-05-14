@@ -1,0 +1,29 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/epics-dev/work/epics/base/base-3.15.9/bin/linux-x86_64",
+                "/home/epics-dev/.local/bin",
+                "/usr/local/bin",
+                "/home/epics-dev/work/epics/external/libplctag-2.5.5/src/lib",
+                "/home/epics-dev/work/epics/modules/asyn/asyn-R4-44-2/include",
+                "/home/epics-dev/work/epics/base/base-3.15.9/include/os/Linux",
+                "/home/epics-dev/work/epics/base/base-3.15.9/include",
+                "/usr/local/sbin",
+                "/usr/bin",
+                "/usr/sbin",
+                "/home/epics-dev/work/epics/base/base-3.15.9/include",
+                "/home/epics-dev/work/epics/base/base-3.15.9/include/compiler/gcc"
+            ],
+            "defines": [],
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64",
+            "configurationProvider": "ms-vscode.makefile-tools",
+            "compilerPath": "/usr/bin/g++"
+        }
+    ],
+    "version": 4
+}

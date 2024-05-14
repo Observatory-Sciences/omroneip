@@ -107,6 +107,14 @@ record(ai, "$(P)readZoneReal4") {
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1] REAL none UDT800_Zone[0][10] none")
 }
 
+record(waveform, "$(P)readUDT") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] UDT 1 0 0")
+    field(NELM, "1996")
+}
+
 #record(ai, "$(P)readZoneReal5") {
 #    field(SCAN, "I/O Intr")
 #    field(DTYP, "asynFloat64")
