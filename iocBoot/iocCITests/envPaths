@@ -1,4 +1,0 @@
-epicsEnvSet("IOC","iocCITests")
-epicsEnvSet("TOP","/home/epics-dev/work/epics/modules/omroneip")
-epicsEnvSet("ASYN","/home/epics-dev/work/epics/modules/asyn/asyn-R4-44-2")
-epicsEnvSet("EPICS_BASE","/home/epics-dev/work/epics/base/base-3.15.9")
