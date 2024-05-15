@@ -672,19 +672,20 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
     else if (i == 2)
     {
       // Checking for valid sliceSize
+      std::string stringWord = thisWord;
       char *p;
-      if (thisWord == "none"){
+      if (stringWord == "none"){
         keyWords.at("sliceSize") = "1";
       }
       else {
-        strtol(thisWord.c_str(), &p, 10);
+        strtol(stringWord.c_str(), &p, 10);
         if (*p == 0)
         {
-          if (indexable && thisWord != "1")
+          if (indexable && stringWord != "1")
           {
-            keyWords.at("sliceSize") = thisWord;
+            keyWords.at("sliceSize") = stringWord;
           }
-          else if (thisWord == "0")
+          else if (stringWord == "0")
           {
             keyWords.at("sliceSize") = "1";
           }
