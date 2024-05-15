@@ -537,7 +537,7 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
       {"optimisationFlag", "not requested"}, // stores the status of optimisation, ("not requested", "attempt optimisation","dont optimise","optimisation failed","optimised","master")
       {"stringValid", "true"} // set to false if errors are detected which aborts creation of tag and asyn parameter
   };
-  std::list<std::string> words;
+  std::list<std::string> words; // Contains a list of string parameters supplied by the user through a record's drvInfo interface.
   std::string substring;
   bool escaped = false;
   size_t pos = 0;
@@ -611,12 +611,13 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
   bool indexable = false;
   for (int i = 0; i < params; i++)
   {
+    const std::string thisWord = words.front(); // The word which we are currently processing to extract the required information
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Processing drvInfo parameter: %s\n", driverName, functionName, words.front().c_str());
     if (i == 0)
     {
       // Check for valid name or name[startIndex]
       std::string startIndex;
-      auto b = words.front().begin(), e = words.front().end();
+      auto b = thisWord.begin(), e = thisWord.end();
 
       while ((b = std::find(b, e, '[')) != e)
       {
@@ -646,7 +647,7 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
           keyWords.at("stringValid") = "false";
         }
       }
-      keyWords.at("tagName") = words.front();
+      keyWords.at("tagName") = thisWord;
       words.pop_front();
     }
     else if (i == 1)
@@ -655,10 +656,10 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
       bool validDataType = false;
       for (int t = 0; t < MAX_OMRON_DATA_TYPES; t++)
       {
-        if (strcmp(words.front().c_str(), omronDataTypes[t].dataTypeString) == 0)
+        if (strcmp(thisWord.c_str(), omronDataTypes[t].dataTypeString) == 0)
         {
           validDataType = true;
-          keyWords.at("dataType") = words.front();
+          keyWords.at("dataType") = thisWord;
         }
       }
       if (!validDataType)
@@ -672,22 +673,22 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
     {
       // Checking for valid sliceSize
       char *p;
-      if (words.front() == "none"){
+      if (thisWord == "none"){
         keyWords.at("sliceSize") = "1";
       }
       else {
-        strtol(words.front().c_str(), &p, 10);
+        strtol(thisWord.c_str(), &p, 10);
         if (*p == 0)
         {
-          if (indexable && words.front() != "1")
+          if (indexable && thisWord != "1")
           {
-            keyWords.at("sliceSize") = words.front();
+            keyWords.at("sliceSize") = thisWord;
           }
-          else if (words.front() == "0")
+          else if (thisWord == "0")
           {
             keyWords.at("sliceSize") = "1";
           }
-          else if (words.front() != "1")
+          else if (thisWord != "1")
           {
             asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s You cannot get a slice of a whole tag. Try tag_name[startIndex] to specify elements for slice.\n", driverName, functionName);
             keyWords.at("stringValid") = "false";
@@ -710,7 +711,7 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
       bool indexFound = false;
       bool firstIndex = true;
       // user has chosen not to use an offset
-      if (words.front() == "none")
+      if (thisWord == "none")
       {
         keyWords.at("optimisationFlag") = "dont optimise";
         keyWords.at("offset") = "0";
@@ -719,17 +720,17 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
         // attempt to set offset to integer, if not possible then assume it is a structname
         try
         {
-          offset = std::stoi(words.front());
+          offset = std::stoi(thisWord);
           keyWords.at("optimisationFlag") = "attempt optimisation";
         }
         catch(...)
         {
           // attempt to split name and integer
-          for (size_t n = 0; n<words.front().size(); n++)
+          for (size_t n = 0; n<thisWord.size(); n++)
           {
-            if (words.front().c_str()[n] == '[')
+            if (thisWord.c_str()[n] == '[')
             {
-              std::string offsetSubstring = words.front().substr(n+1,words.front().size()-(n+1));
+              std::string offsetSubstring = thisWord.substr(n+1);
               if (firstIndex) {indexStartPos = n;} //only want to update indexStartPos, when we find the first index
               for (size_t m = 0; m<offsetSubstring.size(); m++)
               {
@@ -758,7 +759,7 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
           
           //look for matching structure in structMap_
           //if found, look for the offset at the structIndex within the structure
-          std::string structName = words.front().substr(0,indexStartPos);
+          std::string structName = thisWord.substr(0,indexStartPos);
           bool structFound = false;
           for (auto item: this->structMap_)
           {
@@ -770,7 +771,7 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
               if (offset >=0) {}
               else {
                 offset=0;
-                asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid index or structure name: %s\n", driverName, functionName, words.front().c_str());
+                asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid index or structure name: %s\n", driverName, functionName, thisWord.c_str());
                 keyWords.at("stringValid") = "false";
               }
               break;
@@ -778,7 +779,7 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
           }
           if (!structFound)
           {
-            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find structure requested: %s. Have you loaded a struct file?\n", driverName, functionName, words.front().c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find structure requested: %s. Have you loaded a struct file?\n", driverName, functionName, thisWord.c_str());
             keyWords.at("stringValid") = "false";
             offset=0;
           }
@@ -800,27 +801,27 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
           {"str_count_word_bytes=", "2"},
           {"str_pad_bytes=", "0"}};
       std::string extrasString;
-      if (words.front()!="0" && words.front()!="none")
+      if (thisWord!="0" && thisWord!="none")
       {
         // The user has specified attributes other than default, these will either be added to the list or replace existing default values
-        extrasString = words.front();
+        extrasString = thisWord;
         for (auto &attrib : defaultTagAttribs)
         {
-          auto pos = words.front().find(attrib.first);
+          auto pos = thisWord.find(attrib.first);
           std::string size;
           if (pos != std::string::npos) // if attrib is one of our defined defaults
           {
-            std::string remaining = words.front().substr(pos + attrib.first.size(), words.front().size());
+            std::string remaining = thisWord.substr(pos + attrib.first.size(), thisWord.size());
             auto nextPos = remaining.find('&');
             if (nextPos != std::string::npos)
             {
               size = remaining.substr(0, nextPos);
-              extrasString = words.front().erase(pos-1, attrib.first.size() + nextPos + 1);
+              extrasString = extrasString.erase(pos-1, attrib.first.size() + nextPos + 1);
             }
             else
             {
               size = remaining.substr(0, remaining.size());
-              extrasString = words.front().erase(pos-1, words.front().size()-(pos-1));
+              extrasString = extrasString.erase(pos-1);
             }
 
             if (size == attrib.second) // if defined value is identical to default, continue
@@ -835,11 +836,11 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
         }
 
         // we check to see if str_capacity is set, this is needed to get strings from UDTs
-        size_t pos = words.front().find("str_max_capacity=");
+        size_t pos = thisWord.find("str_max_capacity=");
         std::string size;
         if (pos != std::string::npos)
         {
-          std::string remaining = words.front().substr(pos + 17, words.front().size());
+          std::string remaining = thisWord.substr(pos + 17, thisWord.size());
           auto nextPos = remaining.find('&');
           if (nextPos != std::string::npos)
           {
@@ -1448,7 +1449,7 @@ void drvOmronEIP::readPoller()
   std::string tag;
   int offset;
   int status;
-  int still_pending = 1;
+  bool still_pending = 1;
   int timeTaken = 0;
   auto timeoutStartTime = std::chrono::system_clock::now();
   double timeoutTimeTaken = 0; //time that we have been waiting for the current read request to be answered

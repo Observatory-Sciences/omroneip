@@ -1,9 +1,0 @@
-{
-    "makefile.launchConfigurations": [
-        {
-            "cwd": "${workspaceFolder}/iocBoot/iocTest",
-            "binaryPath": "${workspaceFolder}/omroneipApp/src/O.linux-x86_64/omroneipApp",
-            "binaryArgs": ["${workspaceFolder}/iocBoot/iocTest/st.cmd"]
-        }
-    ]
-}
