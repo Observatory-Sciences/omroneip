@@ -171,7 +171,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   }
 
   // Get the required data from the drvInfo string
-  std::unordered_map<std::string, std::string> keyWords = drvInfoParser(drvInfo);
+  drvInfoMap keyWords = drvInfoParser(drvInfo);
   if (keyWords.at("stringValid") != "true")
   {
     readFlag = false;
@@ -519,13 +519,13 @@ asynStatus drvOmronEIP::optimiseTags()
   return asynSuccess; // always return success as any failures to optimise should leave the driver in its pre omtimised state which should have no erros
 }
 
-std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const char *drvInfo)
+drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
 {
   const char * functionName = "drvInfoParser";
   const std::string str(drvInfo);
   char delim = ' ';
   char escape = '/';
-  std::unordered_map<std::string, std::string> keyWords = {
+  drvInfoMap keyWords = {
       {"pollerName", "none"}, // optional
       {"tagName", "none"},  
       {"dataType", "none"}, 
@@ -790,7 +790,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
       // Check for valid extra attributes
       /* These attributes overwrite libplctag attributes, other attributes which arent overwritten are not mentioned here
         Users can overwrite these defaults and other libplctag defaults from their records */
-      std::unordered_map<std::string, std::string> defaultTagAttribs = {
+      drvInfoMap defaultTagAttribs = {
           {"allow_packing=", "1"},
           {"str_is_zero_terminated=", "0"},
           {"str_is_fixed_length=", "0"},
@@ -975,7 +975,7 @@ asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * fileP
   const char * functionName = "loadStructFile";
   this->lock();
   std::ifstream infile(filePath); 
-  std::unordered_map<std::string, std::vector<std::string>> structMap;
+  structDtypeMap structMap;
   std::vector<std::string> row; 
   std::string line, word; 
   asynStatus status = asynSuccess;
@@ -1007,12 +1007,12 @@ asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * fileP
     return status;
 }
 
-asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vector<std::string>> rawMap)
+asynStatus drvOmronEIP::createStructMap(structDtypeMap rawMap)
 {
   const char * functionName = "createStructMap";
   size_t status = asynSuccess;
   std::unordered_map<std::string, std::vector<int>> structMap;
-  std::unordered_map<std::string, std::vector<std::string>> expandedMap = rawMap;
+  structDtypeMap expandedMap = rawMap;
   this->structRawMap_ = rawMap;
   for (auto& kv: expandedMap)
   {// expand embedded structures so that the structure just contains standard dtypes
@@ -1061,7 +1061,7 @@ asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vec
   return asynSuccess;
 }
 
-std::vector<std::string> drvOmronEIP::expandArrayRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string arrayDesc)
+std::vector<std::string> drvOmronEIP::expandArrayRecursive(structDtypeMap const& rawMap, std::string arrayDesc)
 {
   static const char *functionName = "expandArrayRecursive";
   // "ARRAY[x..y] OF z"
@@ -1126,7 +1126,7 @@ std::vector<std::string> drvOmronEIP::expandArrayRecursive(std::unordered_map<st
   return expandedData;
 }
 
-std::vector<std::string> drvOmronEIP::expandStructsRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string structName)
+std::vector<std::string> drvOmronEIP::expandStructsRecursive(structDtypeMap const& rawMap, std::string structName)
 {
   static const char *functionName = "expandStructsRecursive";
   std::vector<std::string> row = rawMap.at(structName);
@@ -1174,7 +1174,7 @@ std::vector<std::string> drvOmronEIP::expandStructsRecursive(std::unordered_map<
   return expandedRow;
 }
 
-std::string drvOmronEIP::findArrayDtype(std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string arrayDesc)
+std::string drvOmronEIP::findArrayDtype(structDtypeMap const& expandedMap, std::string arrayDesc)
 {
   static const char *functionName = "findArrayDtype";
   std::list<std::string> dtypeSet = {"INT","DINT","LINT","UINT","UDINT","ULINT","REAL","LREAL","STRING","WORD","DWORD","LWORD","TIME"};
@@ -1195,7 +1195,7 @@ std::string drvOmronEIP::findArrayDtype(std::unordered_map<std::string, std::vec
   return "Invalid";
 }
 
-size_t drvOmronEIP::getBiggestDtype(std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string structName)
+size_t drvOmronEIP::getBiggestDtype(structDtypeMap const& expandedMap, std::string structName)
 {
   static const char *functionName = "getBiggestDtype";
   size_t thisSize = 0;
@@ -1234,7 +1234,7 @@ size_t drvOmronEIP::getBiggestDtype(std::unordered_map<std::string, std::vector<
 }
 
 // Return first raw dtype encountered, update alignment if we encounter the start or end of a struct
-size_t drvOmronEIP::getEmbeddedAlignment(std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string structName, std::string nextItem, size_t i){
+size_t drvOmronEIP::getEmbeddedAlignment(structDtypeMap const& expandedMap, std::string structName, std::string nextItem, size_t i){
   static const char *functionName = "getEmbeddedAlignment";
   std::vector<std::string> expandedRow = expandedMap.at(structName);
   std::string nextNextItem;
@@ -1281,7 +1281,7 @@ size_t drvOmronEIP::getEmbeddedAlignment(std::unordered_map<std::string, std::ve
   return alignment;
 }
 
-size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap)
+size_t drvOmronEIP::findOffsets(structDtypeMap const& expandedMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap)
 {
   // We must calculate the size of each datatype
   // With a special case for strings which are sized based on their length
@@ -1489,7 +1489,7 @@ void drvOmronEIP::readPoller()
         {
           status = plc_tag_status(x.second->tagIndex);
           // It should be rare that data for the first tag has not arrived before the last tag is read
-          // Therefor this if statement will normally be skipped, or called once by the first few tags as we 
+          // Therefore this if statement will normally be skipped, or called once by the first few tags as we 
           // are asynchronously waiting for all tags in this poller to be read. 
           if (status == PLCTAG_STATUS_PENDING)
           {
