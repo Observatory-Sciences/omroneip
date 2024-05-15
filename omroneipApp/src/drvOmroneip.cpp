@@ -537,7 +537,7 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
       {"optimisationFlag", "not requested"}, // stores the status of optimisation, ("not requested", "attempt optimisation","dont optimise","optimisation failed","optimised","master")
       {"stringValid", "true"} // set to false if errors are detected which aborts creation of tag and asyn parameter
   };
-  std::list<std::string> words; // Contains a list of string parameters supplied by the user through a record's drvInfo interface.
+  std::list<std::string> words;
   std::string substring;
   bool escaped = false;
   size_t pos = 0;
@@ -703,7 +703,7 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
     }
     else if (i == 3)
     {
-      // Checking for valid offset, either a positive integer or a reference to a structs definition file, eg structName[2][11]...
+      // Checking for valid offset
       size_t indexStartPos = 0; // stores the position of the first '[' within the user supplied string
       int offset;
       std::vector<size_t> structIndices; // the indice(s) within the structure specified by the user
@@ -724,21 +724,21 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
         }
         catch(...)
         {
-          // It is either a syntax error, or a reference to a structure, we attempt to split the name and integer
+          // attempt to split name and integer
           for (size_t n = 0; n<words.front().size(); n++)
           {
-            if (words.front().c_str()[n] == '[') // check each character of the word until we have found an opening bracket
+            if (words.front().c_str()[n] == '[')
             {
-              std::string offsetSubstring = words.front().substr(n+1);
-              if (firstIndex) {indexStartPos = n;} //only want to update indexStartPos, once we have already found the first index
+              std::string offsetSubstring = words.front().substr(n+1,words.front().size()-(n+1));
+              if (firstIndex) {indexStartPos = n;} //only want to update indexStartPos, when we find the first index
               for (size_t m = 0; m<offsetSubstring.size(); m++)
               {
-                if (offsetSubstring.c_str()[m] == ']') // check each character of the word until we have found a closing bracket
+                if (offsetSubstring.c_str()[m] == ']')
                 {
                   try
                   {
                     //struct integer found
-                    structIndices.push_back(std::stoi(offsetSubstring.substr(0,m))); // try to convert the string between the brackets to an int
+                    structIndices.push_back(std::stoi(offsetSubstring.substr(0,m)));
                     keyWords.at("optimisationFlag") = "attempt optimisation";
                     indexFound = true;
                     firstIndex = false;
@@ -815,12 +815,12 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
             if (nextPos != std::string::npos)
             {
               size = remaining.substr(0, nextPos);
-              extrasString = extrasString.erase(pos-1, attrib.first.size() + nextPos + 1);
+              extrasString = words.front().erase(pos-1, attrib.first.size() + nextPos + 1);
             }
             else
             {
               size = remaining.substr(0, remaining.size());
-              extrasString = extrasString.erase(pos-1);
+              extrasString = words.front().erase(pos-1, words.front().size()-(pos-1));
             }
 
             if (size == attrib.second) // if defined value is identical to default, continue
