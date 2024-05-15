@@ -91,7 +91,7 @@ public:
       from the structMap_. The main purpose of this algorithm is to skip over embedded structs/arrays as we count through the map.
       For example, if I had a structure A with 2 elements, but the first was a 100byte structure, referencing A[1] would need to skip over this
       100 byte structure. */
-   size_t findRequestedOffset(std::vector<size_t> indices, std::string structMap);
+   int findRequestedOffset(std::vector<size_t> indices, std::string structMap);
    /* Recursively extract datatypes from an embedded array, this array may contain embedded structs in which case expandStructsRecursive is called */
    std::vector<std::string> expandArrayRecursive(structDtypeMap const& rawMap, std::string arrayDesc);
    /* Recursively extract datatypes from embedded structures and list them in the correct order */
@@ -99,16 +99,16 @@ public:
    /* Calculate the alignment rules of an embedded structure or array, if nextItem is a structure then lookup the largest item in the structure.
       If nextItem is an array, then follow the alignment rule of the item after nextItem, it this item is a struct, then look up the largest
       item in this struct */
-   size_t getEmbeddedAlignment(structDtypeMap const& expandedMap, std::string structName, std::string nextItem, size_t i);
+   int getEmbeddedAlignment(structDtypeMap const& expandedMap, std::string structName, std::string nextItem, size_t i);
    /* A recursive function which is passed a row from the raw map and calculates the offset of each datatype in the row. If the datatype
       is the name of another structure, then the size of this structure must first be calculated by calling this function with the row for
       this structure. This process is repeated untill the offset for the lowest common structure is found which is returned by this function.
       The function then works its way back up. structMap is updated with the calculated offsets. */
-   size_t findOffsets(structDtypeMap const& expandedMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap);
+   int findOffsets(structDtypeMap const& expandedMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap);
    /* Finds the datatype which an array type is defined with*/
    std::string findArrayDtype(structDtypeMap const& expandedMap, std::string arrayDesc);
    /* Returns the largest standard datatype within a structure, this includes embedded structures and arrays and is used for calculating padding*/
-   size_t getBiggestDtype(structDtypeMap const&, std::string structName);
+   int getBiggestDtype(structDtypeMap const&, std::string structName);
    /* Creates a new instance of the omronEIPPoller class and starts a new thread named after this new poller which reads data linked to the poller name.*/
    asynStatus createPoller(const char * portName, const char * pollerName, double updateRate);
    /* Reimplemented from asynDriver. This is called when each record is loaded into epics. It processes the drvInfo from the record and attempts

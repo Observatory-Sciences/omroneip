@@ -355,7 +355,7 @@ asynStatus drvOmronEIP::optimiseTags()
   std::unordered_map<std::string, std::vector<int>> commonStructMap; // Contains the structName along with a vector of all the asyn Indexes which use this struct
   std::vector<int> destroyList; // Contains a list of libplctag indexes to be destroyed as they are no longer used
   int status;
-  this->lock();
+  this->lock(); //lock to ensure that the pollers do not attempt polling while tags are being created and destroyed
   // Look at the name used for each tag, if the name references a structure (contains a "."), add the structure name to map
   // Each tag which references the structure adds its asyn index to the map under the same structure name key
   for (auto thisTag:tagMap_)
@@ -705,7 +705,7 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
     {
       // Checking for valid offset
       size_t indexStartPos = 0; // stores the position of the first '[' within the user supplied string
-      size_t offset;
+      int offset;
       std::vector<size_t> structIndices; // the indice(s) within the structure specified by the user
       bool indexFound = false;
       bool firstIndex = true;
@@ -767,7 +767,8 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
               //requested structure found
               structFound = true;
               offset = findRequestedOffset(structIndices, structName); //lookup byte offset based off user supplied indice(s)
-              if (offset == (size_t)-1){
+              if (offset >=0) {}
+              else {
                 offset=0;
                 asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid index or structure name: %s\n", driverName, functionName, words.front().c_str());
                 keyWords.at("stringValid") = "false";
@@ -779,6 +780,7 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
           {
             asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find structure requested: %s. Have you loaded a struct file?\n", driverName, functionName, words.front().c_str());
             keyWords.at("stringValid") = "false";
+            offset=0;
           }
         }
         keyWords.at("offset") = std::to_string(offset);
@@ -875,7 +877,7 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
   return keyWords;
 }
 
-size_t drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string structName)
+int drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string structName)
 {
   static const char *functionName = "findRequestedOffset";
   size_t j = 0; // The element within structDtypeMap (this map includes start: and end: tags)
@@ -884,7 +886,7 @@ size_t drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string
   size_t n = 0; // Used to count through arrays to work out how big they are
   size_t k = 0; // Used to count through structs to work out how big they are
   size_t currentIndex = 0; // Used to keep track of which index we are currently on
-  size_t offset; // The offset found from structMap based off user requested indices.
+  int offset; // The offset found from structMap based off user requested indices.
   std::string dtype;
   std::vector<std::string> dtypeRow; // check for error
   std::stringstream indicesPrintString;
@@ -973,7 +975,6 @@ size_t drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string
 asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * filePath)
 {
   const char * functionName = "loadStructFile";
-  this->lock();
   std::ifstream infile(filePath); 
   structDtypeMap structMap;
   std::vector<std::string> row; 
@@ -1003,7 +1004,6 @@ asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * fileP
     }
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "\n");
     status = this->createStructMap(structMap);
-    this->unlock();
     return status;
 }
 
@@ -1195,11 +1195,11 @@ std::string drvOmronEIP::findArrayDtype(structDtypeMap const& expandedMap, std::
   return "Invalid";
 }
 
-size_t drvOmronEIP::getBiggestDtype(structDtypeMap const& expandedMap, std::string structName)
+int drvOmronEIP::getBiggestDtype(structDtypeMap const& expandedMap, std::string structName)
 {
   static const char *functionName = "getBiggestDtype";
-  size_t thisSize = 0;
-  size_t biggestSize = 0;
+  int thisSize = 0;
+  int biggestSize = 0;
   std::string arrayDtype;
   std::vector<std::string> expandedRow = expandedMap.at(structName);
   const std::string arrayIdentifier = "\"ARRAY[";
@@ -1234,11 +1234,11 @@ size_t drvOmronEIP::getBiggestDtype(structDtypeMap const& expandedMap, std::stri
 }
 
 // Return first raw dtype encountered, update alignment if we encounter the start or end of a struct
-size_t drvOmronEIP::getEmbeddedAlignment(structDtypeMap const& expandedMap, std::string structName, std::string nextItem, size_t i){
+int drvOmronEIP::getEmbeddedAlignment(structDtypeMap const& expandedMap, std::string structName, std::string nextItem, size_t i){
   static const char *functionName = "getEmbeddedAlignment";
   std::vector<std::string> expandedRow = expandedMap.at(structName);
   std::string nextNextItem;
-  size_t alignment = 0;
+  int alignment = 0;
   std::string nextStruct = nextItem.substr(nextItem.find(':')+1,nextItem.size()-(nextItem.find(':')+1)); // removes start: and end: from the string
   // get the bit after : If this string is a valid struct name, lookup the alignment from that struct. If it is an array, then the alignment is calculated
   // based off the next dtype which may be raw or a struct. If a struct then get biggest from struct
@@ -1281,7 +1281,7 @@ size_t drvOmronEIP::getEmbeddedAlignment(structDtypeMap const& expandedMap, std:
   return alignment;
 }
 
-size_t drvOmronEIP::findOffsets(structDtypeMap const& expandedMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap)
+int drvOmronEIP::findOffsets(structDtypeMap const& expandedMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap)
 {
   // We must calculate the size of each datatype
   // With a special case for strings which are sized based on their length
@@ -1297,13 +1297,13 @@ size_t drvOmronEIP::findOffsets(structDtypeMap const& expandedMap, std::string s
   std::vector<std::string> expandedRow = expandedMap.at(structName); // The row of datatypes that we are calculating the offsets for
   std::string nextItem;
   std::string prevItem;
-  size_t thisOffset = 0; // offset position of the next item
-  size_t dtypeSize = 0; // size of the basic dtype
-  size_t paddingSize = 0; // size of padding
-  size_t alignment = 0; // required alignment for thisOffset, can be 1,2,4,8
-  size_t thisAlignment = 0; // temporarily stores the alignment returned from other functions which search for alignment
+  int thisOffset = 0; // offset position of the next item
+  int dtypeSize = 0; // size of the basic dtype
+  int paddingSize = 0; // size of padding
+  int alignment = 0; // required alignment for thisOffset, can be 1,2,4,8
+  int thisAlignment = 0; // temporarily stores the alignment returned from other functions which search for alignment
   bool insideArray = false;
-  size_t arrayBools = 0;
+  int arrayBools = 0;
   int i = 0;
 
   for (std::string dtype : expandedRow){
@@ -2018,6 +2018,10 @@ extern "C"
     drvOmronEIP* pDriver = (drvOmronEIP*)findAsynPortDriver(portName);
     if (!pDriver){
       std::cout<<"Error, Port "<<portName<< " not found!"<<std::endl;
+      return asynError;
+    }
+    else if (iocStarted){
+      std::cout<<"Structure definition file must be loaded before database files."<<std::endl;
       return asynError;
     }
     else

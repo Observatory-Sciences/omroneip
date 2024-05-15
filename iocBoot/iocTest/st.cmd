@@ -39,5 +39,4 @@ dbLoadRecords("db/test.db", "P=${P}, PORT=omronDriver, POLLER=mediumPoller")
 #dbLoadRecords("db/testWeirdINP.db", "P=${P}, PORT=omronDriver, POLLER=mediumPoller") #doesnt work properly atm
 
 #dbLoadRecords("db/asynRecord.db","P=${P},R=asyn,PORT=omronDriver,ADDR=0,IMAX=100,OMAX=100")
-
 iocInit()
