@@ -704,7 +704,7 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
     }
     else if (i == 3)
     {
-      // Checking for valid offset
+      // Checking for valid offset, either a positive integer or a reference to a structs definition file, eg structName[2][11]...
       size_t indexStartPos = 0; // stores the position of the first '[' within the user supplied string
       int offset;
       std::vector<size_t> structIndices; // the indice(s) within the structure specified by the user
@@ -725,21 +725,21 @@ drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
         }
         catch(...)
         {
-          // attempt to split name and integer
+          // It is either a syntax error, or a reference to a structure, we attempt to split the name and integer
           for (size_t n = 0; n<thisWord.size(); n++)
           {
-            if (thisWord.c_str()[n] == '[')
+            if (thisWord.c_str()[n] == '[') // check each character of the word until we have found an opening bracket
             {
               std::string offsetSubstring = thisWord.substr(n+1);
-              if (firstIndex) {indexStartPos = n;} //only want to update indexStartPos, when we find the first index
+              if (firstIndex) {indexStartPos = n;} //only want to update indexStartPos, once we have already found the first index
               for (size_t m = 0; m<offsetSubstring.size(); m++)
               {
-                if (offsetSubstring.c_str()[m] == ']')
+                if (offsetSubstring.c_str()[m] == ']') // check each character of the word until we have found a closing bracket
                 {
                   try
                   {
                     //struct integer found
-                    structIndices.push_back(std::stoi(offsetSubstring.substr(0,m)));
+                    structIndices.push_back(std::stoi(offsetSubstring.substr(0,m))); // try to convert the string between the brackets to an int
                     keyWords.at("optimisationFlag") = "attempt optimisation";
                     indexFound = true;
                     firstIndex = false;
