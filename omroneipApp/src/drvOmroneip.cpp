@@ -1085,7 +1085,7 @@ std::vector<std::string> drvOmronEIP::expandArrayRecursive(std::unordered_map<st
         size_t arrayStart = std::stoi(arrayStartString);
         size_t arrayEnd = std::stoi(arrayEndString);
         arrayLength = arrayEnd-arrayStart+1;
-        if (arrayStart < 0 || arrayEnd < 0 || arrayLength < 0) throw 1;
+        if (arrayStart < 0 || arrayEnd < 0 || arrayLength < 0) throw -1;
         dimsFound = true;
       }
       catch (...)
@@ -1450,6 +1450,8 @@ void drvOmronEIP::readPoller()
   int status;
   int still_pending = 1;
   int timeTaken = 0;
+  auto timeoutStartTime = std::chrono::system_clock::now();
+  double timeoutTimeTaken = 0; //time that we have been waiting for the current read request to be answered
   //The poller may not be fully initialised until the startPollers_ flag is set to 1, do not attempt to get the pPoller yet
   while (!this->startPollers_ && !omronExiting_) {epicsThreadSleep(0.1);}
   omronEIPPoller* pPoller = pollerList_.at(threadName);
@@ -1475,38 +1477,32 @@ void drvOmronEIP::readPoller()
       }
     }
 
-    int waits = 0;
     bool readFailed = false;
+    timeoutStartTime = std::chrono::system_clock::now();
     for (auto x : tagMap_)
     {
       if (x.second->pollerName == threadName)
       {
         offset = x.second->tagOffset;
         still_pending = 1;
-        
         while (still_pending)
         {
-          // It should be rare that data for the first tag has not arrived before the last tag is read
-          // Therefor this loop should rarely be entered and would only be called by the first few tags as we 
-          // are asynchronously waiting for all tags in this poller to be read. 
-          still_pending = 0;
           status = plc_tag_status(x.second->tagIndex);
-
+          // It should be rare that data for the first tag has not arrived before the last tag is read
+          // Therefor this if statement will normally be skipped, or called once by the first few tags as we 
+          // are asynchronously waiting for all tags in this poller to be read. 
           if (status == PLCTAG_STATUS_PENDING)
           {
-            // Wait for the timeout specified in the record
-            if (waits*0.01>=x.second->timeout)
+            // Wait for the timeout specified in the records INP/OUT field
+            // To be precise, this is the time between when the last read request for this poll was sent and the current time,
+            // this means that the first read requests will have slightly longer than their timeout period for their data to return.
+            timeoutTimeTaken = (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - timeoutStartTime).count())*0.001; //seconds
+            if (timeoutTimeTaken>=x.second->timeout)
             {
               setParamStatus(x.first, asynTimeout);
               readFailed = true;
-              asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Timeout finishing read tag %d: %s. Try decreasing the polling rate\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
-              break;
-            }
-            else
-            {
-              still_pending = 1;
-              waits++;
-              epicsThreadSleep(0.01);
+              asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Timeout finishing read tag %d: %s. Decrease the polling rate or increase the timeout.\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
+              still_pending = 0;
             }
           }
           else if (status < 0)
@@ -1514,7 +1510,10 @@ void drvOmronEIP::readPoller()
             setParamStatus(x.first, asynError);
             readFailed = true;
             asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Error finishing read tag %d: %s\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
-            break;
+            still_pending=0;
+          }
+          else {
+            still_pending=0;
           }
         }
 
@@ -1633,7 +1632,7 @@ void drvOmronEIP::readPoller()
               n--;
             }
             status = doCallbacksInt8Array(pData, bytes, x.first, 0);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: 0x%s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
             free(rawData);
             free(pData);
           }
@@ -1657,7 +1656,7 @@ void drvOmronEIP::readPoller()
               n--;
             }
             status = doCallbacksInt8Array(pData, bytes, x.first, 0);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: 0x%s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
             free(rawData);
             free(pData);
           }
@@ -1681,7 +1680,7 @@ void drvOmronEIP::readPoller()
               n--;
             }
             status = doCallbacksInt8Array(pData, bytes, x.first, 0);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: 0x%s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
             free(rawData);
             free(pData);
           }
@@ -1703,7 +1702,7 @@ void drvOmronEIP::readPoller()
               {
                 sprintf(hexString+strlen(hexString), "%02X", rawData[i]);
               }
-              asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type: %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
+              asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: 0x%s My type: %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
             }
             
             free(rawData);

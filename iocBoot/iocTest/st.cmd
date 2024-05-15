@@ -7,12 +7,12 @@ omroneipApp_registerRecordDeviceDriver(pdbbase)
 
 #drvOmronEIPConfigure(driverPortName, gateway, route_path, plc, libplctag_debug) 
 #drvOmronEIPConfigure("omronDriver", "0", "1,0","ControlLogix", "2")
-drvOmronEIPConfigure("omronDriver", "10.2.2.57", "18,10.2.2.57","omron-njnx", "2")
+drvOmronEIPConfigure("omronDriver", "10.2.2.57", "18,10.2.2.57","omron-njnx", "0")
 
 #asynSetTraceFile omronDriver 0 asynTrace.out
-#asynSetTraceMask omronDriver 0 0x00FF #everything
+asynSetTraceMask omronDriver 0 0x00FF #everything
 #asynSetTraceMask omronDriver 0 0x0037 #Warning, flow, error, TRACEIO_DEVICE, TRACEIO_FILTER
-asynSetTraceMask omronDriver 0 0x0021 #Warning and Error
+#asynSetTraceMask omronDriver 0 0x0021 #Warning and Error
 #asynSetTraceMask omronDriver 0 0x0010 #TRACE_FLOW
 #asynSetTraceMask omronDriver 0 0x0008 #TRACEIO_DRIVER
 
