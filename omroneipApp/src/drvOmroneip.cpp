@@ -1522,6 +1522,14 @@ void drvOmronEIP::readPoller()
 
         if (!readFailed)
         {
+          // libplctag has thread protection for single API calls. However there is potential that while we are reading a tag on this poller,
+          // from the plc, we can be simultaneously reading data from the tag in libplctag. This could lead to the data being read, being 
+          // overwritten as it is read, therefor we must lock the tag while reading it.
+          status = plc_tag_lock(x.second->tagIndex);
+          if (status !=0){
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while trying to lock tag: %s\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
+            continue;
+          }
           if (x.second->dataType == "BOOL")
           {
             epicsUInt32 data;
@@ -1730,6 +1738,11 @@ void drvOmronEIP::readPoller()
           setParamStatus(x.first, (asynStatus)status);
           if (status!=asynSuccess) {
             asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error occured while updating asyn parameter with asyn ID: %d tagIndex: %d Datatype %s\n", driverName, functionName, x.first, x.second->tagIndex, x.second->dataType.c_str());
+          }
+          status = plc_tag_unlock(x.second->tagIndex);
+          if (status !=0){
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while trying to unlock tag: %s\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
+            continue;
           }
         }
       }
