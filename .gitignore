@@ -1,13 +1,27 @@
 *~
 O.*
-bin
-dbd
-db
-data
-documentation
-lib
+*.so
+/bin/
+/dbd/
+/db/
+/data/
+/documentation/
+/lib/
+/include/
 .svn*
-iocs/*IOC*
-iocs/example
 .idea
-*.local
+configure/*.local
+
+#Python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+#VSCode
+/.vscode/
+
+#Epics generated
+envPaths*
+cdCommands
+dllPath.bat
+*.out

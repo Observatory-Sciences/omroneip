@@ -1,5 +1,4 @@
 #include "drvOmroneip.h"
-#include <sstream>
 
 // This stores information about each communication tag to the PLC.
 // A new instance will be made for each record which requsts to uniquely read/write to the PLC
@@ -105,8 +104,9 @@ drvOmronEIP::drvOmronEIP(const char *portName,
                      1,                                                                                                                                                  /* Autoconnect */
                      0,                                                                                                                                                  /* Default priority */
                      0),                                                                                                                                                 /* Default stack size*/
+      omronExiting_(false),
       initialized_(false),
-      omronExiting_(false)
+      startPollers_(false)
 
 {
   static const char *functionName = "drvOmronEIP";
@@ -121,7 +121,7 @@ drvOmronEIP::drvOmronEIP(const char *portName,
                           (EPICSTHREADFUNC)optimiseTagsC,
                           this) == NULL);
   if (status!=0){
-    std::cout<< "Error, Driver initiation returned asyn status:" << status << std::endl;
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Driver initialisation failed.\n", driverName, functionName);
   }
   initialized_ = true;
 }
@@ -171,11 +171,10 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   }
 
   // Get the required data from the drvInfo string
-  std::unordered_map<std::string, std::string> keyWords = drvInfoParser(drvInfo);
+  drvInfoMap keyWords = drvInfoParser(drvInfo);
   if (keyWords.at("stringValid") != "true")
   {
     readFlag = false;
-    printf("Error! drvInfo string is invalid, record: %s was not created\n", drvInfo);
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s drvInfo string is invalid, record: %s was not created\n", driverName, functionName, drvInfo);
     tag = "Invalid tag!";
   }
@@ -192,7 +191,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
       if (tag == previousTag.second->tag && keyWords.at("pollerName") == previousTag.second->pollerName)
       {
         /* Potential extension here to allow tags with different pollers to be combined, but must check the polling duration so that the shortest polling duration is used as the master tag */
-        std::cout << "Duplicate tag exists, reusing tag " << previousTag.second->tagIndex << " for this parameter" <<std::endl;
+        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Duplicate tag exists, reusing tag %d for this parameter.\n", driverName, functionName, previousTag.second->tagIndex);
         tagIndex = previousTag.second->tagIndex; 
         dupeTag = true;
         break;
@@ -356,7 +355,7 @@ asynStatus drvOmronEIP::optimiseTags()
   std::unordered_map<std::string, std::vector<int>> commonStructMap; // Contains the structName along with a vector of all the asyn Indexes which use this struct
   std::vector<int> destroyList; // Contains a list of libplctag indexes to be destroyed as they are no longer used
   int status;
-  this->lock();
+  this->lock(); //lock to ensure that the pollers do not attempt polling while tags are being created and destroyed
   // Look at the name used for each tag, if the name references a structure (contains a "."), add the structure name to map
   // Each tag which references the structure adds its asyn index to the map under the same structure name key
   for (auto thisTag:tagMap_)
@@ -482,9 +481,7 @@ asynStatus drvOmronEIP::optimiseTags()
           // now we get the drvUser for the asyn parameter which is to be optimised and set its tagIndex to the tagIndex we piggy back off
           matchFound = true;
           destroyList.push_back(drvUser->tagIndex);
-          //std::cout<<"Old value was: "<<drvUser->tagIndex<<std::endl;
           drvUser->tagIndex = masterStruct.second;
-          //std::cout<<"New value is: "<< this->tagMap_.find(asynIndex)->second->tagIndex<<std::endl;
           asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Asyn index: %d Optimised to use libplctag tag with libplctag index: %d\n", driverName, functionName, asynIndex, masterStruct.second);
           if (drvUser->optimisationFlag != "master") {
             // If we are the master then our tagIndex will be read, otherwise we will rely on the data read by the master         
@@ -522,13 +519,13 @@ asynStatus drvOmronEIP::optimiseTags()
   return asynSuccess; // always return success as any failures to optimise should leave the driver in its pre omtimised state which should have no erros
 }
 
-std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const char *drvInfo)
+drvInfoMap drvOmronEIP::drvInfoParser(const char *drvInfo)
 {
   const char * functionName = "drvInfoParser";
   const std::string str(drvInfo);
   char delim = ' ';
   char escape = '/';
-  std::unordered_map<std::string, std::string> keyWords = {
+  drvInfoMap keyWords = {
       {"pollerName", "none"}, // optional
       {"tagName", "none"},  
       {"dataType", "none"}, 
@@ -540,7 +537,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
       {"optimisationFlag", "not requested"}, // stores the status of optimisation, ("not requested", "attempt optimisation","dont optimise","optimisation failed","optimised","master")
       {"stringValid", "true"} // set to false if errors are detected which aborts creation of tag and asyn parameter
   };
-  std::list<std::string> words;
+  std::list<std::string> words; // Contains a list of string parameters supplied by the user through a record's drvInfo interface.
   std::string substring;
   bool escaped = false;
   size_t pos = 0;
@@ -587,13 +584,13 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
 
   if (escaped)
   {
-    std::cout << "Escape character never closed! Record invalid" << std::endl;
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Escape character never closed. Record invalid\n", driverName, functionName);
     keyWords.at("stringValid") = "false";
   }
 
   if (words.size() < 1)
   {
-    std::cout << "No arguments supplied to driver" << std::endl;
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s No arguments supplied to driver\n", driverName, functionName);
     keyWords.at("stringValid") = "false";
   }
 
@@ -606,7 +603,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
 
   if (words.size() < 5)
   {
-    std::cout << "Record is missing parameters. Expected 5 space seperated terms (or 6 including poller) but recieved " << words.size() << std::endl;
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Record is missing parameters. Expected 5 space seperated terms (or 6 including poller) but recieved: %ld\n", driverName, functionName, words.size());
     keyWords.at("stringValid") = "false";
   }
 
@@ -614,12 +611,13 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
   bool indexable = false;
   for (int i = 0; i < params; i++)
   {
+    const std::string thisWord = words.front(); // The word which we are currently processing to extract the required information
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Processing drvInfo parameter: %s\n", driverName, functionName, words.front().c_str());
     if (i == 0)
     {
       // Check for valid name or name[startIndex]
       std::string startIndex;
-      auto b = words.front().begin(), e = words.front().end();
+      auto b = thisWord.begin(), e = thisWord.end();
 
       while ((b = std::find(b, e, '[')) != e)
       {
@@ -639,17 +637,17 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
         {                
           if (std::stoi(startIndex) < 1)
           {
-            std::cout << "A startIndex of < 1 is forbidden" << std::endl;
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s A startIndex of < 1 is forbidden\n", driverName, functionName);
             keyWords.at("stringValid") = "false";
           }
         }
         catch(...)
         {
-          std::cout << "startIndex must be an integer" << std::endl;
+          asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s startIndex must be an integer.\n", driverName, functionName);
           keyWords.at("stringValid") = "false";
         }
       }
-      keyWords.at("tagName") = words.front();
+      keyWords.at("tagName") = thisWord;
       words.pop_front();
     }
     else if (i == 1)
@@ -658,15 +656,15 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
       bool validDataType = false;
       for (int t = 0; t < MAX_OMRON_DATA_TYPES; t++)
       {
-        if (strcmp(words.front().c_str(), omronDataTypes[t].dataTypeString) == 0)
+        if (strcmp(thisWord.c_str(), omronDataTypes[t].dataTypeString) == 0)
         {
           validDataType = true;
-          keyWords.at("dataType") = words.front();
+          keyWords.at("dataType") = thisWord;
         }
       }
       if (!validDataType)
       {
-        std::cout << "Datatype invalid" << std::endl;
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Datatype invalid.\n", driverName, functionName);
         keyWords.at("stringValid") = "false";
       }
       words.pop_front();
@@ -675,30 +673,30 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
     {
       // Checking for valid sliceSize
       char *p;
-      if (words.front() == "none"){
+      if (thisWord == "none"){
         keyWords.at("sliceSize") = "1";
       }
       else {
-        strtol(words.front().c_str(), &p, 10);
+        strtol(thisWord.c_str(), &p, 10);
         if (*p == 0)
         {
-          if (indexable && words.front() != "1")
+          if (indexable && thisWord != "1")
           {
-            keyWords.at("sliceSize") = words.front();
+            keyWords.at("sliceSize") = thisWord;
           }
-          else if (words.front() == "0")
+          else if (thisWord == "0")
           {
             keyWords.at("sliceSize") = "1";
           }
-          else if (words.front() != "1")
+          else if (thisWord != "1")
           {
-            std::cout << "You cannot get a slice whole tag. Try tag_name[startIndex] to specify elements for slice" << std::endl;
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s You cannot get a slice of a whole tag. Try tag_name[startIndex] to specify elements for slice.\n", driverName, functionName);
             keyWords.at("stringValid") = "false";
           }
         }
         else
         {
-          std::cout << "Invalid sliceSize, must be integer." << std::endl;
+          asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid sliceSize, must be integer.\n", driverName, functionName);
           keyWords.at("stringValid") = "false";
         }
       }
@@ -706,14 +704,14 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
     }
     else if (i == 3)
     {
-      // Checking for valid offset
+      // Checking for valid offset, either a positive integer or a reference to a structs definition file, eg structName[2][11]...
       size_t indexStartPos = 0; // stores the position of the first '[' within the user supplied string
-      size_t offset;
+      int offset;
       std::vector<size_t> structIndices; // the indice(s) within the structure specified by the user
       bool indexFound = false;
       bool firstIndex = true;
       // user has chosen not to use an offset
-      if (words.front() == "none")
+      if (thisWord == "none")
       {
         keyWords.at("optimisationFlag") = "dont optimise";
         keyWords.at("offset") = "0";
@@ -722,34 +720,32 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
         // attempt to set offset to integer, if not possible then assume it is a structname
         try
         {
-          offset = std::stoi(words.front());
+          offset = std::stoi(thisWord);
           keyWords.at("optimisationFlag") = "attempt optimisation";
         }
         catch(...)
         {
-          // attempt to split name and integer
-          for (size_t n = 0; n<words.front().size(); n++)
+          // It is either a syntax error, or a reference to a structure, we attempt to split the name and integer
+          for (size_t n = 0; n<thisWord.size(); n++)
           {
-            if (words.front().c_str()[n] == '[')
+            if (thisWord.c_str()[n] == '[') // check each character of the word until we have found an opening bracket
             {
-              std::string offsetSubstring = words.front().substr(n+1,words.front().size()-(n+1));
-              if (firstIndex) {indexStartPos = n;} //only want to update indexStartPos, when we find the first index
+              std::string offsetSubstring = thisWord.substr(n+1);
+              if (firstIndex) {indexStartPos = n;} //only want to update indexStartPos, once we have already found the first index
               for (size_t m = 0; m<offsetSubstring.size(); m++)
               {
-                if (offsetSubstring.c_str()[m] == ']')
+                if (offsetSubstring.c_str()[m] == ']') // check each character of the word until we have found a closing bracket
                 {
                   try
                   {
                     //struct integer found
-                    structIndices.push_back(std::stoi(offsetSubstring.substr(0,m)));
+                    structIndices.push_back(std::stoi(offsetSubstring.substr(0,m))); // try to convert the string between the brackets to an int
                     keyWords.at("optimisationFlag") = "attempt optimisation";
                     indexFound = true;
                     firstIndex = false;
                   }
-                  catch(...)
-                  {
-                    std::cout << "Error, could not find a valid index for the requested structure: " << words.front() << std::endl;
-                    keyWords.at("stringValid") = "false";
+                  catch(...){
+                    indexFound = false;
                   }
                   break;
                 }
@@ -757,13 +753,13 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
             }
           }
           if (!indexFound){
-            std::cout<<"Invalid index for requested structure: " << words.front() << std::endl;
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find a valid index for the requested structure: %s\n", driverName, functionName, words.front().c_str());
             keyWords.at("stringValid") = "false";
           }
           
           //look for matching structure in structMap_
           //if found, look for the offset at the structIndex within the structure
-          std::string structName = words.front().substr(0,indexStartPos);
+          std::string structName = thisWord.substr(0,indexStartPos);
           bool structFound = false;
           for (auto item: this->structMap_)
           {
@@ -771,10 +767,11 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
             {
               //requested structure found
               structFound = true;
-              offset = findRequestedOffset(structIndices, structName);
-              if (offset == -1){
+              offset = findRequestedOffset(structIndices, structName); //lookup byte offset based off user supplied indice(s)
+              if (offset >=0) {}
+              else {
                 offset=0;
-                std::cout<<"Invalid index or structure name: " <<words.front() << std::endl;
+                asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid index or structure name: %s\n", driverName, functionName, thisWord.c_str());
                 keyWords.at("stringValid") = "false";
               }
               break;
@@ -782,8 +779,9 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
           }
           if (!structFound)
           {
-            std::cout << "Could not find structure requested: " << words.front() << ". Have you loaded a struct file?" << std::endl;
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find structure requested: %s. Have you loaded a struct file?\n", driverName, functionName, thisWord.c_str());
             keyWords.at("stringValid") = "false";
+            offset=0;
           }
         }
         keyWords.at("offset") = std::to_string(offset);
@@ -795,7 +793,7 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
       // Check for valid extra attributes
       /* These attributes overwrite libplctag attributes, other attributes which arent overwritten are not mentioned here
         Users can overwrite these defaults and other libplctag defaults from their records */
-      std::unordered_map<std::string, std::string> defaultTagAttribs = {
+      drvInfoMap defaultTagAttribs = {
           {"allow_packing=", "1"},
           {"str_is_zero_terminated=", "0"},
           {"str_is_fixed_length=", "0"},
@@ -803,27 +801,29 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
           {"str_count_word_bytes=", "2"},
           {"str_pad_bytes=", "0"}};
       std::string extrasString;
-      if (words.front()!="0" && words.front()!="none")
+      std::string extrasWord;
+      if (thisWord!="0" && thisWord!="none")
       {
         // The user has specified attributes other than default, these will either be added to the list or replace existing default values
-        extrasString = words.front();
+        extrasString = thisWord;
+        extrasWord = thisWord;
         for (auto &attrib : defaultTagAttribs)
         {
-          auto pos = words.front().find(attrib.first);
+          auto pos = extrasWord.find(attrib.first);
           std::string size;
           if (pos != std::string::npos) // if attrib is one of our defined defaults
           {
-            std::string remaining = words.front().substr(pos + attrib.first.size(), words.front().size());
+            std::string remaining = extrasWord.substr(pos + attrib.first.size(), extrasWord.size());
             auto nextPos = remaining.find('&');
             if (nextPos != std::string::npos)
             {
               size = remaining.substr(0, nextPos);
-              extrasString = words.front().erase(pos-1, attrib.first.size() + nextPos + 1);
+              extrasString = extrasWord.erase(pos-1, attrib.first.size() + nextPos + 1);
             }
             else
             {
               size = remaining.substr(0, remaining.size());
-              extrasString = words.front().erase(pos-1, words.front().size()-(pos-1));
+              extrasString = extrasWord.erase(pos-1, extrasWord.size()-(pos-1));
             }
 
             if (size == attrib.second) // if defined value is identical to default, continue
@@ -838,11 +838,11 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
         }
 
         // we check to see if str_capacity is set, this is needed to get strings from UDTs
-        size_t pos = words.front().find("str_max_capacity=");
+        size_t pos = thisWord.find("str_max_capacity=");
         std::string size;
         if (pos != std::string::npos)
         {
-          std::string remaining = words.front().substr(pos + 17, words.front().size());
+          std::string remaining = thisWord.substr(pos + 17, thisWord.size());
           auto nextPos = remaining.find('&');
           if (nextPos != std::string::npos)
           {
@@ -880,17 +880,19 @@ std::unordered_map<std::string, std::string> drvOmronEIP::drvInfoParser(const ch
   return keyWords;
 }
 
-size_t drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string structName)
+int drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string structName)
 {
+  static const char *functionName = "findRequestedOffset";
   size_t j = 0; // The element within structDtypeMap (this map includes start: and end: tags)
   size_t m = 0; // Element within structMap
   size_t i = 0; // User supplied element, essentially it keeps count within one "level" of the struct, each index within the indices vector is on a different "level"
   size_t n = 0; // Used to count through arrays to work out how big they are
   size_t k = 0; // Used to count through structs to work out how big they are
   size_t currentIndex = 0; // Used to keep track of which index we are currently on
-  size_t offset; // The offset found from structMap based off user requested indices.
+  int offset; // The offset found from structMap based off user requested indices.
   std::string dtype;
   std::vector<std::string> dtypeRow; // check for error
+  std::stringstream indicesPrintString;
   try {
     dtypeRow = structDtypeMap_.at(structName);
   }
@@ -898,8 +900,10 @@ size_t drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string
     return -1;
   }
 
+  std::copy(indices.begin(), indices.end(), std::ostream_iterator<int>(indicesPrintString, " "));
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Finding offset for struct: %s at the indices: %s\n", driverName, functionName, structName.c_str(), indicesPrintString.str().c_str());
+
   for (size_t index : indices){
-    std::cout << index << std::endl;
     currentIndex++;
     for (i = 0; i<=index; i++){
       if (i==index){
@@ -916,7 +920,7 @@ size_t drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string
         dtype = dtypeRow[j];
       }
       else {
-        std::cout<<"Invalid index: " << index << " for structure: " << structName << std::endl;
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid index: %ld for structure: %s\n", driverName, functionName, index, structName.c_str());
         return -1; 
       }
 
@@ -962,7 +966,8 @@ size_t drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string
         j++;
       }
       else {
-        std::cout<<"Error"<<std::endl;
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Failed to calculate offset due to invalid datatype: %s\n", driverName, functionName, dtype.c_str());
+        return -1;
       }
     }
   }
@@ -973,11 +978,11 @@ size_t drvOmronEIP::findRequestedOffset(std::vector<size_t> indices, std::string
 asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * filePath)
 {
   const char * functionName = "loadStructFile";
-  this->lock();
   std::ifstream infile(filePath); 
-  std::unordered_map<std::string, std::vector<std::string>> structMap;
+  structDtypeMap structMap;
   std::vector<std::string> row; 
   std::string line, word; 
+  asynStatus status = asynSuccess;
 
   while (std::getline(infile, line)) { 
 
@@ -1001,22 +1006,27 @@ asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * fileP
       flowString.clear();
     }
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "\n");
-    this->createStructMap(structMap);
-    this->unlock();
-    return asynSuccess;
+    status = this->createStructMap(structMap);
+    return status;
 }
 
-asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vector<std::string>> rawMap)
+asynStatus drvOmronEIP::createStructMap(structDtypeMap rawMap)
 {
   const char * functionName = "createStructMap";
   size_t status = asynSuccess;
   std::unordered_map<std::string, std::vector<int>> structMap;
-  std::unordered_map<std::string, std::vector<std::string>> expandedMap = rawMap;
+  structDtypeMap expandedMap = rawMap;
   this->structRawMap_ = rawMap;
   for (auto& kv: expandedMap)
   {// expand embedded structures so that the structure just contains standard dtypes
     kv.second = expandStructsRecursive(expandedMap, kv.first);
+    if (std::find(kv.second.begin(), kv.second.end(), "Invalid") != kv.second.end()){
+      //If either expandStructsRecursive or expandArrayRecursive returned "Invalid" then return asynError
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Encountered an error while expanding struct: %s\n", driverName, functionName, kv.first.c_str());
+      return asynError;
+    }
   }
+
   this->structDtypeMap_ = expandedMap;
 
   std::string flowString;
@@ -1054,8 +1064,9 @@ asynStatus drvOmronEIP::createStructMap(std::unordered_map<std::string, std::vec
   return asynSuccess;
 }
 
-std::vector<std::string> drvOmronEIP::expandArrayRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string arrayDesc)
+std::vector<std::string> drvOmronEIP::expandArrayRecursive(structDtypeMap const& rawMap, std::string arrayDesc)
 {
+  static const char *functionName = "expandArrayRecursive";
   // "ARRAY[x..y] OF z"
   std::vector<std::string> expandedData;
   std::string ss = arrayDesc.substr(7,arrayDesc.size()-7);
@@ -1077,19 +1088,19 @@ std::vector<std::string> drvOmronEIP::expandArrayRecursive(std::unordered_map<st
         size_t arrayStart = std::stoi(arrayStartString);
         size_t arrayEnd = std::stoi(arrayEndString);
         arrayLength = arrayEnd-arrayStart+1;
-        if (arrayStart < 0 || arrayEnd < 0 || arrayLength < 0) throw 1;
+        if (arrayStart < 0 || arrayEnd < 0 || arrayLength < 0) throw -1;
         dimsFound = true;
       }
       catch (...)
       {
-        std::cout<<"Array dimensions are invalid"<<std::endl;
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Array dimensions are invalid.\n", driverName, functionName);
       }
       break;
     }
   }
   if (!dimsFound)
   {
-    std::cout<<"ARRAY type must be of the following format: \"ARRAY[x..y] OF z\", " << arrayDesc << " definition is invalid" <<std::endl;
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s ARRAY type must be of the following format: \"ARRAY[x..y] OF z\", definition: %s is invalid\n", driverName, functionName, arrayDesc.c_str());
     expandedData.push_back("Invalid");
     return expandedData;
   }
@@ -1118,8 +1129,9 @@ std::vector<std::string> drvOmronEIP::expandArrayRecursive(std::unordered_map<st
   return expandedData;
 }
 
-std::vector<std::string> drvOmronEIP::expandStructsRecursive(std::unordered_map<std::string, std::vector<std::string>> const& rawMap, std::string structName)
+std::vector<std::string> drvOmronEIP::expandStructsRecursive(structDtypeMap const& rawMap, std::string structName)
 {
+  static const char *functionName = "expandStructsRecursive";
   std::vector<std::string> row = rawMap.at(structName);
   std::vector<std::string> expandedRow;
   const std::string arrayIdentifier = "\"ARRAY[";
@@ -1156,15 +1168,18 @@ std::vector<std::string> drvOmronEIP::expandStructsRecursive(std::unordered_map<
       }
       catch (...)
       {
-        std::cout<<"Failed to find the standard datatype: " << dtype << ". Definition for " << structName << " and its dependents failed" << std::endl;
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Failed to find the standard datatype: %s. Definition for %s and its dependents failed.\n", driverName, functionName, dtype.c_str(), structName.c_str());
+        expandedRow.push_back("Invalid");
+        return expandedRow;
       }
     }
   }
   return expandedRow;
 }
 
-std::string drvOmronEIP::findArrayDtype(std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string arrayDesc)
+std::string drvOmronEIP::findArrayDtype(structDtypeMap const& expandedMap, std::string arrayDesc)
 {
+  static const char *functionName = "findArrayDtype";
   std::list<std::string> dtypeSet = {"INT","DINT","LINT","UINT","UDINT","ULINT","REAL","LREAL","STRING","WORD","DWORD","LWORD","TIME"};
   std::string dtypeData = arrayDesc.substr(arrayDesc.find("] OF ")+5, arrayDesc.size()-(arrayDesc.find("] OF ")+5));
   for (std::string dtype : dtypeSet) {
@@ -1179,14 +1194,15 @@ std::string drvOmronEIP::findArrayDtype(std::unordered_map<std::string, std::vec
   }
 
   // If we get here then we have an invalid array definition
-  std::cout<<"Invalid array definition: "<< arrayDesc <<std::endl;
+  asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid array definition: %s\n", driverName, functionName, arrayDesc.c_str());
   return "Invalid";
 }
 
-size_t drvOmronEIP::getBiggestDtype(std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string structName)
+int drvOmronEIP::getBiggestDtype(structDtypeMap const& expandedMap, std::string structName)
 {
-  size_t thisSize = 0;
-  size_t biggestSize = 0;
+  static const char *functionName = "getBiggestDtype";
+  int thisSize = 0;
+  int biggestSize = 0;
   std::string arrayDtype;
   std::vector<std::string> expandedRow = expandedMap.at(structName);
   const std::string arrayIdentifier = "\"ARRAY[";
@@ -1209,7 +1225,7 @@ size_t drvOmronEIP::getBiggestDtype(std::unordered_map<std::string, std::vector<
       thisSize = getBiggestDtype(expandedMap, dtype.substr(dtype.find("start:")+6));
     }
     else {
-      std::cout <<"Could not find the size of dtype: " << dtype <<std::endl;
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find the size of dtype: %s\n", driverName, functionName, dtype.c_str());
       return -1;
     }
     if (thisSize>biggestSize)
@@ -1221,10 +1237,11 @@ size_t drvOmronEIP::getBiggestDtype(std::unordered_map<std::string, std::vector<
 }
 
 // Return first raw dtype encountered, update alignment if we encounter the start or end of a struct
-size_t drvOmronEIP::getEmbeddedAlignment(std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string structName, std::string nextItem, size_t i){
+int drvOmronEIP::getEmbeddedAlignment(structDtypeMap const& expandedMap, std::string structName, std::string nextItem, size_t i){
+  static const char *functionName = "getEmbeddedAlignment";
   std::vector<std::string> expandedRow = expandedMap.at(structName);
   std::string nextNextItem;
-  size_t alignment = 0;
+  int alignment = 0;
   std::string nextStruct = nextItem.substr(nextItem.find(':')+1,nextItem.size()-(nextItem.find(':')+1)); // removes start: and end: from the string
   // get the bit after : If this string is a valid struct name, lookup the alignment from that struct. If it is an array, then the alignment is calculated
   // based off the next dtype which may be raw or a struct. If a struct then get biggest from struct
@@ -1247,7 +1264,7 @@ size_t drvOmronEIP::getEmbeddedAlignment(std::unordered_map<std::string, std::ve
       alignment = getBiggestDtype(expandedMap, nextNextItem.substr(nextNextItem.find("start:")+6));
     }
     else {
-      std::cout <<"Could not find the alignment rule for: " << nextNextItem <<std::endl;
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find the alignment rule for: %s\n", driverName, functionName, nextNextItem.c_str());
       return -1;
     }
   }
@@ -1260,37 +1277,36 @@ size_t drvOmronEIP::getEmbeddedAlignment(std::unordered_map<std::string, std::ve
     }
     catch (...)
     {
-      std::cout<<"Invalid datatype: " << nextStruct << ". Definition for " << structName << " is invalid" << std::endl;
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid datatype: %s. Definition for: %s is invalid.\n", driverName, functionName, nextStruct.c_str(), structName.c_str());
       return -1;
     }
   }
   return alignment;
 }
 
-size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std::string>> const& expandedMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap)
+int drvOmronEIP::findOffsets(structDtypeMap const& expandedMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap)
 {
-  // Calculate the size of each datatype
-  // Special case for strings which are sized based on their length
-  // Special case for arrays where their size is based on the number of elements and their type, special case for bool arrays
-  // Calculate the size of padding
+  // We must calculate the size of each datatype
+  // With a special case for strings which are sized based on their length
+  // With a special case for arrays where their size is based on the number of elements and their type and a special case for bool arrays
+  // We must also calculate the size of padding
   // For simple situations where the next item is a dtype then we just pad to the alignment of that dtype
-  // If this item is a struct definition, then this offset is skipped and the next offset is padded based off biggest item in struct
-  // If the next item is "end" then this offset is skipped and the next offset is padded based off biggest item in struct
+  // If this item is a struct definition, then this offset is skipped and the next offset is padded based off the size of the biggest item in struct
+  // If the next item is "end" then this offset is skipped and the next offset is padded based off biggest item in the previous struct
   // Arrays are padded as normal based off the alignment rules for their dtype
 
-  // I will need the next and previous dtypes. I will need the previous offset
-
+  static const char *functionName = "findOffsets";
   std::vector<int> newRow; // Stores the offsets as they are calculated
   std::vector<std::string> expandedRow = expandedMap.at(structName); // The row of datatypes that we are calculating the offsets for
   std::string nextItem;
   std::string prevItem;
-  size_t thisOffset = 0; // offset position of the next item
-  size_t dtypeSize = 0; // size of the basic dtype
-  size_t paddingSize = 0; // size of padding
-  size_t alignment = 0; // required alignment for thisOffset, can be 1,2,4,8
-  size_t thisAlignment = 0; // temporarily stores the alignment returned from other functions which search for alignment
+  int thisOffset = 0; // offset position of the next item
+  int dtypeSize = 0; // size of the basic dtype
+  int paddingSize = 0; // size of padding
+  int alignment = 0; // required alignment for thisOffset, can be 1,2,4,8
+  int thisAlignment = 0; // temporarily stores the alignment returned from other functions which search for alignment
   bool insideArray = false;
-  size_t arrayBools = 0;
+  int arrayBools = 0;
   int i = 0;
 
   for (std::string dtype : expandedRow){
@@ -1311,7 +1327,7 @@ size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std:
     }
 
     // Get next raw dtype
-    if (i+1 < expandedRow.size()){
+    if ((unsigned long int)(i+1) < expandedRow.size()){
       nextItem = expandedRow[i+1];
     }
     else {nextItem="none";}
@@ -1373,7 +1389,7 @@ size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std:
           }
           catch (...)
           {
-            std::cout<<"STRING length must be an integer"<<std::endl;
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s STRING length must be an integer\n", driverName, functionName);
             strLength = 0;
           }
           break;
@@ -1381,19 +1397,18 @@ size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std:
       }
       if (!intFound)
       {
-        std::cout<<"STRING type must specify size, " << structName << " definition is invalid" <<std::endl;
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s STRING definition: %s does not specify size, definition for struct: %s is invalid.\n", driverName, functionName, dtype.c_str(), structName.c_str());
         return -1;
       }
       dtypeSize = strLength;
     }
     else {
-      std::cout<<"Failed to parse user input datatype: " << dtype << ". Definition for " << structName << " invalid." << std::endl;
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Failed to parse user input datatype: %s. Definition for struct: %s is invalid.\n", driverName, functionName, dtype.c_str(), structName.c_str());
       return -1;
     }
 
     // Calculate the alignment rule of the next dtype, from this we can calculate the amount of padding required
     // nextItem should only be one of the raw dtypes at this point
-
     if (nextItem =="BOOL" && insideArray){
       if (alignment < 1){alignment=1;}
     }
@@ -1409,7 +1424,7 @@ size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std:
     else if (nextItem.substr(0,7) == "STRING["){
       if (alignment < 1){alignment=1;}
     }
-    else if (nextItem == "none"){} // We need no additional padding
+    else if (nextItem == "none"){} // Next item is the end of the struct, so we need no padding from this dtype. However we may add padding elsewhere if the previous item is a struct 
     else if (nextItem.substr(0,4) == "end:" || nextItem.substr(0,6) == "start:")
     {
       // If nextItem is an arrayStart or end, then set nextItem to the item after, this must be done recursively as that item could also be a struct
@@ -1420,12 +1435,13 @@ size_t drvOmronEIP::findOffsets(std::unordered_map<std::string, std::vector<std:
       if (alignment < thisAlignment){alignment=thisAlignment;} // Alignment should be 0 at this point, but we check just in case
     }
     else {
-      std::cout<<"Failed to calculate the alignment of: " << nextItem << ". Definition for " << structName << " invalid." << std::endl;
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Failed to calculate the alignment of: %s. Definition for struct: %s is invalid.\n", driverName, functionName, nextItem.c_str(), structName.c_str());
       return -1;
     }
     i++;
   }
   structMap[structName] = newRow;
+  return 1;
 }
 
 void drvOmronEIP::readPoller()
@@ -1435,8 +1451,10 @@ void drvOmronEIP::readPoller()
   std::string tag;
   int offset;
   int status;
-  int still_pending = 1;
+  bool still_pending = 1;
   int timeTaken = 0;
+  auto timeoutStartTime = std::chrono::system_clock::now();
+  double timeoutTimeTaken = 0; //time that we have been waiting for the current read request to be answered
   //The poller may not be fully initialised until the startPollers_ flag is set to 1, do not attempt to get the pPoller yet
   while (!this->startPollers_ && !omronExiting_) {epicsThreadSleep(0.1);}
   omronEIPPoller* pPoller = pollerList_.at(threadName);
@@ -1462,38 +1480,32 @@ void drvOmronEIP::readPoller()
       }
     }
 
-    int waits = 0;
     bool readFailed = false;
+    timeoutStartTime = std::chrono::system_clock::now();
     for (auto x : tagMap_)
     {
       if (x.second->pollerName == threadName)
       {
         offset = x.second->tagOffset;
         still_pending = 1;
-        
         while (still_pending)
         {
-          // It should be rare that data for the first tag has not arrived before the last tag is read
-          // Therefor this loop should rarely be entered and would only be called by the first few tags as we 
-          // are asynchronously waiting for all tags in this poller to be read. 
-          still_pending = 0;
           status = plc_tag_status(x.second->tagIndex);
-
+          // It should be rare that data for the first tag has not arrived before the last tag is read
+          // Therefore this if statement will normally be skipped, or called once by the first few tags as we 
+          // are asynchronously waiting for all tags in this poller to be read. 
           if (status == PLCTAG_STATUS_PENDING)
           {
-            // Wait for the timeout specified in the record
-            if (waits*0.01>=x.second->timeout)
+            // Wait for the timeout specified in the records INP/OUT field
+            // To be precise, this is the time between when the last read request for this poll was sent and the current time,
+            // this means that the first read requests will have slightly longer than their timeout period for their data to return.
+            timeoutTimeTaken = (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - timeoutStartTime).count())*0.001; //seconds
+            if (timeoutTimeTaken>=x.second->timeout)
             {
               setParamStatus(x.first, asynTimeout);
               readFailed = true;
-              asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Timeout finishing read tag %d: %s. Try decreasing the polling rate\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
-              break;
-            }
-            else
-            {
-              still_pending = 1;
-              waits++;
-              epicsThreadSleep(0.01);
+              asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Timeout finishing read tag %d: %s. Decrease the polling rate or increase the timeout.\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
+              still_pending = 0;
             }
           }
           else if (status < 0)
@@ -1501,7 +1513,10 @@ void drvOmronEIP::readPoller()
             setParamStatus(x.first, asynError);
             readFailed = true;
             asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Error finishing read tag %d: %s\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
-            break;
+            still_pending=0;
+          }
+          else {
+            still_pending=0;
           }
         }
 
@@ -1620,7 +1635,7 @@ void drvOmronEIP::readPoller()
               n--;
             }
             status = doCallbacksInt8Array(pData, bytes, x.first, 0);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: 0x%s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
             free(rawData);
             free(pData);
           }
@@ -1644,7 +1659,7 @@ void drvOmronEIP::readPoller()
               n--;
             }
             status = doCallbacksInt8Array(pData, bytes, x.first, 0);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: 0x%s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
             free(rawData);
             free(pData);
           }
@@ -1668,7 +1683,7 @@ void drvOmronEIP::readPoller()
               n--;
             }
             status = doCallbacksInt8Array(pData, bytes, x.first, 0);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: 0x%s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
             free(rawData);
             free(pData);
           }
@@ -1684,7 +1699,15 @@ void drvOmronEIP::readPoller()
             epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
             memcpy(pData, rawData, bytes);
             status = doCallbacksInt8Array(pData, bytes, x.first, 0);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %x My type %s\n", driverName, functionName, x.first, x.second->tagIndex, rawData, x.second->dataType.c_str());
+            if (pasynTrace->getTraceMask(pasynUserSelf) & ASYN_TRACEIO_DRIVER){
+              char hexString[bytes*2+1]{};
+              for (int i = 0; i < bytes; i++)
+              {
+                sprintf(hexString+strlen(hexString), "%02X", rawData[i]);
+              }
+              asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: 0x%s My type: %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
+            }
+            
             free(rawData);
             free(pData);
           }
@@ -1763,7 +1786,7 @@ asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, si
   omronDrvUser_t *drvUser = (omronDrvUser_t *)pasynUser->drvUser;
   int tagIndex = drvUser->tagIndex;
   int offset = drvUser->tagOffset;
-  int status;
+  int status = 0;
   size_t tagSize = plc_tag_get_size(tagIndex);
   double timeout = pasynUser->timeout*1000;
   if (nElements>tagSize)
@@ -1998,6 +2021,10 @@ extern "C"
     drvOmronEIP* pDriver = (drvOmronEIP*)findAsynPortDriver(portName);
     if (!pDriver){
       std::cout<<"Error, Port "<<portName<< " not found!"<<std::endl;
+      return asynError;
+    }
+    else if (iocStarted){
+      std::cout<<"Structure definition file must be loaded before database files."<<std::endl;
       return asynError;
     }
     else

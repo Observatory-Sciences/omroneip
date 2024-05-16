@@ -1,9 +1,0 @@
-{
-    "makefile.launchConfigurations": [
-        {
-            "cwd": "/home/epics-dev/work/epics/modules/omroneip/iocBoot/iocTest",
-            "binaryPath": "/home/epics-dev/work/epics/modules/omroneip/omroneipApp/src/O.linux-x86_64/omroneipApp",
-            "binaryArgs": ["/home/epics-dev/work/epics/modules/omroneip/iocBoot/iocTest/st.cmd"]
-        }
-    ]
-}
