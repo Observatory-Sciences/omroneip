@@ -1,0 +1,27 @@
+*~
+O.*
+*.so
+/bin/
+/dbd/
+/db/
+/data/
+/documentation/
+/lib/
+/include/
+.svn*
+.idea
+configure/*.local
+
+#Python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+#VSCode
+/.vscode/
+
+#Epics generated
+envPaths*
+cdCommands
+dllPath.bat
+*.out
