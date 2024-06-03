@@ -1,16 +1,11 @@
-record(waveform, "$(P)readUDTPacking") {
-    field(SCAN, "I/O Intr")
-    field(FTVL, "UCHAR")
-    field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[1] UDT 9 0 &allow_packing=1")
-    field(NELM, "1996")
-}
+# Here we pack requests so that the data fetched is as close to the 1996 byte limit as possible
+# We should send a single request message and recieve a single response message of 1994 bytes of packed data.
 
 record(waveform, "$(P)readUDTPackingElement1") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[1] UDT 1 0 &allow_packing=1")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[1] UDT 1 none &allow_packing=1")
     field(NELM, "1996")
 }
 
@@ -18,7 +13,7 @@ record(waveform, "$(P)readUDTPackingElement2") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[2] UDT 1 0 &allow_packing=1")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[2] UDT 1 none &allow_packing=1")
     field(NELM, "1996")
 }
 
@@ -26,7 +21,7 @@ record(waveform, "$(P)readUDTPackingElement3") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[3] UDT 1 0 &allow_packing=1")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[3] UDT 1 none &allow_packing=1")
     field(NELM, "1996")
 }
 
@@ -34,6 +29,60 @@ record(waveform, "$(P)readUDTPackingElement4") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[4] UDT 1 0 &allow_packing=1")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[4] UDT 1 none &allow_packing=1")
     field(NELM, "1996")
+}
+
+record(waveform, "$(P)readUDTPackingElement5") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[5] UDT 1 none &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readUDTPackingElement6") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[6] UDT 1 none &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readUDTPackingElement7") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[7] UDT 1 none &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readUDTPackingElement8") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[8] UDT 1 none &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)readUDTPackingElement9") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[9] UDT 1 none &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(waveform, "$(P)testChildArray") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) testChildArray[1] UDT 2 none &allow_packing=1")
+    field(NELM, "1996")
+}
+
+record(longin, "$(P)readUInt32") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testUDINT UDINT 1 none &allow_packing=1")
 }

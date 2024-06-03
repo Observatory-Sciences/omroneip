@@ -41,11 +41,11 @@
 #    field(INDX, "0")
 #}
 
-#record(lso, "$(P)writeString") {
-#    field(DTYP, "asynOctetWrite")
-#    field(OUT, "@asyn($(PORT), 0, 1)TestString STRING 1 none &str_max_capacity=60&str_pad_to_16_bits=1")
-#    field(SIZV, "61")
-#}
+record(lso, "$(P)writeString") {
+    field(DTYP, "asynOctetWrite")
+    field(OUT, "@asyn($(PORT), 0, 1)TestString STRING 1 none &str_max_capacity=60&str_pad_to_multiple_bytes=1&str_is_zero_terminated=0")
+    field(SIZV, "61")
+}
 
 #record(lsi, "$(P)readString") {
 #    field(SCAN, "I/O Intr")
@@ -83,37 +83,37 @@
 #    field(NELM, "1996")
 #}
 
-record(ai, "$(P)readZoneReal") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1] REAL none UDT800_Zone[43] none")
-}
+#record(ai, "$(P)readZoneReal") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynFloat64")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1] REAL none UDT800_Zone[43] none")
+#}
 
-record(ai, "$(P)readZoneReal2") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1] REAL none UDT800_Zone[0][42][9] none")
-}
+#record(ai, "$(P)readZoneReal2") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynFloat64")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1] REAL none UDT800_Zone[0][42][9] none")
+#}
 
-record(ai, "$(P)readZoneReal3") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1] REAL none UDT800_Zone[1] none")
-}
+#record(ai, "$(P)readZoneReal3") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynFloat64")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1] REAL none UDT800_Zone[1] none")
+#}
 
-record(ai, "$(P)readZoneReal4") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1] REAL none UDT800_Zone[0][10] none")
-}
+#record(ai, "$(P)readZoneReal4") {
+#    field(SCAN, "I/O Intr")
+#    field(DTYP, "asynFloat64")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[1] REAL none UDT800_Zone[0][10] none")
+#}
 
-record(waveform, "$(P)readUDT") {
-    field(SCAN, "I/O Intr")
-    field(FTVL, "UCHAR")
-    field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] UDT 1 none none")
-    field(NELM, "1996")
-}
+#record(waveform, "$(P)readUDT") {
+#    field(SCAN, "I/O Intr")
+#    field(FTVL, "UCHAR")
+#    field(DTYP, "asynInt8ArrayIn")
+#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] UDT 1 none none")
+#    field(NELM, "1996")
+#}
 
 #record(ai, "$(P)readZoneReal5") {
 #    field(SCAN, "I/O Intr")

@@ -1,0 +1,10 @@
+file "db/testISIS.template" { pattern
+{P, R, PORT, POLLER, INDEX, SLICE}
+{omronEIP:, 0:, omronDriver, fastPoller, 1, 1}
+{omronEIP:, 1:, omronDriver, fastPoller, 10, 1}
+{omronEIP:, 2:, omronDriver, fastPoller, 19, 1}
+{omronEIP:, 3:, omronDriver, fastPoller, 28, 1}
+{omronEIP:, 4:, omronDriver, fastPoller, 37, 1}
+{omronEIP:, 5:, omronDriver, fastPoller, 46, 1}
+{omronEIP:, 6:, omronDriver, fastPoller, 55, 1}
+}
