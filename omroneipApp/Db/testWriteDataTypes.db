@@ -18,9 +18,23 @@ record(longout, "$(P)writeInt16") {
     field(OUT, "@asyn($(PORT), 0, 1)transportArray1[$(I)] INT 1 0 0")
 }
 
+record(waveform, "$(P)writeInt16Array") {
+    field(FTVL, "SHORT")
+    field(DTYP, "asynInt16ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)intArray[1] INT 10 none none")
+    field(NELM, "10")
+}
+
 record(longout, "$(P)writeInt32") {
     field(DTYP, "asynInt32")
     field(OUT, "@asyn($(PORT), 0, 1)testDint DINT 1 0 0")
+}
+
+record(waveform, "$(P)writeInt32Array") {
+    field(FTVL, "LONG")
+    field(DTYP, "asynInt32ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)dintArray[1] DINT 10 none none")
+    field(NELM, "10")
 }
 
 #Should be int64in but not supported in epics base 3.15
@@ -34,9 +48,23 @@ record(longout, "$(P)writeUInt16") {
     field(OUT, "@asyn($(PORT), 0, 1)statusChannels[1].status UINT 1 0 0")
 }
 
+record(waveform, "$(P)writeUInt16Array") {
+    field(FTVL, "USHORT")
+    field(DTYP, "asynInt16ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)uintArray[1] UINT 10 none none")
+    field(NELM, "10")
+}
+
 record(longout, "$(P)writeUInt32") {
     field(DTYP, "asynInt32")
     field(OUT, "@asyn($(PORT), 0, 1)testUDINT UDINT 1 0 0")
+}
+
+record(waveform, "$(P)writeUInt32Array") {
+    field(FTVL, "ULONG")
+    field(DTYP, "asynInt32ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)udintArray[1] UDINT 10 none none")
+    field(NELM, "10")
 }
 
 #Should be int64in but not supported in epics base 3.15
@@ -50,9 +78,23 @@ record(ao, "$(P)writeFloat32") {
     field(OUT, "@asyn($(PORT), 0, 1)Zone_Heaters.Zone_01.Zone_Circuit_01.CT_Heater_Current REAL 1 0 0")
 }
 
+record(waveform, "$(P)writeFloatArray") {
+    field(FTVL, "FLOAT")
+    field(DTYP, "asynFloat32ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)floatArray[1] REAL 10 none none")
+    field(NELM, "10")
+}
+
 record(ao, "$(P)writeFloat64") {
     field(DTYP, "asynFloat64")
     field(OUT, "@asyn($(PORT), 0, 1)testLREAL LREAL 1 0 0")
+}
+
+record(waveform, "$(P)writeDoubleArray") {
+    field(FTVL, "DOUBLE")
+    field(DTYP, "asynFloat64ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)doubleArray[1] LREAL 10 none none")
+    field(NELM, "10")
 }
 
 record(lso, "$(P)writeString") {

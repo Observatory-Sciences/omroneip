@@ -1,6 +1,23 @@
 #include "drvOmroneip.h"
 
-
+// Supported PLC datatypes and the strings which users use to read/write this type
+static omronDataTypeStruct omronDataTypes[MAX_OMRON_DATA_TYPES] = {
+    {dataTypeBool, "BOOL"},
+    {dataTypeInt, "INT"},
+    {dataTypeDInt, "DINT"},
+    {dataTypeLInt, "LINT"},
+    {dataTypeUInt, "UINT"},
+    {dataTypeUDInt, "UDINT"},
+    {dataTypeULInt, "ULINT"},
+    {dataTypeReal, "REAL"},
+    {dataTypeLReal, "LREAL"},
+    {dataTypeString, "STRING"},
+    {dataTypeWord, "WORD"},
+    {dataTypeDWord, "DWORD"},
+    {dataTypeLWord, "LWORD"},
+    {dataTypeUDT, "UDT"},
+    {dataTypeUDT, "TIME"}};
+    
 omronUtilities::omronUtilities(drvOmronEIP *ptrDriver)
 {
     pDriver = ptrDriver;

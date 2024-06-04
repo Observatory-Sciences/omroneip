@@ -1,8 +1,9 @@
-# record(ai, "$(P)testRead) {
-#     field(DTYP, "asynInt32")
-#     field(INP, "asyn(PORT, ADDR, TIMEOUT)@POLLER tag_name[start_index] data_type length offset extras")
-#     field(INP, "asyn(PORT, ADDR, TIMEOUT)@POLLER tag_name[1] REAL 1 0 0")
-# }
+record(waveform, "$(P)writeArray") {
+    field(FTVL, "SHORT")
+    field(DTYP, "asynInt16ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)intArray[1] INT 10 none none")
+    field(NELM, "10")
+}
 
 #record(ai, "$(P)testReadPassive") {
 #    #field(SCAN, "1 second")
@@ -10,7 +11,7 @@
 #    field(DTYP, "asynFloat64")
 #    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVValue REAL 1")
 #}
-
+ 
 #record(ai, "$(P)testReadIntr") {
 #    field(SCAN, "I/O Intr")
 #    field(DTYP, "asynFloat64")
@@ -41,11 +42,11 @@
 #    field(INDX, "0")
 #}
 
-record(lso, "$(P)writeString") {
-    field(DTYP, "asynOctetWrite")
-    field(OUT, "@asyn($(PORT), 0, 1)TestString STRING 1 none &str_max_capacity=60&str_pad_to_multiple_bytes=1&str_is_zero_terminated=0")
-    field(SIZV, "61")
-}
+#record(lso, "$(P)writeString") {
+#    field(DTYP, "asynOctetWrite")
+#    field(OUT, "@asyn($(PORT), 0, 1)TestString STRING 1 none &str_max_capacity=60&str_pad_to_multiple_bytes=1&str_is_zero_terminated=0")
+#    field(SIZV, "61")
+#}
 
 #record(lsi, "$(P)readString") {
 #    field(SCAN, "I/O Intr")

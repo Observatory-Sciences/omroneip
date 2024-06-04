@@ -21,10 +21,26 @@ record(longin, "$(P)readInt16") {
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) transportArray1[$(I)] INT 1 0 0")
 }
 
+record(waveform, "$(P)readInt16Array") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "SHORT")
+    field(DTYP, "asynInt16ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) transportArray1[1] INT 10 none none")
+    field(NELM, "10")
+}
+
 record(longin, "$(P)readInt32") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testDint DINT 1 0 0")
+}
+
+record(waveform, "$(P)readInt32Array") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "LONG")
+    field(DTYP, "asynInt32ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) dintArray[1] DINT 10 none none")
+    field(NELM, "10")
 }
 
 #Should be int64in but not supported in epics base 3.15
@@ -40,10 +56,26 @@ record(longin, "$(P)readUInt16") {
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels[$(I)].status UINT 1 StatusChannel[0] 0")
 }
 
+record(waveform, "$(P)readUInt16Array") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "USHORT")
+    field(DTYP, "asynInt16ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) uintArray[1] UINT 10 none none")
+    field(NELM, "10")
+}
+
 record(longin, "$(P)readUInt32") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testUDINT UDINT 1 none none")
+}
+
+record(waveform, "$(P)readUInt32Array") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "ULONG")
+    field(DTYP, "asynInt32ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) udintArray[1] UDINT 10 none none")
+    field(NELM, "10")
 }
 
 #Should be int64in but not supported in epics base 3.15

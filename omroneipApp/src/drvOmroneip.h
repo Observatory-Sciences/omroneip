@@ -70,23 +70,6 @@ typedef struct
   const char *dataTypeString;
 } omronDataTypeStruct;
 
-// Supported PLC datatypes and the strings which users use to read/write this type
-static omronDataTypeStruct omronDataTypes[MAX_OMRON_DATA_TYPES] = {
-    {dataTypeBool, "BOOL"},
-    {dataTypeInt, "INT"},
-    {dataTypeDInt, "DINT"},
-    {dataTypeLInt, "LINT"},
-    {dataTypeUInt, "UINT"},
-    {dataTypeUDInt, "UDINT"},
-    {dataTypeULInt, "ULINT"},
-    {dataTypeReal, "REAL"},
-    {dataTypeLReal, "LREAL"},
-    {dataTypeString, "STRING"},
-    {dataTypeWord, "WORD"},
-    {dataTypeDWord, "DWORD"},
-    {dataTypeLWord, "LWORD"},
-    {dataTypeUDT, "UDT"},
-    {dataTypeUDT, "TIME"}};
 
 // This stores information about each communication tag to the PLC.
 // A new instance will be made for each record which requsts to uniquely read/write to the PLC
@@ -143,10 +126,20 @@ public:
 
    /* The read interface only needs to be reimplemented for int8Arrays as the other read interfaces have helper functions to set the value of the
       asynParameters that they write to */
-   asynStatus readInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements, size_t *nIn)override;
+   //pretty sure these two functions want to be deleted
+   //asynStatus readInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements, size_t *nIn)override;
+   //asynStatus readInt16Array(asynUser *pasynUser, epicsInt16 *value, size_t nElements, size_t *nIn)override;
 
-   /* Write interfaces reimplemented from asynPortDriver. Write data from the asynParameter to the associated libplctag tag*/
+   /* 
+    * Write interfaces reimplemented from asynPortDriver. Write data from the asynParameter to the associated libplctag tag
+    */
+   /* This interface is used to write both UDTs and WORD, DWORD and LWORDS*/
    asynStatus writeInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements)override;
+   asynStatus writeInt16Array(asynUser *pasynUser, epicsInt16 *value, size_t nElements)override;
+   asynStatus writeInt32Array(asynUser *pasynUser, epicsInt32 *value, size_t nElements)override;
+   asynStatus writeFloat32Array(asynUser *pasynUser, epicsFloat32 *value, size_t nElements)override;
+   asynStatus writeFloat64Array(asynUser *pasynUser, epicsFloat64 *value, size_t nElements)override;
+
    asynStatus writeUInt32Digital(asynUser *pasynUser, epicsUInt32 value, epicsUInt32 mask)override;
    asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value)override;
    asynStatus writeInt64(asynUser *pasynUser, epicsInt64 value)override;

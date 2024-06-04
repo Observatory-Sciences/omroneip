@@ -54,8 +54,12 @@ drvOmronEIP::drvOmronEIP(const char *portName,
 
     : asynPortDriver(portName,
                      1,                                                                                                                                                  /* maxAddr */
-                     asynInt32Mask | asynUInt32DigitalMask | asynInt64Mask | asynFloat64Mask | asynInt32ArrayMask | asynOctetMask | asynDrvUserMask | asynInt8ArrayMask, /* Interface mask */
-                     asynInt32Mask | asynUInt32DigitalMask | asynInt64Mask | asynFloat64Mask | asynInt32ArrayMask | asynOctetMask | asynInt8ArrayMask,                   /* Interrupt mask */
+                     asynInt32Mask | asynUInt32DigitalMask | asynInt64Mask | asynFloat64Mask | asynOctetMask | asynDrvUserMask |
+                     asynInt8ArrayMask | asynInt16ArrayMask | asynInt32ArrayMask | asynInt64ArrayMask | asynFloat32ArrayMask | 
+                     asynFloat64ArrayMask, /* Interface mask */
+                     asynInt32Mask | asynUInt32DigitalMask | asynInt64Mask | asynFloat64Mask | asynOctetMask | 
+                     asynInt8ArrayMask | asynInt16ArrayMask | asynInt32ArrayMask | asynInt64ArrayMask | asynFloat32ArrayMask | 
+                     asynFloat64ArrayMask, /* Interrupt mask */
                      ASYN_CANBLOCK | ASYN_MULTIDEVICE,                                                                                                                   /* asynFlags */
                      1,                                                                                                                                                  /* Autoconnect */
                      0,                                                                                                                                                  /* Default priority */
@@ -132,7 +136,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   if (keyWords.at("stringValid") != "true")
   {
     readFlag = false;
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s drvInfo string is invalid, record: %s was not created\n", driverName, functionName, drvInfo);
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s drvInfo string is invalid, record: %s was not created!\n", driverName, functionName, drvInfo);
     tag = "Invalid tag!";
   }
   else {
@@ -517,6 +521,7 @@ void drvOmronEIP::readPoller()
   std::string threadName = epicsThreadGetNameSelf();
   std::string tag;
   int offset;
+  int sliceSize;
   int status;
   bool still_pending = 1;
   int timeTaken = 0;
@@ -554,6 +559,7 @@ void drvOmronEIP::readPoller()
       if (x.second->pollerName == threadName)
       {
         offset = x.second->tagOffset;
+        sliceSize = x.second->sliceSize;
         still_pending = 1;
         while (still_pending)
         {
@@ -606,20 +612,37 @@ void drvOmronEIP::readPoller()
           }
           else if (x.second->dataType == "INT")
           {
-            epicsInt16 data;
-            data = plc_tag_get_int16(x.second->tagIndex, offset);
-            status = setIntegerParam(x.first, data);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %d My type %s\n", driverName, functionName, x.first, x.second->tagIndex, data, x.second->dataType.c_str());
+            epicsInt16 data[sliceSize];
+            std::string dataString;
+            for (int i = 0; i<sliceSize; i++){
+              data[i] = plc_tag_get_int16(x.second->tagIndex, (offset + i*2));
+              dataString+=std::to_string(data[i])+' ';
+            }
+            if (sliceSize==1)
+              status = setIntegerParam(x.first, data[0]);
+            else
+              status = doCallbacksInt16Array(data, sliceSize, x.first, 0);
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n",
+                        driverName, functionName, x.first, x.second->tagIndex, dataString.c_str(), x.second->dataType.c_str());
           }
           else if (x.second->dataType == "DINT")
           {
-            epicsInt32 data;
-            data = plc_tag_get_int32(x.second->tagIndex, offset);
-            status = setIntegerParam(x.first, data);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %d My type %s\n", driverName, functionName, x.first, x.second->tagIndex, data, x.second->dataType.c_str());
+            epicsInt32 data[sliceSize];
+            std::string dataString;
+            for (int i = 0; i<sliceSize; i++){
+              data[i] = plc_tag_get_int32(x.second->tagIndex, (offset + i*4));
+              dataString+=std::to_string(data[i])+' ';
+            }
+            if (sliceSize==1)
+              status = setIntegerParam(x.first, data[0]);
+            else
+              status = doCallbacksInt32Array(data, sliceSize, x.first, 0);
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n",
+                        driverName, functionName, x.first, x.second->tagIndex, dataString.c_str(), x.second->dataType.c_str());
           }
           else if (x.second->dataType == "LINT")
           {
+            //We do not natively support reading arrays of Int64, these must be read as UDTs
             epicsInt64 data;
             data = plc_tag_get_int64(x.second->tagIndex, offset);
             status = setInteger64Param(x.first, data);
@@ -627,17 +650,36 @@ void drvOmronEIP::readPoller()
           }
           else if (x.second->dataType == "UINT")
           {
-            epicsUInt16 data;
-            data = plc_tag_get_uint16(x.second->tagIndex, offset);
-            status = setIntegerParam(x.first, data);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %u My type %s\n", driverName, functionName, x.first, x.second->tagIndex, data, x.second->dataType.c_str());
+            // We read a uint and then must save it as an int to use the asyn Int16Array. The waveform record allows it to be displayed as uint
+            epicsInt16 data[sliceSize];
+            std::string dataString;
+            for (int i = 0; i<sliceSize; i++){
+              data[i] = plc_tag_get_uint16(x.second->tagIndex, (offset + i*2));
+              dataString+=std::to_string((uint16_t)data[i])+' ';
+            }
+            if (sliceSize==1)
+              status = setIntegerParam(x.first, data[0]);
+            else
+              status = doCallbacksInt16Array(data, sliceSize, x.first, 0);
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n",
+                        driverName, functionName, x.first, x.second->tagIndex, dataString.c_str(), x.second->dataType.c_str());
           }
           else if (x.second->dataType == "UDINT")
           {
-            epicsUInt32 data;
-            data = plc_tag_get_uint32(x.second->tagIndex, offset);
-            status = setIntegerParam(x.first, data);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %u My type %s\n", driverName, functionName, x.first, x.second->tagIndex, data, x.second->dataType.c_str());
+            // We read a udint and then must save it as a dint to use the asyn Int32Array interface. 
+            // The waveform record allows it to be displayed as udint
+            epicsInt32 data[sliceSize];
+            std::string dataString;
+            for (int i = 0; i<sliceSize; i++){
+              data[i] = plc_tag_get_uint32(x.second->tagIndex, (offset + i*4));
+              dataString+=std::to_string((uint32_t)data[i])+' ';
+            }
+            if (sliceSize==1)
+              status = setIntegerParam(x.first, data[0]);
+            else
+              status = doCallbacksInt32Array(data, sliceSize, x.first, 0);
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n",
+                        driverName, functionName, x.first, x.second->tagIndex, dataString.c_str(), x.second->dataType.c_str());
           }
           else if (x.second->dataType == "ULINT")
           {
@@ -648,17 +690,37 @@ void drvOmronEIP::readPoller()
           }
           else if (x.second->dataType == "REAL")
           {
-            epicsFloat32 data;
-            data = plc_tag_get_float32(x.second->tagIndex, offset);
-            status = setDoubleParam(x.first, data);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %f My type %s\n", driverName, functionName, x.first, x.second->tagIndex, data, x.second->dataType.c_str());
+            epicsFloat32 data[sliceSize];
+            std::string dataString;
+            std::stringstream ss;
+            for (int i = 0; i<sliceSize; i++){
+              data[i] = plc_tag_get_float32(x.second->tagIndex, (offset + i*4));
+              ss<<data[i] << ' ';
+            }
+            dataString = ss.str();
+            if (sliceSize==1)
+              status = setDoubleParam(x.first, data[0]);
+            else
+              status = doCallbacksFloat32Array(data, sliceSize, x.first, 0);
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n",
+                        driverName, functionName, x.first, x.second->tagIndex, dataString.c_str(), x.second->dataType.c_str());
           }
           else if (x.second->dataType == "LREAL")
           {
-            epicsFloat64 data;
-            data = plc_tag_get_float64(x.second->tagIndex, offset);
-            status = setDoubleParam(x.first, data);
-            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %f My type %s\n", driverName, functionName, x.first, x.second->tagIndex, data, x.second->dataType.c_str());
+            epicsFloat64 data[sliceSize];
+            std::string dataString;
+            std::stringstream ss;
+            for (int i = 0; i<sliceSize; i++){
+              data[i] = plc_tag_get_float64(x.second->tagIndex, (offset + i*8));
+              ss<<data[i] << ' ';
+            }
+            dataString = ss.str();
+            if (sliceSize==1)
+              status = setDoubleParam(x.first, data[0]);
+            else
+              status = doCallbacksFloat64Array(data, sliceSize, x.first, 0);
+            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n",
+                        driverName, functionName, x.first, x.second->tagIndex, dataString.c_str(), x.second->dataType.c_str());
           }
           else if (x.second->dataType == "STRING")
           {
@@ -826,38 +888,76 @@ void drvOmronEIP::readPoller()
 }
 
 /* Reimplementation of asyn interfaces*/
+// Are these just so we can read without using the readPoller? as this is no longer intentional behavior
 
-asynStatus drvOmronEIP::readInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements, size_t *nIn)
-{
-  const char * functionName = "readInt8Array";
-  int status;
-  for (auto x : tagMap_)
-  {
-    int offset = x.second->tagOffset;
-    if (x.second->dataType == "UDT")
-    {
-      size_t bytes = plc_tag_get_size(x.second->tagIndex);
-      uint8_t *pOutput = (uint8_t *)malloc(bytes * sizeof(uint8_t));
-      status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, pOutput, bytes); /* +1 for the zero termination */
-      if (status < 0) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Read attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
-        return asynError;
-      }
-      if (bytes > nElements)
-      {
-        memcpy(value, pOutput, nElements);
-        memcpy(nIn, &nElements, sizeof(size_t));
-      }
-      else
-      {
-        memcpy(value, pOutput, bytes);
-        memcpy(nIn, &bytes, sizeof(size_t));
-      }
-      free(pOutput);
-    }
-  }
-  return asynSuccess;
-}
+// asynStatus drvOmronEIP::readInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements, size_t *nIn)
+// {
+//   const char * functionName = "readInt8Array";
+//   int status;
+//   for (auto x : tagMap_)
+//   {
+//     int offset = x.second->tagOffset;
+//     if (x.second->dataType == "UDT")
+//     {
+//       size_t bytes = plc_tag_get_size(x.second->tagIndex);
+//       uint8_t *pOutput = (uint8_t *)malloc(bytes * sizeof(uint8_t));
+//       status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, pOutput, bytes); /* +1 for the zero termination */
+//       if (status < 0) {
+//         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Read attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+//         return asynError;
+//       }
+//       if (bytes > nElements)
+//       {
+//         memcpy(value, pOutput, nElements);
+//         memcpy(nIn, &nElements, sizeof(size_t));
+//       }
+//       else
+//       {
+//         memcpy(value, pOutput, bytes);
+//         memcpy(nIn, &bytes, sizeof(size_t));
+//       }
+//       free(pOutput);
+//     }
+//   }
+//   return asynSuccess;
+// }
+
+// asynStatus drvOmronEIP::readInt16Array(asynUser *pasynUser, epicsInt16 *value, size_t nElements, size_t *nIn)
+// {
+//   const char * functionName = "readInt16Array";
+//   int status;
+//   int offset;
+//   omronDrvUser_t *drvUser;
+
+//   if (tagMap_.find(pasynUser->reason) == tagMap_.end()){
+//     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Read attempt for asyn user %d failed. User is not registered with this interface\n",
+//                driverName, functionName, pasynUser->reason);
+//     return asynError;
+//   }
+//   else
+//     drvUser = tagMap_.at(pasynUser->reason);
+
+//   offset = drvUser->tagOffset;
+//   if (drvUser->dataType == "INT")
+//   {
+//     epicsInt16 data[nElements];
+//     std::string dataString;
+//     for (int i = 0; i<nElements; i++){
+//       data[i] = plc_tag_get_int16(drvUser->tagIndex, offset + i*2);
+//       dataString+=std::to_string(data[i])+' ';
+//     }
+//     memcpy(value, data, nElements);
+//     memcpy(nIn, &nElements, sizeof(size_t));
+//     asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n", 
+//               driverName, functionName, pasynUser->reason, drvUser->tagIndex, dataString.c_str(), drvUser->dataType.c_str());
+//   }
+//   else {
+//     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Record does not specify a valid dtype for this interface.\n", driverName, functionName);
+//     return asynError;
+//   }
+  
+//   return asynSuccess;
+// }
 
 
 asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements)
@@ -871,8 +971,9 @@ asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, si
   double timeout = pasynUser->timeout*1000;
   if (nElements>tagSize)
   {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
-    nElements=tagSize;
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s libplctag tag index: %d. Request to write more characters than can fit into the tag! nElements>tagSize:  %ld > %ld.\n",
+               driverName, functionName, tagIndex, nElements, tagSize); 
+    return asynError;
   }
   if (drvUser->dataType == "UDT")
   {
@@ -889,6 +990,7 @@ asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, si
       return asynError;
     }
     free(pOutput);
+    return asynSuccess;
   }
   else if (drvUser->dataType == "WORD" || drvUser->dataType == "DWORD" || drvUser->dataType == "LWORD")
   {
@@ -910,6 +1012,212 @@ asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, si
       return asynError;
     }
     free(pOutput);
+    return asynSuccess;
+  }
+  else
+    return asynError; //This error should be caught at drvUser creation, but just in case
+}
+
+asynStatus drvOmronEIP::writeInt16Array(asynUser *pasynUser, epicsInt16 *value, size_t nElements)
+{
+  const char * functionName = "writeInt16Array";
+  omronDrvUser_t *drvUser = (omronDrvUser_t *)pasynUser->drvUser;
+  int tagIndex = drvUser->tagIndex;
+  int offset = drvUser->tagOffset;
+  size_t sliceSize = drvUser->sliceSize;
+  int status = 0;
+  double timeout = pasynUser->timeout*1000;
+  if (nElements>sliceSize){
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s libplctag tag index: %d. Request to write more values than the configured sliceSize! nElements>sliceSize:  %ld > %ld.\n",
+               driverName, functionName, tagIndex, nElements, sliceSize); 
+    return asynError;
+  }
+  else if (nElements<sliceSize){
+    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize:  %ld < %ld.\n",
+                driverName, functionName, tagIndex, nElements, sliceSize); 
+  }
+
+  if (drvUser->dataType == "INT")
+  {
+    for (size_t i = 0; i<sliceSize; i++){
+      /* If nElements is less than sliceSize, the remaining data is written as zeroes */
+      if (nElements<=i)
+        status = plc_tag_set_int16(tagIndex,offset + i*2, 0); 
+      else
+        status = plc_tag_set_int16(tagIndex,offset + i*2, *(value+i)); 
+      if (status < 0) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+        return asynError;
+      }
+    }
+  }
+  else if (drvUser->dataType == "UINT")
+  {
+    for (size_t i = 0; i<sliceSize; i++){
+      /* If nElements is less than sliceSize, the remaining data is written as zeroes */
+      if (nElements<=i)
+        status = plc_tag_set_uint16(tagIndex,offset + i*2, 0); 
+      else
+        status = plc_tag_set_uint16(tagIndex,offset + i*2, *(value+i)); 
+      if (status < 0) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+        return asynError;
+      }
+    }
+  }
+  else
+    return asynError; //This error should be caught at drvUser creation, but just in case
+
+  status = plc_tag_write(tagIndex, timeout);
+  if (status < 0) {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+    return asynError;
+  }
+  return asynSuccess;
+}
+
+asynStatus drvOmronEIP::writeInt32Array(asynUser *pasynUser, epicsInt32 *value, size_t nElements)
+{
+  const char * functionName = "writeInt32Array";
+  omronDrvUser_t *drvUser = (omronDrvUser_t *)pasynUser->drvUser;
+  int tagIndex = drvUser->tagIndex;
+  int offset = drvUser->tagOffset;
+  size_t sliceSize = drvUser->sliceSize;
+  int status = 0;
+  double timeout = pasynUser->timeout*1000;
+  if (nElements>sliceSize){
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s libplctag tag index: %d. Request to write more values than the configured sliceSize! nElements>sliceSize:  %ld > %ld.\n",
+               driverName, functionName, tagIndex, nElements, sliceSize); 
+    return asynError;
+  }
+  else if (nElements<sliceSize){
+    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize:  %ld < %ld.\n",
+                driverName, functionName, tagIndex, nElements, sliceSize); 
+  }
+
+  if (drvUser->dataType == "DINT")
+  {
+    for (size_t i = 0; i<sliceSize; i++){
+      /* If nElements is less than sliceSize, the remaining data is written as zeroes */
+      if (nElements<=i)
+        status = plc_tag_set_int32(tagIndex,offset + i*4, 0); 
+      else
+        status = plc_tag_set_int32(tagIndex,offset + i*4, *(value+i)); 
+      if (status < 0) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+        return asynError;
+      }
+    }
+  }
+  else if (drvUser->dataType == "UDINT")
+  {
+    for (size_t i = 0; i<sliceSize; i++){
+      /* If nElements is less than sliceSize, the remaining data is written as zeroes */
+      if (nElements<=i)
+        status = plc_tag_set_uint32(tagIndex,offset + i*4, 0); 
+      else
+        status = plc_tag_set_uint32(tagIndex,offset + i*4, *(value+i)); 
+      if (status < 0) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+        return asynError;
+      }
+    }
+  }
+  else
+    return asynError; //This error should be caught at drvUser creation, but just in case
+
+  status = plc_tag_write(tagIndex, timeout);
+  if (status < 0) {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+    return asynError;
+  }
+  return asynSuccess;
+}
+
+asynStatus drvOmronEIP::writeFloat32Array(asynUser *pasynUser, epicsFloat32 *value, size_t nElements)
+{
+  const char * functionName = "writeFloat32Array";
+  omronDrvUser_t *drvUser = (omronDrvUser_t *)pasynUser->drvUser;
+  int tagIndex = drvUser->tagIndex;
+  int offset = drvUser->tagOffset;
+  size_t sliceSize = drvUser->sliceSize;
+  int status = 0;
+  double timeout = pasynUser->timeout*1000;
+  if (nElements>sliceSize){
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s libplctag tag index: %d. Request to write more values than the configured sliceSize! nElements>sliceSize:  %ld > %ld.\n",
+               driverName, functionName, tagIndex, nElements, sliceSize); 
+    return asynError;
+  }
+  else if (nElements<sliceSize){
+    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize:  %ld < %ld.\n",
+                driverName, functionName, tagIndex, nElements, sliceSize); 
+  }
+
+  if (drvUser->dataType == "REAL")
+  {
+    for (size_t i = 0; i<sliceSize; i++){
+      /* If nElements is less than sliceSize, the remaining data is written as zeroes */
+      if (nElements<=i)
+        status = plc_tag_set_float32(tagIndex,offset + i*4, 0); 
+      else
+        status = plc_tag_set_float32(tagIndex,offset + i*4, *(value+i)); 
+      if (status < 0) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+        return asynError;
+      }
+    }
+  }
+  else
+    return asynError; //This error should be caught at drvUser creation, but just in case
+
+  status = plc_tag_write(tagIndex, timeout);
+  if (status < 0) {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+    return asynError;
+  }
+  return asynSuccess;
+}
+
+asynStatus drvOmronEIP::writeFloat64Array(asynUser *pasynUser, epicsFloat64 *value, size_t nElements)
+{
+  const char * functionName = "writeFloat64Array";
+  omronDrvUser_t *drvUser = (omronDrvUser_t *)pasynUser->drvUser;
+  int tagIndex = drvUser->tagIndex;
+  int offset = drvUser->tagOffset;
+  size_t sliceSize = drvUser->sliceSize;
+  int status = 0;
+  double timeout = pasynUser->timeout*1000;
+  if (nElements>sliceSize){
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s libplctag tag index: %d. Request to write more values than the configured sliceSize! nElements>sliceSize:  %ld > %ld.\n",
+               driverName, functionName, tagIndex, nElements, sliceSize); 
+    return asynError;
+  }
+  else if (nElements<sliceSize){
+    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize:  %ld < %ld.\n",
+                driverName, functionName, tagIndex, nElements, sliceSize); 
+  }
+
+  if (drvUser->dataType == "LREAL")
+  {
+    for (size_t i = 0; i<sliceSize; i++){
+      /* If nElements is less than sliceSize, the remaining data is written as zeroes */
+      if (nElements<=i)
+        status = plc_tag_set_float64(tagIndex,offset + i*8, 0); 
+      else
+        status = plc_tag_set_float64(tagIndex,offset + i*8, *(value+i)); 
+      if (status < 0) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+        return asynError;
+      }
+    }
+  }
+  else
+    return asynError; //This error should be caught at drvUser creation, but just in case
+
+  status = plc_tag_write(tagIndex, timeout);
+  if (status < 0) {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+    return asynError;
   }
   return asynSuccess;
 }
@@ -934,8 +1242,10 @@ asynStatus drvOmronEIP::writeUInt32Digital(asynUser *pasynUser, epicsUInt32 valu
       asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;
     }
+    return asynSuccess;
   }
-  return asynError;
+  else
+    return asynError; //This error should be caught at drvUser creation, but just in case
 }
 
 asynStatus drvOmronEIP::writeInt32(asynUser *pasynUser, epicsInt32 value)
@@ -948,21 +1258,16 @@ asynStatus drvOmronEIP::writeInt32(asynUser *pasynUser, epicsInt32 value)
   double timeout = pasynUser->timeout*1000;
 
   if (drvUser->dataType == "INT")
-  {
     status = plc_tag_set_int16(tagIndex, offset, (epicsInt16)value);
-  }
   else if (drvUser->dataType == "DINT")
-  {
     status = plc_tag_set_int32(tagIndex, offset, value);
-  }
   else if (drvUser->dataType == "UINT")
-  {
-    status = plc_tag_set_int32(tagIndex, offset, (epicsUInt16)value);
-  }
+    status = plc_tag_set_uint16(tagIndex, offset, (epicsUInt16)value);
   else if (drvUser->dataType == "UDINT")
-  {
-    status = plc_tag_set_int32(tagIndex, offset, (epicsUInt32)value);
-  }
+    status = plc_tag_set_uint32(tagIndex, offset, (epicsUInt32)value);
+  else
+    return asynError; //This error should be caught at drvUser creation, but just in case
+
   if (status < 0) {
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
     return asynError;
@@ -984,13 +1289,12 @@ asynStatus drvOmronEIP::writeInt64(asynUser *pasynUser, epicsInt64 value)
   int offset = drvUser->tagOffset;
   double timeout = pasynUser->timeout*1000;
   if (drvUser->dataType == "LINT")
-  {
     status = plc_tag_set_int64(tagIndex, offset, value);
-  }
   else if (drvUser->dataType == "ULINT")
-  {
     status = plc_tag_set_int64(tagIndex, offset, (epicsUInt64)value);
-  }
+  else
+    return asynError; //This error should be caught at drvUser creation, but just in case
+  
   if (status < 0) {
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
     return asynError;
@@ -1012,13 +1316,12 @@ asynStatus drvOmronEIP::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
   int offset = drvUser->tagOffset;
   double timeout = pasynUser->timeout*1000;
   if (drvUser->dataType == "REAL")
-  {
     status = plc_tag_set_float32(tagIndex, offset, (epicsFloat32)value);
-  }
   else if (drvUser->dataType == "LREAL")
-  {
     status = plc_tag_set_float64(tagIndex, offset, value);
-  }
+  else
+    return asynError; //This error should be caught at drvUser creation, but just in case
+
   if (status < 0) {
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
     return asynError;
@@ -1078,7 +1381,7 @@ asynStatus drvOmronEIP::writeOctet(asynUser *pasynUser, const char *value, size_
   }
   else {
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s WriteOctet is only allowed for STRING type.\n", driverName, functionName); 
-    return asynError;
+    return asynError; //This error should be caught at drvUser creation, but just in case
   }
   return asynSuccess;
 }

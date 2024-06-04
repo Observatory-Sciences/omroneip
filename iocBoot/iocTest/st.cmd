@@ -22,7 +22,9 @@ drvOmronEIPConfigPoller("omronDriver", "mediumPoller", 2)
 drvOmronEIPConfigPoller("omronDriver", "slowPoller", 10)
 
 #drvOmronEIPStructDefine(driverPortName, pathToFile)
-drvOmronEIPStructDefine("omronDriver", "iocBoot/iocTest/structDefs.csv")
+#drvOmronEIPStructDefine("omronDriver", "iocBoot/iocTest/structDefs.csv")
+
+dbLoadRecords("db/test.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
 
 #dbLoadRecords("db/testStatusChannels.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
 #dbLoadRecords("db/testHeatingZones.db", "P=${P}, PORT=omronDriver, POLLER=mediumPoller")
@@ -34,9 +36,8 @@ drvOmronEIPStructDefine("omronDriver", "iocBoot/iocTest/structDefs.csv")
 #dbLoadRecords("db/testInefficientRead.db", "P=${P}, I=1, R=1:, PORT=omronDriver, POLLER=fastPoller")
 #dbLoadRecords("db/testEfficientRead.db", "P=${P}, I=2, R=2:, PORT=omronDriver, POLLER=fastPoller")
 
-#dbLoadRecords("db/test.db", "P=${P}, PORT=omronDriver, POLLER=mediumPoller")
 #dbLoadRecords("db/testReadNoPacking.db", "P=${P}, PORT=omronDriver, POLLER=slowPoller") #doesnt work properly atm
-dbLoadRecords("db/testReadPacking.db", "P=${P}, PORT=omronDriver, POLLER=slowPoller") #doesnt work properly atm
+#dbLoadRecords("db/testReadPacking.db", "P=${P}, PORT=omronDriver, POLLER=slowPoller") #doesnt work properly atm
 #dbLoadRecords("db/testWeirdINP.db", "P=${P}, PORT=omronDriver, POLLER=mediumPoller") #doesnt work properly atm
 
 #dbLoadRecords("db/asynRecord.db","P=${P},R=asyn,PORT=omronDriver,ADDR=0,IMAX=100,OMAX=100")
