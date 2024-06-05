@@ -110,11 +110,25 @@ record(waveform, "$(P)writeWord") {
     field(NELM, "2")
 }
 
+record(waveform, "$(P)writeWordArray") {
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)wordArray[1] WORD 10 0 0")
+    field(NELM, "20")
+}
+
 record(waveform, "$(P)writeDWord") {
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayOut")
     field(INP, "@asyn($(PORT), 0, 1)testDWORD DWORD 1 0 0")
     field(NELM, "4")
+}
+
+record(waveform, "$(P)writeDWordArray") {
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)dwordArray[1] DWORD 10 0 0")
+    field(NELM, "40")
 }
 
 record(waveform, "$(P)writeLWord") {
@@ -124,11 +138,31 @@ record(waveform, "$(P)writeLWord") {
     field(NELM, "8")
 }
 
+record(waveform, "$(P)writeLWordArray") {
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)lwordArray[1] LWORD 10 0 0")
+    field(NELM, "80")
+}
+
 record(waveform, "$(P)writeUDT") {
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayOut")
     field(INP, "@asyn($(PORT), 0, 1)ISISTestMultiple[$(I)] UDT 1 0 0")
     field(NELM, "1996")
+}
+
+#This writes an array of 3 UDTs, each 204 bytes long.
+#The offset of 408 means that anything entered into the waveform, writes to the third UDT
+#Any values not written to the waveform will be filled in with the values currently in the tag in libplctag
+#This means that if another libplctag tag has written to the PLC and overwritten the UDT, as this data
+#Is not reflected in this tag locally, we can potentially overwrite what was written to the UDT
+#With the old values remaining in this libplctag tag.
+record(waveform, "$(P)writeUDTArray") {
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)ISISTestMultiple[1] UDT 3 408 none")
+    field(NELM, "612")
 }
 
 #Not currently working as the Omron PLC seems to be returning TIME data as TIME_NSEC data which libplctag doesnt understand

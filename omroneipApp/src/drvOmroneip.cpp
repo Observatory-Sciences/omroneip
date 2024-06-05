@@ -755,23 +755,27 @@ void drvOmronEIP::readPoller()
           else if (x.second->dataType == "WORD")
           {
             int bytes = 2;
-            uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
-            status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
+            int size = bytes*sliceSize;
+            uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)size);
+            status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, size);
             if (status !=0){
               asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while accessing WORD data: %s\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
               continue;
             }
-            epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
+            epicsInt8 *pData = (epicsInt8 *)malloc(size * sizeof(epicsInt8));
             /* We flip around the hex numbers to match what is done in the PLC */
-            int n = bytes-1;
-            char hexString[bytes*2+1]{};
-            for (int i = 0; i < bytes; i++)
+            int n;
+            char hexString[size*2+1]{};
+            for (int i = 0; i < sliceSize; i++)
             {
-              sprintf(hexString+strlen(hexString), "%02X", rawData[n]);
-              pData[i] = rawData[n];
-              n--;
+              n = bytes-1;
+              for (int j = 0; j < bytes; j++){
+                sprintf(hexString+strlen(hexString), "%02X", rawData[n+i*bytes]);
+                pData[j+i*bytes] = rawData[n+i*bytes];
+                n--;
+              }
             }
-            status = doCallbacksInt8Array(pData, bytes, x.first, 0);
+            status = doCallbacksInt8Array(pData, size, x.first, 0);
             asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: 0x%s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
             free(rawData);
             free(pData);
@@ -779,23 +783,27 @@ void drvOmronEIP::readPoller()
           else if (x.second->dataType == "DWORD")
           {
             int bytes = 4;
-            uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
-            status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
+            int size = bytes*sliceSize;
+            uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)size);
+            status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, size);
             if (status !=0){
               asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while accessing DWORD data: %s\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
               continue;
             }
-            epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
+            epicsInt8 *pData = (epicsInt8 *)malloc(size * sizeof(epicsInt8));
             /* We flip around the hex numbers to match what is done in the PLC */
-            int n = bytes-1;
-            char hexString[bytes*2+1]{};
-            for (int i = 0; i < bytes; i++)
+            int n;
+            char hexString[size*2+1]{};
+            for (int i = 0; i < sliceSize; i++)
             {
-              sprintf(hexString+strlen(hexString), "%02X", rawData[n]);
-              pData[i] = rawData[n];
-              n--;
+              n = bytes-1;
+              for (int j = 0; j < bytes; j++){
+                sprintf(hexString+strlen(hexString), "%02X", rawData[n+i*bytes]);
+                pData[j+i*bytes] = rawData[n+i*bytes];
+                n--;
+              }
             }
-            status = doCallbacksInt8Array(pData, bytes, x.first, 0);
+            status = doCallbacksInt8Array(pData, size, x.first, 0);
             asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: 0x%s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
             free(rawData);
             free(pData);
@@ -803,23 +811,27 @@ void drvOmronEIP::readPoller()
           else if (x.second->dataType == "LWORD")
           {
             int bytes = 8;
-            uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)bytes);
-            status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, bytes);
+            int size = bytes*sliceSize;
+            uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)size);
+            status = plc_tag_get_raw_bytes(x.second->tagIndex, offset, rawData, size);
             if (status !=0){
               asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while accessing LWORD data: %s\n", driverName, functionName, x.second->tagIndex, plc_tag_decode_error(status));
               continue;
             }
-            epicsInt8 *pData = (epicsInt8 *)malloc(bytes * sizeof(epicsInt8));
+            epicsInt8 *pData = (epicsInt8 *)malloc(size * sizeof(epicsInt8));
             /* We flip around the hex numbers to match what is done in the PLC */
-            int n = bytes-1;
-            char hexString[bytes*2+1]{};
-            for (int i = 0; i < bytes; i++)
+            int n;
+            char hexString[size*2+1]{};
+            for (int i = 0; i < sliceSize; i++)
             {
-              sprintf(hexString+strlen(hexString), "%02X", rawData[n]);
-              pData[i] = rawData[n];
-              n--;
+              n = bytes-1;
+              for (int j = 0; j < bytes; j++){
+                sprintf(hexString+strlen(hexString), "%02X", rawData[n+i*bytes]);
+                pData[j+i*bytes] = rawData[n+i*bytes];
+                n--;
+              }
             }
-            status = doCallbacksInt8Array(pData, bytes, x.first, 0);
+            status = doCallbacksInt8Array(pData, size, x.first, 0);
             asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: 0x%s My type %s\n", driverName, functionName, x.first, x.second->tagIndex, hexString, x.second->dataType.c_str());
             free(rawData);
             free(pData);
@@ -966,11 +978,13 @@ asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, si
   omronDrvUser_t *drvUser = (omronDrvUser_t *)pasynUser->drvUser;
   int tagIndex = drvUser->tagIndex;
   int offset = drvUser->tagOffset;
+  size_t sliceSize = drvUser->sliceSize;
   int status = 0;
   size_t tagSize = plc_tag_get_size(tagIndex);
   double timeout = pasynUser->timeout*1000;
   if (nElements>tagSize)
   {
+    // tagSize is calculated by the library based off the initial read of the tag, the user should not try and write more data than this
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s libplctag tag index: %d. Request to write more characters than can fit into the tag! nElements>tagSize:  %ld > %ld.\n",
                driverName, functionName, tagIndex, nElements, tagSize); 
     return asynError;
@@ -994,14 +1008,35 @@ asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, si
   }
   else if (drvUser->dataType == "WORD" || drvUser->dataType == "DWORD" || drvUser->dataType == "LWORD")
   {
-    uint8_t *pOutput = (uint8_t *)malloc(nElements * sizeof(uint8_t));
-    int j = nElements-1;
-    for (size_t i=0; i<nElements; i++)
-    {
-      pOutput[i] = value[j];
-      j--;
+    size_t bytes;
+    if (drvUser->dataType == "WORD") {bytes = 2;}
+    else if (drvUser->dataType == "DWORD") {bytes = 4;}
+    else if (drvUser->dataType == "LWORD") {bytes = 8;}
+
+    if (nElements>sliceSize*bytes){
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s libplctag tag index: %d. Request to write more data than specified in sliceSize! nElements>sliceSize*bytes:  %ld > %ld.\n",
+                driverName, functionName, tagIndex, nElements, sliceSize*bytes); 
+      return asynError;
     }
-    status = plc_tag_set_raw_bytes(tagIndex, offset, pOutput ,nElements);
+    else if (nElements<sliceSize*bytes){
+      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize*bytes:  %ld < %ld.\n",
+                  driverName, functionName, tagIndex, nElements, sliceSize*bytes); 
+    }
+
+    uint8_t *pOutput = (uint8_t *)malloc(sliceSize * bytes * sizeof(uint8_t));
+    int n;
+    for (size_t i = 0; i < sliceSize; i++)
+    {
+      n = bytes-1;
+      for (size_t j = 0; j < bytes; j++){
+        if (nElements<=i)
+          pOutput[j+i*bytes] = 0;
+        else
+          pOutput[j+i*bytes] = value[n+i*bytes];
+        n--;
+      }
+    }
+    status = plc_tag_set_raw_bytes(tagIndex, offset, pOutput ,sliceSize);
     if (status < 0) {
       asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;

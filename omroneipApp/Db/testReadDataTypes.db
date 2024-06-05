@@ -91,12 +91,6 @@ record(ai, "$(P)readFloat32") {
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)].PVValue REAL 1 PVData[2] none")
 }
 
-record(ai, "$(P)readFloat32(2)") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[$(I)].ZTC.PV REAL 1 UDT801_ZTC[5] none")
-}
-
 record(ai, "$(P)readFloat64") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
@@ -118,6 +112,14 @@ record(waveform, "$(P)readWord") {
     field(NELM, "2")
 }
 
+record(waveform, "$(P)readWordArray") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) wordArray[1] WORD 10 none none")
+    field(NELM, "20")
+}
+
 record(waveform, "$(P)readDWord") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
@@ -126,12 +128,28 @@ record(waveform, "$(P)readDWord") {
     field(NELM, "4")
 }
 
+record(waveform, "$(P)readDWordArray") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) dwordArray[1] DWORD 10 none none")
+    field(NELM, "40")
+}
+
 record(waveform, "$(P)readLWord") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testLWORD LWORD 1 0 0")
     field(NELM, "8")
+}
+
+record(waveform, "$(P)readLWordArray") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) lwordArray[1] LWORD 10 none none")
+    field(NELM, "80")
 }
 
 record(waveform, "$(P)readUDT") {

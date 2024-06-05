@@ -1,8 +1,9 @@
-record(waveform, "$(P)writeArray") {
-    field(FTVL, "SHORT")
-    field(DTYP, "asynInt16ArrayOut")
-    field(INP, "@asyn($(PORT), 0, 1)intArray[1] INT 10 none none")
-    field(NELM, "10")
+record(waveform, "$(P)readUDT") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] UDT 3 0 0")
+    field(NELM, "1996")
 }
 
 #record(ai, "$(P)testReadPassive") {
