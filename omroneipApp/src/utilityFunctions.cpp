@@ -189,6 +189,10 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
           if (indexable && thisWord != "1")
           {
             keyWords.at("sliceSize") = thisWord;
+            if (keyWords.at("dataType")=="STRING" || keyWords.at("dataType")=="LINT" || keyWords.at("dataType")=="ULINT"){
+              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error! sliceSize must be 1 for this datatype.\n", driverName, functionName);
+              keyWords.at("stringValid") = "false";
+            }
           }
           else if (thisWord == "0")
           {
@@ -305,14 +309,21 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
           {"str_is_fixed_length=", "0"},
           {"str_is_counted=", "1"},
           {"str_count_word_bytes=", "2"},
-          {"str_pad_bytes=", "0"}};
+          {"str_pad_to_multiple_bytes=", "0"}};
+
       std::string extrasString;
       std::string extrasWord;
-      if (thisWord!="0" && thisWord!="none")
+      if ((thisWord!="0" && thisWord!="none") || keyWords.at("dataType")=="STRING") 
       {
         // The user has specified attributes other than default, these will either be added to the list or replace existing default values
-        extrasString = thisWord;
-        extrasWord = thisWord;
+        if ((keyWords.at("dataType")=="STRING")&&(thisWord=="0" || thisWord=="none")){
+          //We have a string dtype which has not defined its extrasString, this is improper behaviour but we allow it hear and create
+          //a warning later. We must strip away the none identifier.
+          extrasString="",extrasWord="";
+        }
+        else
+          extrasString = thisWord, extrasWord = thisWord;
+
         for (auto &attrib : defaultTagAttribs)
         {
           auto pos = extrasWord.find(attrib.first);
@@ -360,6 +371,10 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
           }
           keyWords.at("strCapacity") = size; 
         }
+        else{
+          asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, str_max_capacity has not been defined, this can cause errors when reading strings from structures and when writing strings. This should be defined.\n", 
+                      driverName, functionName);
+        }
       }
 
       for (auto attrib : defaultTagAttribs)
@@ -381,7 +396,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Creating libplctag tag with the following parameters:\n", driverName, functionName);
   for (auto i = keyWords.begin(); i != keyWords.end(); i++)
   {
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s \t\t\t %s\n", i->first.c_str(), i->second.c_str());
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s = %s\n", i->first.c_str(), i->second.c_str());
   }
   return keyWords;
 }
@@ -433,7 +448,7 @@ int omronUtilities::findRequestedOffset(std::vector<size_t> indices, std::string
       if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
           dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || 
             dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || 
-              dtype =="TIME" || dtype =="DATE_AND_TIME"){
+              dtype =="TIME" || dtype =="DATE_AND_TIME" || dtype.substr(0,7)=="STRING["){
         j++;m++;
       }
       else if ((pDriver->structMap_.find(dtype.substr(6)))!=pDriver->structMap_.end()){
@@ -446,7 +461,7 @@ int omronUtilities::findRequestedOffset(std::vector<size_t> indices, std::string
           if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
                 dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || 
                   dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || 
-                    dtype =="TIME" || dtype =="DATE_AND_TIME"){
+                    dtype =="TIME" || dtype =="DATE_AND_TIME" || dtype.substr(0,7)=="STRING["){
             structDtypes++;
           }
           k++;

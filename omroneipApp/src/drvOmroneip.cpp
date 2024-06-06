@@ -136,7 +136,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   if (keyWords.at("stringValid") != "true")
   {
     readFlag = false;
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s drvInfo string is invalid, record: %s was not created!\n", driverName, functionName, drvInfo);
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, drvInfo string is invalid, record with drvInfo: %s was not created!\n", driverName, functionName, drvInfo);
     tag = "Invalid tag!";
   }
   else {
@@ -152,7 +152,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
       if (tag == previousTag.second->tag && keyWords.at("pollerName") == previousTag.second->pollerName)
       {
         /* Potential extension here to allow tags with different pollers to be combined, but must check the polling duration so that the shortest polling duration is used as the master tag */
-        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Duplicate tag exists, reusing tag %d for this parameter.\n", driverName, functionName, previousTag.second->tagIndex);
+        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, duplicate tag exists, reusing tag %d for this parameter.\n", driverName, functionName, previousTag.second->tagIndex);
         tagIndex = previousTag.second->tagIndex; 
         dupeTag = true;
         break;
@@ -165,14 +165,13 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
     }
 
     /* Check and report failure codes. An Asyn param will be created even on failure but the record will be given error status */
-    if (tagIndex<0)
-    {
-      const char* error = plc_tag_decode_error(tagIndex);
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s  Tag not added! %s. drvInfo: %s\n", driverName, functionName, error, drvInfo);
+    if (tagIndex<0){
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, tag not added! %s. drvInfo: '%s', tag string: '%s'\n", 
+                  driverName, functionName, plc_tag_decode_error(tagIndex), drvInfo, tag.c_str());
     }
-    else if (tagIndex == 1)
-    {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag not added! Timeout while creating tag. drvInfo: %s\n", driverName, functionName, drvInfo);
+    else if (tagIndex == 1){
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, tag not added! Timeout while creating tag %s. drvInfo: '%s', tag string: '%s'\n", 
+                  driverName, functionName, plc_tag_decode_error(tagIndex), drvInfo, tag.c_str());
     }
   }
 
@@ -297,13 +296,11 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
     //Set record to error
     setParamStatus(asynIndex, asynError);
   }
-  else if (tagIndex == 1)
-  {
+  else if (tagIndex == 1) {
     setParamStatus(asynIndex, asynError);
   }
-  else
-  {
-    printf("Created libplctag tag with tag index: %d, asyn index: %d and tag string: %s\n", tagIndex, asynIndex, tag.c_str());
+  else {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Created libplctag tag with tag index: %d, asyn index: %d and tag string: %s\n", driverName, functionName, tagIndex, asynIndex, tag.c_str());
   }
   this->unlock();
   return status;
@@ -365,6 +362,17 @@ asynStatus drvOmronEIP::optimiseTags()
       }
     }
   }
+  int optimiseCounter = 0;
+  for (auto tag: tagMap_)
+  {
+    if (tag.second->optimisationFlag != "dont optimise"){optimiseCounter++;}
+  }
+  if (optimiseCounter==0){ //No tags to optimise so start immediately
+    this->unlock();
+    this->startPollers_ = true;
+    return asynSuccess;
+  }
+
 
   size_t countNeeded = 2; // The number of tags which need to reference a struct before we decide it is more efficient to fetch the entire struct
   // For each struct which is being referenced at least countNeeded times and which is not already in structIDList, create tag and add to list
@@ -374,6 +382,7 @@ asynStatus drvOmronEIP::optimiseTags()
     {
       if (structIDList.find(commonStruct.first) == structIDList.end()){
         // We must create a new libplctag tag and then add it to structIDList if valid
+        // Uses UDT string attributes
         std::string tag = this->tagConnectionString_ +
                         "&name=" + commonStruct.first +
                         "&elem_count=1&allow_packing=1&str_is_counted=0&str_count_word_bytes=0&str_is_zero_terminated=1";
@@ -440,14 +449,22 @@ asynStatus drvOmronEIP::optimiseTags()
         {
           // we have found a tag that already exists which gets this struct, so we piggy back off this
           // now we get the drvUser for the asyn parameter which is to be optimised and set its tagIndex to the tagIndex we piggy back off
+          int oldTag = drvUser->tagIndex;
           matchFound = true;
-          destroyList.push_back(drvUser->tagIndex);
-          drvUser->tagIndex = masterStruct.second;
-          asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Asyn index: %d Optimised to use libplctag tag with libplctag index: %d\n", driverName, functionName, asynIndex, masterStruct.second);
-          if (drvUser->optimisationFlag != "master") {
-            // If we are the master then our tagIndex will be read, otherwise we will rely on the data read by the master         
-            drvUser->optimisationFlag = "optimised";
-            drvUser->readFlag = false;
+          destroyList.push_back(oldTag);
+          // we must update the tagIndex of this drvUser and also any other drvUser which uses its old tagIndex, as this will be deleted
+          for (auto tag: tagMap_){
+            if (tag.second->tagIndex == oldTag){
+              if (tag.second->optimisationFlag != "master")
+              {
+                tag.second->readFlag = false;
+                tag.second->optimisationFlag = "optimised";
+              }
+              else
+                tag.second->readFlag = true;
+              tag.second->tagIndex = masterStruct.second;
+              asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Asyn index: %d Optimised to use libplctag tag with libplctag index: %d\n", driverName, functionName, tag.first, masterStruct.second);
+            }
           }
         }
       }
@@ -739,7 +756,7 @@ void drvOmronEIP::readPoller()
             }
             else if (string_length>string_capacity+1)
             {
-              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Offset does not point to valid string!\n", driverName, functionName);
+              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, offset does not point to valid string! Did you set the string size? My asyn parameter ID: %d My tagIndex: %d\n", driverName, functionName, x.first, x.second->tagIndex);
               continue;
             }
             char *pData = (char *)malloc((size_t)(unsigned int)(string_length));
@@ -1390,7 +1407,7 @@ asynStatus drvOmronEIP::writeOctet(asynUser *pasynUser, const char *value, size_
     /* First check if the user has set this in the extras parameter, if not then we set to the size of nChars and hope it fits*/
     if (drvUser->strCapacity == 0) {
       asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s A write to a string tag is being attempted without defining the capacity of this string, this may not work! Tag index: %d\n", driverName, functionName, tagIndex);       
-      string_capacity = nChars;
+      if (nChars > (size_t)string_capacity) {string_capacity = nChars;}
     }
     status = plc_tag_set_size(tagIndex, string_capacity + 2);     // Allow room for string length
     if (status < 0) {

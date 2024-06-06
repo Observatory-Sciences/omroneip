@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--Saved on 2024-06-06 13:37:13 by epics-dev-->
+<display version="2.0.0">
+  <name>Display</name>
+  <macros>
+    <P>omronEIP:</P>
+  </macros>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry</name>
+    <pv_name>$(P)writeString1</pv_name>
+    <x>80</x>
+    <y>270</y>
+    <width>580</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update</name>
+    <pv_name>$(P)readString1</pv_name>
+    <x>80</x>
+    <y>70</y>
+    <width>580</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_1</name>
+    <pv_name>$(P)readString2</pv_name>
+    <x>80</x>
+    <y>100</y>
+    <width>580</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_2</name>
+    <pv_name>$(P)readString3</pv_name>
+    <x>80</x>
+    <y>130</y>
+    <width>580</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_1</name>
+    <pv_name>$(P)writeString2</pv_name>
+    <x>80</x>
+    <y>300</y>
+    <width>580</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_2</name>
+    <pv_name>$(P)writeString3</pv_name>
+    <x>80</x>
+    <y>330</y>
+    <width>580</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_3</name>
+    <pv_name>$(P)readString4</pv_name>
+    <x>80</x>
+    <y>160</y>
+    <width>580</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_4</name>
+    <pv_name>$(P)readString5</pv_name>
+    <x>80</x>
+    <y>190</y>
+    <width>580</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label</name>
+    <text>This should be INVALID</text>
+    <x>700</x>
+    <y>100</y>
+    <width>170</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_3</name>
+    <pv_name>$(P)writeString4</pv_name>
+    <x>80</x>
+    <y>360</y>
+    <width>580</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_5</name>
+    <pv_name>$(P)readString6</pv_name>
+    <x>80</x>
+    <y>220</y>
+    <width>580</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_1</name>
+    <text>This should be INVALID</text>
+    <x>700</x>
+    <y>160</y>
+    <width>170</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_2</name>
+    <text>Write should fail</text>
+    <x>700</x>
+    <y>360</y>
+    <width>170</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_3</name>
+    <text>Write may fail</text>
+    <x>700</x>
+    <y>300</y>
+    <width>170</width>
+  </widget>
+</display>

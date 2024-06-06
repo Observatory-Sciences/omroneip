@@ -22,10 +22,11 @@ drvOmronEIPConfigPoller("omronDriver", "mediumPoller", 2)
 drvOmronEIPConfigPoller("omronDriver", "slowPoller", 10)
 
 #drvOmronEIPStructDefine(driverPortName, pathToFile)
-#drvOmronEIPStructDefine("omronDriver", "iocBoot/iocTest/structDefs.csv")
+drvOmronEIPStructDefine("omronDriver", "iocBoot/iocTest/structDefs.csv")
 
-dbLoadRecords("db/test.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
+#dbLoadRecords("db/test.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
 
+dbLoadRecords("db/testStrings.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
 #dbLoadRecords("db/testStatusChannels.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
 #dbLoadRecords("db/testHeatingZones.db", "P=${P}, PORT=omronDriver, POLLER=mediumPoller")
 #dbLoadTemplate("iocBoot/iocTest/testISIS.substitutions")
