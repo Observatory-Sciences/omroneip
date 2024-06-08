@@ -112,6 +112,8 @@ public:
 
    /* All reading of data is initiated from this function which runs at a predefined frequency */
    void readPoller();
+   /* This waits for requested reads to come in and then takes them from libplctag and puts them into records */
+   void readData(omronDrvUser_t* drvUser, int asynIndex);
    /* Creates a new instance of the omronEIPPoller class and starts a new thread named after this new poller which reads data linked to the poller name.*/
    asynStatus createPoller(const char * portName, const char * pollerName, double updateRate);
    /* Reimplemented from asynDriver. This is called when each record is loaded into epics. It processes the drvInfo from the record and attempts
@@ -123,12 +125,6 @@ public:
    /* Takes a csv style file, where each line contains a structure name followed by a list of datatypes within the struct
    Stores the user input struct as a map containing Struct:field_list pairs. It then calls createStructMap and passes this map */   
    asynStatus loadStructFile(const char * portName, const char * filePath);
-
-   /* The read interface only needs to be reimplemented for int8Arrays as the other read interfaces have helper functions to set the value of the
-      asynParameters that they write to */
-   //pretty sure these two functions want to be deleted
-   //asynStatus readInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements, size_t *nIn)override;
-   //asynStatus readInt16Array(asynUser *pasynUser, epicsInt16 *value, size_t nElements, size_t *nIn)override;
 
    /* 
     * Write interfaces reimplemented from asynPortDriver. Write data from the asynParameter to the associated libplctag tag
@@ -149,6 +145,7 @@ public:
 private:
    bool initialized_; // Tracks if the driver successfully initialized
    bool startPollers_;
+   epicsEventId firstReadCompleteEvent_; // Triggered by the drvInitPoller finishing its poll
    std::string tagConnectionString_; // Stores the basic PLC connection information common to all read/write requests
    // The key is the name of the struct, the vector is a list of byte offsets within the structure
    std::unordered_map<std::string, std::vector<int>> structMap_;

@@ -1,11 +1,3 @@
-record(waveform, "$(P)readUDT") {
-    field(SCAN, "I/O Intr")
-    field(FTVL, "CHAR")
-    field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testStringArray[1] UDT 5 none none")
-    field(NELM, "1996")
-}
-
 #record(ai, "$(P)testReadPassive") {
 #    #field(SCAN, "1 second")
 #    field(SCAN, "Passive")

@@ -10,7 +10,7 @@
 record(bi, "$(P)readBool") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynUInt32Digital")
-    field(INP, "@asynMask($(PORT), 0, 1)@$(POLLER) testBOOL BOOL 1 0 0")
+    field(INP, "@asynMask($(PORT), 0, 1)@$(POLLER) testBOOL BOOL 1 none none")
     field(ZNAM, "Off")
     field(ONAM, "On")
 }
@@ -18,7 +18,7 @@ record(bi, "$(P)readBool") {
 record(longin, "$(P)readInt16") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) transportArray1[$(I)] INT 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) transportArray1[$(I)] INT 1 none none")
 }
 
 record(waveform, "$(P)readInt16Array") {
@@ -32,7 +32,7 @@ record(waveform, "$(P)readInt16Array") {
 record(longin, "$(P)readInt32") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testDint DINT 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testDint DINT 1 none none")
 }
 
 record(waveform, "$(P)readInt32Array") {
@@ -47,13 +47,13 @@ record(waveform, "$(P)readInt32Array") {
 record(ai, "$(P)readInt64") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[$(I)].ZTC.SampleTimeL LINT 1 UDT801_ZTC[13] 0")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[$(I)].ZTC.SampleTimeL LINT 1 UDT801_ZTC[13] none")
 }
 
 record(longin, "$(P)readUInt16") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels[$(I)].status UINT 1 StatusChannel[0] 0")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels[$(I)].status UINT 1 StatusChannel[0] none")
 }
 
 record(waveform, "$(P)readUInt16Array") {
@@ -94,7 +94,7 @@ record(ai, "$(P)readFloat32") {
 record(ai, "$(P)readFloat64") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testLREAL LREAL 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testLREAL LREAL 1 none none")
 }
 
 record(lsi, "$(P)readString") {
@@ -108,7 +108,7 @@ record(waveform, "$(P)readWord") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[$(I)].ZTC.ErrorID WORD 1 UDT801_ZTC[28] 0")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[$(I)].ZTC.ErrorID WORD 1 UDT801_ZTC[28] none")
     field(NELM, "2")
 }
 
@@ -124,7 +124,7 @@ record(waveform, "$(P)readDWord") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testDWORD DWORD 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testDWORD DWORD 1 none none")
     field(NELM, "4")
 }
 
@@ -140,7 +140,7 @@ record(waveform, "$(P)readLWord") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testLWORD LWORD 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testLWORD LWORD 1 none none")
     field(NELM, "8")
 }
 
@@ -156,7 +156,7 @@ record(waveform, "$(P)readUDT") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)] UDT 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)] UDT 1 none none")
     field(NELM, "1996")
 }
 
@@ -164,5 +164,5 @@ record(waveform, "$(P)readUDT") {
 record(stringin, "$(P)readTime"){
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime TIME 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime TIME 1 none none")
 }

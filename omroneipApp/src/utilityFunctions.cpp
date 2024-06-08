@@ -103,8 +103,14 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
   if (words.front()[0] == '@')
   {
     // Sort out potential readpoller reference
-    keyWords.at("pollerName") = words.front().substr(1, words.front().size() - 1);
-    words.pop_front();
+    if (words.front() == "@driverInitPoller"){
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, this poller name is reserved and cannot be used: %s\n", driverName, functionName, words.front().c_str());
+      keyWords.at("stringValid") = "false";
+    }
+    else {
+      keyWords.at("pollerName") = words.front().substr(1, words.front().size() - 1);
+      words.pop_front();
+    }
   }
 
   if (words.size() < 5)

@@ -8,14 +8,14 @@
 
 record(bo, "$(P)writeBool") {
     field(DTYP, "asynUInt32Digital")
-    field(OUT, "@asynMask($(PORT), 0, 1)testBOOL BOOL 1 0 0")
+    field(OUT, "@asynMask($(PORT), 0, 1)testBOOL BOOL 1 none none")
     field(ZNAM, "Off")
     field(ONAM, "On")
 }
 
 record(longout, "$(P)writeInt16") {
     field(DTYP, "asynInt32")
-    field(OUT, "@asyn($(PORT), 0, 1)transportArray1[$(I)] INT 1 0 0")
+    field(OUT, "@asyn($(PORT), 0, 1)transportArray1[$(I)] INT 1 none none")
 }
 
 record(waveform, "$(P)writeInt16Array") {
@@ -27,7 +27,7 @@ record(waveform, "$(P)writeInt16Array") {
 
 record(longout, "$(P)writeInt32") {
     field(DTYP, "asynInt32")
-    field(OUT, "@asyn($(PORT), 0, 1)testDint DINT 1 0 0")
+    field(OUT, "@asyn($(PORT), 0, 1)testDint DINT 1 none none")
 }
 
 record(waveform, "$(P)writeInt32Array") {
@@ -40,12 +40,12 @@ record(waveform, "$(P)writeInt32Array") {
 #Should be int64in but not supported in epics base 3.15
 record(ao, "$(P)writeInt64") {
     field(DTYP, "asynInt64")
-    field(OUT, "@asyn($(PORT), 0, 1)Zones[1].ZTC.SampleTimeL LINT 1 0 0")
+    field(OUT, "@asyn($(PORT), 0, 1)Zones[1].ZTC.SampleTimeL LINT 1 none none")
 }
 
 record(longout, "$(P)writeUInt16") {
     field(DTYP, "asynInt32")
-    field(OUT, "@asyn($(PORT), 0, 1)statusChannels[1].status UINT 1 0 0")
+    field(OUT, "@asyn($(PORT), 0, 1)statusChannels[1].status UINT 1 none none")
 }
 
 record(waveform, "$(P)writeUInt16Array") {
@@ -57,7 +57,7 @@ record(waveform, "$(P)writeUInt16Array") {
 
 record(longout, "$(P)writeUInt32") {
     field(DTYP, "asynInt32")
-    field(OUT, "@asyn($(PORT), 0, 1)testUDINT UDINT 1 0 0")
+    field(OUT, "@asyn($(PORT), 0, 1)testUDINT UDINT 1 none none")
 }
 
 record(waveform, "$(P)writeUInt32Array") {
@@ -70,12 +70,12 @@ record(waveform, "$(P)writeUInt32Array") {
 #Should be int64in but not supported in epics base 3.15
 record(ao, "$(P)writeUInt64") {
     field(DTYP, "asynInt64")
-    field(OUT, "@asyn($(PORT), 0, 1)testULINT ULINT 1 0 0")
+    field(OUT, "@asyn($(PORT), 0, 1)testULINT ULINT 1 none none")
 }
 
 record(ao, "$(P)writeFloat32") {
     field(DTYP, "asynFloat64")
-    field(OUT, "@asyn($(PORT), 0, 1)Zone_Heaters.Zone_01.Zone_Circuit_01.CT_Heater_Current REAL 1 0 0")
+    field(OUT, "@asyn($(PORT), 0, 1)ISISTestMultiple[1].PVValue REAL 1 none none")
 }
 
 record(waveform, "$(P)writeFloatArray") {
@@ -87,7 +87,7 @@ record(waveform, "$(P)writeFloatArray") {
 
 record(ao, "$(P)writeFloat64") {
     field(DTYP, "asynFloat64")
-    field(OUT, "@asyn($(PORT), 0, 1)testLREAL LREAL 1 0 0")
+    field(OUT, "@asyn($(PORT), 0, 1)testLREAL LREAL 1 none none")
 }
 
 record(waveform, "$(P)writeDoubleArray") {
@@ -99,56 +99,57 @@ record(waveform, "$(P)writeDoubleArray") {
 
 record(lso, "$(P)writeString") {
     field(DTYP, "asynOctetWrite")
-    field(OUT, "@asyn($(PORT), 0, 1)ISISTestMultiple[1].PVName STRING 1 0 &str_is_zero_terminated=0&str_is_fixed_length=0&str_pad_bytes=0&str_is_counted=1&str_count_word_bytes=2&str_max_capacity=60")
+    field(OUT, "@asyn($(PORT), 0, 1)ISISTestMultiple[1].PVName STRING 1 none &str_max_capacity=60")
     field(SIZV, "61")
+    info(asyn:INITIAL_READBACK, "1")
 }
 
 record(waveform, "$(P)writeWord") {
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayOut")
-    field(INP, "@asyn($(PORT), 0, 1)Zones[$(I)].ZTC.ErrorID WORD 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)Zones[$(I)].ZTC.ErrorID WORD 1 none none")
     field(NELM, "2")
 }
 
 record(waveform, "$(P)writeWordArray") {
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayOut")
-    field(INP, "@asyn($(PORT), 0, 1)wordArray[1] WORD 10 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)wordArray[1] WORD 10 none none")
     field(NELM, "20")
 }
 
 record(waveform, "$(P)writeDWord") {
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayOut")
-    field(INP, "@asyn($(PORT), 0, 1)testDWORD DWORD 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)testDWORD DWORD 1 none none")
     field(NELM, "4")
 }
 
 record(waveform, "$(P)writeDWordArray") {
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayOut")
-    field(INP, "@asyn($(PORT), 0, 1)dwordArray[1] DWORD 10 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)dwordArray[1] DWORD 10 none none")
     field(NELM, "40")
 }
 
 record(waveform, "$(P)writeLWord") {
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayOut")
-    field(INP, "@asyn($(PORT), 0, 1)testLWORD LWORD 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)testLWORD LWORD 1 none none")
     field(NELM, "8")
 }
 
 record(waveform, "$(P)writeLWordArray") {
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayOut")
-    field(INP, "@asyn($(PORT), 0, 1)lwordArray[1] LWORD 10 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)lwordArray[1] LWORD 10 none none")
     field(NELM, "80")
 }
 
 record(waveform, "$(P)writeUDT") {
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayOut")
-    field(INP, "@asyn($(PORT), 0, 1)ISISTestMultiple[$(I)] UDT 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)ISISTestMultiple[$(I)] UDT 1 none none")
     field(NELM, "1996")
 }
 
@@ -166,9 +167,10 @@ record(waveform, "$(P)writeUDTArray") {
 }
 
 #Not currently working as the Omron PLC seems to be returning TIME data as TIME_NSEC data which libplctag doesnt understand
-record(stringout, "$(P)writeTime"){
-    field(DTYP, "asynOctetWrite")
-    field(OUT, "@asyn($(PORT), 0, 1)testTime TIME 1 0 0")
-}
+#record(stringout, "$(P)writeTime"){
+#    field(DTYP, "asynOctetWrite")
+#    field(OUT, "@asyn($(PORT), 0, 1)testTime TIME 1 none none")
+#    info(asyn:INITIAL_READBACK, "1")
+#}
 
 
