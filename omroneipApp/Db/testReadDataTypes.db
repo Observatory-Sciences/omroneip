@@ -160,6 +160,15 @@ record(waveform, "$(P)readUDT") {
     field(NELM, "1996")
 }
 
+#This essentially just reads pvName.PVDesc
+record(waveform, "$(P)readUDT2") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)] UDT 1 60 &UDT_read_size=40")
+    field(NELM, "1996")
+}
+
 #Not currently working as the Omron PLC seems to be returning TIME data as TIME_NSEC data which libplctag doesnt understand
 record(stringin, "$(P)readTime"){
     field(SCAN, "I/O Intr")

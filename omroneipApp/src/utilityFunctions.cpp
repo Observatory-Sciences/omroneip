@@ -41,7 +41,8 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
       {"tagExtras", "none"},
       {"strCapacity", "0"}, // only needed for getting strings from UDTs  
       {"optimisationFlag", "not requested"}, // stores the status of optimisation, ("not requested", "attempt optimisation","dont optimise","optimisation failed","optimised","master")
-      {"stringValid", "true"} // set to false if errors are detected which aborts creation of tag and asyn parameter
+      {"stringValid", "true"}, // set to false if errors are detected which aborts creation of tag and asyn parameter
+      {"UDTreadSize", "0"}
   };
   std::list<std::string> words; // Contains a list of string parameters supplied by the user through a record's drvInfo interface.
   std::string substring;
@@ -323,7 +324,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
       {
         // The user has specified attributes other than default, these will either be added to the list or replace existing default values
         if ((keyWords.at("dataType")=="STRING")&&(thisWord=="0" || thisWord=="none")){
-          //We have a string dtype which has not defined its extrasString, this is improper behaviour but we allow it hear and create
+          //We have a string dtype which has not defined its extrasString, this is improper behaviour but we allow it here and create
           //a warning later. We must strip away the none identifier.
           extrasString="",extrasWord="";
         }
@@ -363,29 +364,75 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
         // we check to see if str_capacity is set, this is needed to get strings from UDTs
         size_t pos = thisWord.find("str_max_capacity=");
         std::string size;
+        if (keyWords.at("dataType")=="STRING"){
+          if (pos != std::string::npos)
+          {
+            std::string remaining = thisWord.substr(pos + sizeof("str_max_capacity=")-1, thisWord.size());
+            auto nextPos = remaining.find('&');
+            if (nextPos != std::string::npos)
+            {
+              size = remaining.substr(0, nextPos);
+            }
+            else
+            {
+              size = remaining.substr(0, remaining.size());
+            }
+            try
+            {
+              //str_max_capacity found
+              std::stoi(size); // try to convert the string between the brackets to an int
+              keyWords.at("strCapacity") = size;  
+            }
+            catch(...){
+              keyWords.at("stringValid") = "false";
+              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid integer for str_max_capacity: %s\n", driverName, functionName, size.c_str());
+            }
+          }
+          else{
+            asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, str_max_capacity has not been defined, this can cause errors when reading strings from structures and when writing strings. This should be defined.\n", 
+                        driverName, functionName);
+          }
+        }
+
+        // we check to see if UDTreadSize is defined. This is a bit different as it is not used in libplctag, so is removed from extrasString
+        pos = thisWord.find("UDT_read_size=");
         if (pos != std::string::npos)
         {
-          std::string remaining = thisWord.substr(pos + 17, thisWord.size());
-          auto nextPos = remaining.find('&');
-          if (nextPos != std::string::npos)
-          {
-            size = remaining.substr(0, nextPos);
+          if (keyWords.at("dataType")=="UDT"){
+            std::string remaining = thisWord.substr(pos + sizeof("UDT_read_size=")-1, thisWord.size());
+            auto nextPos = remaining.find('&');
+            if (nextPos != std::string::npos)
+            {
+              size = remaining.substr(0, nextPos);
+            }
+            else
+            {
+              size = remaining.substr(0, remaining.size());
+            }
+
+            try
+            {
+              //UDT_read_size found
+              std::stoi(size); // try to convert the string between the brackets to an int
+              keyWords.at("UDTreadSize") = size;  
+              extrasString.erase(pos, nextPos-pos);
+            }
+            catch(...){
+              keyWords.at("stringValid") = "false";
+              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid integer for UDT_read_size: %s\n", driverName, functionName, size.c_str());
+            }
           }
-          else
-          {
-            size = remaining.substr(0, remaining.size());
+          else {
+            asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, UDT_read_size should only be set for UDT type.\n", 
+                        driverName, functionName);
           }
-          keyWords.at("strCapacity") = size; 
-        }
-        else{
-          asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, str_max_capacity has not been defined, this can cause errors when reading strings from structures and when writing strings. This should be defined.\n", 
-                      driverName, functionName);
         }
       }
 
+      //Add the non default tag attributes to the map
       for (auto attrib : defaultTagAttribs)
       {
-        if (attrib.first.substr(0,3) == "str" && keyWords.at("dataType") != "STRING")
+        if (attrib.first.substr(0,3) == "str" && !(keyWords.at("dataType") == "STRING" || keyWords.at("dataType") == "UDT"))
         {
           // If the user requests str type attributes for a non STRING record then ignore
           continue;

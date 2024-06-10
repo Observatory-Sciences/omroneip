@@ -75,18 +75,18 @@ typedef struct
 // A new instance will be made for each record which requsts to uniquely read/write to the PLC
 struct omronDrvUser_t
 {
-  size_t startIndex;
-  size_t sliceSize;
-  std::string tag;
-  std::string dataType;
-  int32_t tagIndex;
-  size_t dataCounter;
-  std::string pollerName;
-  size_t tagOffset;
-  double timeout;
-  std::string optimisationFlag;
-  size_t strCapacity;
-  bool readFlag;
+  int32_t tagIndex; //Index of tag returned by libplctag
+  std::string pollerName; //Optional name of poller which reads this asyn parameter
+  bool readFlag; //Whether the poller should read this tag
+  double timeout; //Timeout starting from when a read request is sent to the PLC
+  std::string tag; //Tag string sent to libplctag when creating the tag
+  size_t startIndex; //Index for addressing an array element in the PLC
+  size_t sliceSize; //Number of array elements to return
+  std::string dataType; //CIP datatype
+  std::string optimisationFlag; //Contains a string describing the optimisation state of an asyn parameter
+  size_t strCapacity; //Size of the string within the PLC
+  size_t tagOffset; //Bytes offset within a tags data to read from
+  size_t UDTreadSize; //Number of bytes to read from a UDT. Can be paired with tagOffset to read specific chunks of data from a UDT
 };
 
 typedef std::unordered_map<std::string, std::vector<std::string>> structDtypeMap;
@@ -110,7 +110,9 @@ public:
 
    bool omronExiting_;
 
-   /* All reading of data is initiated from this function which runs at a predefined frequency */
+   /* All reading of data is initiated from this function which runs at a predefined frequency. Each poller runs this function
+    * in its own thread. Each record which is registered with a named poller will call the readData function with its asynIndex
+    * and drvUser */
    void readPoller();
    /* This waits for requested reads to come in and then takes them from libplctag and puts them into records */
    void readData(omronDrvUser_t* drvUser, int asynIndex);

@@ -1,3 +1,10 @@
+record(waveform, "$(P)writeUDT") {
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)ISISTestMultiple[1] UDT 1 60 none")
+    field(NELM, "1996")
+}
+
 #record(ai, "$(P)testReadPassive") {
 #    #field(SCAN, "1 second")
 #    field(SCAN, "Passive")

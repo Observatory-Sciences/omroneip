@@ -167,6 +167,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
       if (tagIndex<0){
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, tag creation failed! Reported: %s. Asyn parameter is not valid. drvInfo: '%s', tag string: '%s'\n", 
                     driverName, functionName, plc_tag_decode_error(tagIndex), drvInfo, tag.c_str());
+        return asynDisabled;
       }
       else
       {
@@ -175,6 +176,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
         {
           asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, tag creation failed! Reported: %s. Asyn parameter is not valid. drvInfo: '%s', tag string: '%s'\n", 
                       driverName, functionName, plc_tag_decode_error(tagIndex), drvInfo, tag.c_str());
+          return asynDisabled;
         }
       }
     }
@@ -193,6 +195,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
     newDrvUser->strCapacity = std::stoi(keyWords.at("strCapacity"));
     newDrvUser->optimisationFlag = keyWords.at("optimisationFlag");
     newDrvUser->readFlag = readFlag;
+    newDrvUser->UDTreadSize = std::stoi(keyWords.at("UDTreadSize"));
 
     { /* Create the asyn param with the interface that matches the datatype */
       status = asynSuccess;
@@ -381,7 +384,7 @@ asynStatus drvOmronEIP::optimiseTags()
     }
     else {
       // Case where a child is found, but it is the only one, therefor no optimisation is possible and it is made unique
-      tagMap_.find(commonStruct.second[0])->second->optimisationFlag = "optimisation failed";
+      tagMap_.find(commonStruct.second[0])->second->optimisationFlag = "no optimisation possible";
       tagMap_.find(commonStruct.second[0])->second->readFlag = true;
     }
   }
@@ -718,7 +721,7 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
     else if (drvUser->dataType == "WORD")
     {
       int bytes = 2;
-      int size = bytes*sliceSize - offset;
+      int size = bytes*sliceSize;
       uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)size);
       status = plc_tag_get_raw_bytes(drvUser->tagIndex, offset, rawData, size);
       if (status !=0){
@@ -748,7 +751,7 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
     else if (drvUser->dataType == "DWORD")
     {
       int bytes = 4;
-      int size = bytes*sliceSize - offset;
+      int size = bytes*sliceSize;
       uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)size);
       status = plc_tag_get_raw_bytes(drvUser->tagIndex, offset, rawData, size);
       if (status !=0){
@@ -778,7 +781,7 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
     else if (drvUser->dataType == "LWORD")
     {
       int bytes = 8;
-      int size = bytes*sliceSize - offset;
+      int size = bytes*sliceSize;
       uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)size);
       status = plc_tag_get_raw_bytes(drvUser->tagIndex, offset, rawData, size);
       if (status !=0){
@@ -807,7 +810,21 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
     }
     else if (drvUser->dataType == "UDT")
     {
-      int bytes = plc_tag_get_size(drvUser->tagIndex) - offset;
+      int tagSize = plc_tag_get_size(drvUser->tagIndex);
+      int bytes = 0;
+      if (drvUser->UDTreadSize != 0){
+        bytes = drvUser->UDTreadSize; //user may request a byte size rather than reading the entire UDT
+      }
+      if (bytes+offset <= plc_tag_get_size(drvUser->tagIndex)){
+        bytes = tagSize-(offset); //read all data after offset
+        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Tag index: %d You are attempting to read beyond the end of the buffer, output has been truncated\n", 
+                    driverName, functionName, drvUser->tagIndex);
+      }
+      else {
+        bytes = 0;
+        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Tag index: %d You are attempting to read beyond the end of the buffer, output has been truncated\n", 
+                    driverName, functionName, drvUser->tagIndex);
+      }
       uint8_t *rawData = (uint8_t *)malloc(bytes * sizeof(uint8_t));
       status = plc_tag_get_raw_bytes(drvUser->tagIndex, offset, rawData, bytes);
       if (status !=0){

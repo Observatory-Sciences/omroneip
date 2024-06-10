@@ -149,7 +149,7 @@ record(waveform, "$(P)writeLWordArray") {
 record(waveform, "$(P)writeUDT") {
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayOut")
-    field(INP, "@asyn($(PORT), 0, 1)ISISTestMultiple[$(I)] UDT 1 none none")
+    field(INP, "@asyn($(PORT), 0, 1)ISISTestMultiple[1] UDT 1 none none")
     field(NELM, "1996")
 }
 
