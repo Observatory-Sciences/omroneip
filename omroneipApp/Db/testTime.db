@@ -36,14 +36,14 @@ record(lsi, "$(P)readTIME2") {
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime2 TIME 1 none &allow_packing=0&read_as_string=1")
     field(SIZV, "128")
 }
-###Dont do this! Read as asynInt64 instead
+###Dont do this! Read as asynInt64 instead (missing TOD data is still printed but is meaningless)
 record(lsi, "$(P)readDATE2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime4 TIME 1 none &allow_packing=0&read_as_string=1")
     field(SIZV, "128")
 }
-###Dont do this! Read as asynInt64 instead
+###Dont do this! Read as asynInt64 instead (missing DATE data is still printed but is meaningless)
 record(lsi, "$(P)readTOD2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
