@@ -5,9 +5,9 @@ dbLoadDatabase("dbd/omroneipApp.dbd")
 omroneipApp_registerRecordDeviceDriver(pdbbase)
 
 
-#drvOmronEIPConfigure(driverPortName, gateway, route_path, plc, libplctag_debug) 
-#drvOmronEIPConfigure("omronDriver", "0", "1,0","ControlLogix", "2")
-drvOmronEIPConfigure("omronDriver", "10.2.2.57", "18,10.2.2.57","omron-njnx", "2")
+#drvOmronEIPConfigure(driverPortName, gateway, route_path, plc, libplctag_debug, timezone_offset) 
+#drvOmronEIPConfigure("omronDriver", "0", "1,0","ControlLogix", "2", "0")
+drvOmronEIPConfigure("omronDriver", "10.2.2.57", "18,10.2.2.57","omron-njnx", "2", "3.5")
 
 #asynSetTraceFile omronDriver 0 asynTrace.out
 asynSetTraceMask omronDriver 0 0x00FF #everything
@@ -24,8 +24,10 @@ drvOmronEIPConfigPoller("omronDriver", "slowPoller", 10)
 #drvOmronEIPStructDefine(driverPortName, pathToFile)
 drvOmronEIPStructDefine("omronDriver", "iocBoot/iocTest/structDefs.csv")
 
-dbLoadRecords("db/test.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
+#dbLoadRecords("db/test.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
 
+#dbLoadRecords("db/testTime.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
+dbLoadRecords("db/testTimeStruct.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
 #dbLoadRecords("db/testStrings.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
 #dbLoadRecords("db/testStatusChannels.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
 #dbLoadRecords("db/testHeatingZones.db", "P=${P}, PORT=omronDriver, POLLER=mediumPoller")

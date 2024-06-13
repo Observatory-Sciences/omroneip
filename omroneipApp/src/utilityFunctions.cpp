@@ -1,22 +1,4 @@
 #include "drvOmroneip.h"
-
-// Supported PLC datatypes and the strings which users use to read/write this type
-static omronDataTypeStruct omronDataTypes[MAX_OMRON_DATA_TYPES] = {
-    {dataTypeBool, "BOOL"},
-    {dataTypeInt, "INT"},
-    {dataTypeDInt, "DINT"},
-    {dataTypeLInt, "LINT"},
-    {dataTypeUInt, "UINT"},
-    {dataTypeUDInt, "UDINT"},
-    {dataTypeULInt, "ULINT"},
-    {dataTypeReal, "REAL"},
-    {dataTypeLReal, "LREAL"},
-    {dataTypeString, "STRING"},
-    {dataTypeWord, "WORD"},
-    {dataTypeDWord, "DWORD"},
-    {dataTypeLWord, "LWORD"},
-    {dataTypeUDT, "UDT"},
-    {dataTypeUDT, "TIME"}};
     
 omronUtilities::omronUtilities(drvOmronEIP *ptrDriver)
 {
@@ -42,7 +24,8 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
       {"strCapacity", "0"}, // only needed for getting strings from UDTs  
       {"optimisationFlag", "not requested"}, // stores the status of optimisation, ("not requested", "attempt optimisation","dont optimise","optimisation failed","optimised","master")
       {"stringValid", "true"}, // set to false if errors are detected which aborts creation of tag and asyn parameter
-      {"UDTreadSize", "0"}
+      {"UDTreadSize", "0"},
+      {"readAsString", "0"} // currently just used to optionally output the TIME dtypes as user friendly strings in the local timezone
   };
   std::list<std::string> words; // Contains a list of string parameters supplied by the user through a record's drvInfo interface.
   std::string substring;
@@ -167,9 +150,9 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
     {
       // Checking for valid datatype
       bool validDataType = false;
-      for (int t = 0; t < MAX_OMRON_DATA_TYPES; t++)
+      for (size_t t = 0; t < pDriver->omronDataTypeList.size(); t++)
       {
-        if (strcmp(thisWord.c_str(), omronDataTypes[t].dataTypeString) == 0)
+        if (thisWord == pDriver->omronDataTypeList[t].first)
         {
           validDataType = true;
           keyWords.at("dataType") = thisWord;
@@ -360,73 +343,8 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
             }
           }
         }
-
-        // we check to see if str_capacity is set, this is needed to get strings from UDTs
-        size_t pos = thisWord.find("str_max_capacity=");
-        std::string size;
-        if (keyWords.at("dataType")=="STRING"){
-          if (pos != std::string::npos)
-          {
-            std::string remaining = thisWord.substr(pos + sizeof("str_max_capacity=")-1, thisWord.size());
-            auto nextPos = remaining.find('&');
-            if (nextPos != std::string::npos)
-            {
-              size = remaining.substr(0, nextPos);
-            }
-            else
-            {
-              size = remaining.substr(0, remaining.size());
-            }
-            try
-            {
-              //str_max_capacity found
-              std::stoi(size); // try to convert the string between the brackets to an int
-              keyWords.at("strCapacity") = size;  
-            }
-            catch(...){
-              keyWords.at("stringValid") = "false";
-              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid integer for str_max_capacity: %s\n", driverName, functionName, size.c_str());
-            }
-          }
-          else{
-            asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, str_max_capacity has not been defined, this can cause errors when reading strings from structures and when writing strings. This should be defined.\n", 
-                        driverName, functionName);
-          }
-        }
-
-        // we check to see if UDTreadSize is defined. This is a bit different as it is not used in libplctag, so is removed from extrasString
-        pos = thisWord.find("UDT_read_size=");
-        if (pos != std::string::npos)
-        {
-          if (keyWords.at("dataType")=="UDT"){
-            std::string remaining = thisWord.substr(pos + sizeof("UDT_read_size=")-1, thisWord.size());
-            auto nextPos = remaining.find('&');
-            if (nextPos != std::string::npos)
-            {
-              size = remaining.substr(0, nextPos);
-            }
-            else
-            {
-              size = remaining.substr(0, remaining.size());
-            }
-
-            try
-            {
-              //UDT_read_size found
-              std::stoi(size); // try to convert the string between the brackets to an int
-              keyWords.at("UDTreadSize") = size;  
-              extrasString.erase(pos, nextPos-pos);
-            }
-            catch(...){
-              keyWords.at("stringValid") = "false";
-              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid integer for UDT_read_size: %s\n", driverName, functionName, size.c_str());
-            }
-          }
-          else {
-            asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, UDT_read_size should only be set for UDT type.\n", 
-                        driverName, functionName);
-          }
-        }
+        // look for and process the strings: str_max_capacity, UDT_read_size and as_time
+        processExtrasExceptions(thisWord, keyWords, extrasString);
       }
 
       //Add the non default tag attributes to the map
@@ -452,6 +370,111 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s = %s\n", i->first.c_str(), i->second.c_str());
   }
   return keyWords;
+}
+
+void omronUtilities::processExtrasExceptions(std::string thisWord, drvInfoMap &keyWords, std::string &extrasString)
+{
+  static const char *functionName = "processExtrasExceptions";
+  // we check to see if str_max_capacity is set, this is needed to get strings from UDTs
+  size_t pos = thisWord.find("str_max_capacity=");
+  std::string size;
+  if (keyWords.at("dataType")=="STRING"){
+    if (pos != std::string::npos)
+    {
+      std::string remaining = thisWord.substr(pos + sizeof("str_max_capacity=")-1, thisWord.size());
+      auto nextPos = remaining.find('&');
+      if (nextPos != std::string::npos)
+      {
+        size = remaining.substr(0, nextPos);
+      }
+      else
+      {
+        size = remaining.substr(0, remaining.size());
+      }
+      try
+      {
+        //str_max_capacity found
+        std::stoi(size); // try to convert the string to an int
+        keyWords.at("strCapacity") = size;  
+      }
+      catch(...){
+        keyWords.at("stringValid") = "false";
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid integer for str_max_capacity: %s\n", driverName, functionName, size.c_str());
+      }
+    }
+    else{
+      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, str_max_capacity has not been defined, this can cause errors when reading strings from structures and when writing strings. This should be defined.\n", 
+                  driverName, functionName);
+    }
+  }
+
+  // we check to see if UDT_read_size is defined. This is a bit different as it is not used in libplctag, so is removed from extrasString
+  pos = thisWord.find("UDT_read_size=");
+  if (pos != std::string::npos)
+  {
+    if (keyWords.at("dataType")=="UDT"){
+      std::string remaining = thisWord.substr(pos + sizeof("UDT_read_size=")-1, thisWord.size());
+      auto nextPos = remaining.find('&');
+      if (nextPos != std::string::npos)
+      {
+        size = remaining.substr(0, nextPos);
+      }
+      else
+      {
+        size = remaining.substr(0, remaining.size());
+      }
+
+      try
+      {
+        //UDT_read_size found
+        std::stoi(size); // try to convert the string to an int
+        keyWords.at("UDTreadSize") = size;  
+        extrasString.erase(pos, nextPos-pos);
+      }
+      catch(...){
+        keyWords.at("stringValid") = "false";
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid integer for UDT_read_size: %s\n", driverName, functionName, size.c_str());
+      }
+    }
+    else {
+      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, UDT_read_size should only be set for UDT type.\n", 
+                  driverName, functionName);
+    }
+  }
+
+  // we check to see if read_as_string is defined. This is a bit different as it is not used in libplctag, so is removed from extrasString
+  pos = thisWord.find("read_as_string=");
+  if (pos != std::string::npos)
+  {
+    if (keyWords.at("dataType")=="TIME"){
+      std::string remaining = thisWord.substr(pos + sizeof("read_as_string=")-1, thisWord.size());
+      auto nextPos = remaining.find('&');
+      if (nextPos != std::string::npos)
+      {
+        size = remaining.substr(0, nextPos);
+      }
+      else
+      {
+        size = remaining.substr(0, remaining.size());
+      }
+
+      try
+      {
+        //UDT_read_size found
+        std::stoi(size); // try to convert the string to an int
+        keyWords.at("readAsString") = size;  
+        extrasString.erase(pos, nextPos-pos);
+      }
+      catch(...){
+        keyWords.at("stringValid") = "false";
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid value for as_string=: %s\n", driverName, functionName, size.c_str());
+      }
+    }
+    else {
+      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, read_as_string= should only be set for TIME type.\n", 
+                  driverName, functionName);
+    }
+  }
 }
 
 int omronUtilities::findRequestedOffset(std::vector<size_t> indices, std::string structName)
@@ -498,10 +521,9 @@ int omronUtilities::findRequestedOffset(std::vector<size_t> indices, std::string
         return -1; 
       }
 
-      if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
-          dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || 
-            dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || 
-              dtype =="TIME" || dtype =="DATE_AND_TIME" || dtype.substr(0,7)=="STRING["){
+      if (dtype=="SINT" || dtype=="USINT" ||dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
+            dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || dtype =="ULINT" || dtype =="LINT" || 
+              dtype == "LREAL" || dtype =="LWORD" || dtype =="TIME" || dtype.substr(0,7)=="STRING["){
         j++;m++;
       }
       else if ((pDriver->structMap_.find(dtype.substr(6)))!=pDriver->structMap_.end()){
@@ -511,10 +533,9 @@ int omronUtilities::findRequestedOffset(std::vector<size_t> indices, std::string
         while (dtypeRow[k]!="end:"+dtypeRow[j].substr(6))
         {
           dtype = dtypeRow[k];
-          if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
-                dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || 
-                  dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || 
-                    dtype =="TIME" || dtype =="DATE_AND_TIME" || dtype.substr(0,7)=="STRING["){
+          if (dtype=="SINT" || dtype=="USINT" ||dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
+                dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || dtype =="ULINT" || dtype =="LINT" || 
+                  dtype == "LREAL" || dtype =="LWORD" || dtype =="TIME" || dtype.substr(0,7)=="STRING["){
             structDtypes++;
           }
           k++;
@@ -647,9 +668,9 @@ std::vector<std::string> omronUtilities::expandArrayRecursive(structDtypeMap con
   // Get the datatype of the array
   dtype = ss.substr(ss.find_last_of(' ')+1, ss.size()-(ss.find_last_of(' ')+1)-1); // We dont want the closing "
   std::vector<std::string> singleExpandedData;
-  if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || dtype =="UDINT" || 
-      dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || dtype =="ULINT" || dtype =="LINT" || 
-        dtype == "LREAL" || dtype =="LWORD" || dtype.substr(0,6) == "STRING")
+  if (dtype=="SINT" || dtype=="USINT" ||dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
+        dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || dtype =="ULINT" || dtype =="LINT" || 
+          dtype == "LREAL" || dtype =="LWORD" || dtype =="TIME" || dtype.substr(0,7)=="STRING[") 
   {
     singleExpandedData.push_back(dtype);
   }
@@ -676,7 +697,9 @@ std::vector<std::string> omronUtilities::expandStructsRecursive(structDtypeMap c
   const std::string arrayIdentifier = "\"ARRAY[";
   for (std::string dtype : row)
   {
-    if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || dtype.substr(0,6) == "STRING")
+    if (dtype=="SINT" || dtype=="USINT" ||dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
+          dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || dtype =="ULINT" || dtype =="LINT" || 
+            dtype == "LREAL" || dtype =="LWORD" || dtype =="TIME" || dtype.substr(0,7)=="STRING[")
     {
       expandedRow.push_back(dtype);
     }
@@ -719,7 +742,7 @@ std::vector<std::string> omronUtilities::expandStructsRecursive(structDtypeMap c
 std::string omronUtilities::findArrayDtype(structDtypeMap const& expandedMap, std::string arrayDesc)
 {
   static const char *functionName = "findArrayDtype";
-  std::list<std::string> dtypeSet = {"INT","DINT","LINT","UINT","UDINT","ULINT","REAL","LREAL","STRING","WORD","DWORD","LWORD","TIME"};
+  std::list<std::string> dtypeSet = {"SINT","USINT","INT","DINT","LINT","UINT","UDINT","ULINT","REAL","LREAL","STRING","WORD","DWORD","LWORD","TIME"};
   std::string dtypeData = arrayDesc.substr(arrayDesc.find("] OF ")+5, arrayDesc.size()-(arrayDesc.find("] OF ")+5));
   for (std::string dtype : dtypeSet) {
     // Check to see if array contains a standard dtype
@@ -754,10 +777,10 @@ int omronUtilities::getBiggestDtype(structDtypeMap const& expandedMap, std::stri
         return -1;
       }
     }
-    if (dtype == "LREAL" || dtype == "ULINT" || dtype == "LINT" || dtype == "TIME" || dtype == "DATE_AND_TIME") {return 8;}
+    if (dtype == "LREAL" || dtype == "ULINT" || dtype == "LINT" || dtype == "TIME") {return 8;}
     else if (dtype == "DWORD" || dtype == "UDINT" || dtype == "DINT" || dtype == "REAL") {thisSize = 4;}
     else if (dtype == "BOOL" || dtype == "WORD" || dtype == "UINT" || dtype == "INT") {thisSize = 2;}
-    else if (dtype.substr(0,6) == "STRING") {thisSize = 1;}
+    else if (dtype.substr(0,6) == "STRING" || dtype =="SINT" || dtype =="USINT") {thisSize = 1;}
     else if (dtype.substr(0,4)=="end:") {continue;} // We find the size of the struct from the start: tag, so the end: tag is skipped
     else if (expandedMap.find(dtype.substr(dtype.find("start:")+6))!=expandedMap.end()){
       // Check to see if any element within the expandedRow is a start:structName. If it is then we must lookup the biggest dtype in this struct
@@ -794,9 +817,10 @@ int omronUtilities::getEmbeddedAlignment(structDtypeMap const& expandedMap, std:
     else {nextNextItem="none";}
     
     if (nextNextItem == "none") {alignment=0;}
-    else if (nextNextItem == "LREAL" || nextNextItem == "ULINT" || nextNextItem == "LINT" || nextNextItem == "TIME" || nextNextItem == "DATE_AND_TIME") {alignment = 8;}
+    else if (nextNextItem == "LREAL" || nextNextItem == "ULINT" || nextNextItem == "LINT" || nextNextItem == "TIME") {alignment = 8;}
     else if (nextNextItem == "DWORD" || nextNextItem == "UDINT" || nextNextItem == "DINT" || nextNextItem == "REAL") {alignment = 4;}
     else if (nextNextItem == "BOOL" || nextNextItem == "WORD" || nextNextItem == "UINT" || nextNextItem == "INT") {alignment = 2;}
+    else if (nextNextItem == "SINT" || nextNextItem == "USINT") {alignment = 1;}
     else if (nextNextItem.substr(0,6) == "STRING") {alignment = 1;}
     else if (expandedMap.find(nextNextItem.substr(nextNextItem.find("start:")+6))!=expandedMap.end()){
       // Check to see if the array dtype is a start:structName. If it is then we must lookup the biggest dtype in this struct
@@ -885,9 +909,9 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
     alignment = 0; // Reset alignment ready for next item
 
     // Calculate size of this dtype
-    if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
-              dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || 
-                dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || dtype =="TIME" || dtype =="DATE_AND_TIME")
+    if (dtype=="SINT" || dtype=="USINT" ||dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL" || 
+          dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || dtype =="ULINT" || dtype =="LINT" || 
+            dtype == "LREAL" || dtype =="LWORD" || dtype =="TIME")
     {
       if (dtype == "BOOL" && insideArray) {
         // When a bool is inside an array instead of taking up 2 bytes, they actually take up 1 bit and are stored together inside bytes
@@ -901,13 +925,16 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
           dtypeSize = 0;
         }
       }
+      else if (dtype =="SINT" || dtype =="USINT"){
+        dtypeSize=1;
+      }
       else if (dtype =="UINT" || dtype =="INT" || dtype =="WORD" || dtype =="BOOL"){
         dtypeSize=2;
       }
       else if (dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD"){
         dtypeSize=4;
       }
-      else if (dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD"){
+      else if (dtype =="ULINT" || dtype =="LINT" || dtype == "LREAL" || dtype =="LWORD" || dtype=="TIME"){
         dtypeSize=8;
       }
     }
@@ -948,7 +975,7 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
 
     // Calculate the alignment rule of the next dtype, from this we can calculate the amount of padding required
     // nextItem should only be one of the raw dtypes at this point
-    if (nextItem =="BOOL" && insideArray){
+    if ((nextItem =="BOOL" && insideArray) || nextItem =="SINT" || nextItem =="USINT"){
       if (alignment < 1){alignment=1;}
     }
     else if (nextItem =="UINT" || nextItem =="INT" || nextItem =="WORD" || nextItem =="BOOL"){
@@ -957,7 +984,7 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
     else if (nextItem =="UDINT" || nextItem =="DINT" || nextItem =="REAL" || nextItem =="DWORD"){
       if (alignment < 4){alignment=4;}
     }
-    else if (nextItem =="ULINT" || nextItem =="LINT" || nextItem == "LREAL" || nextItem =="LWORD"){
+    else if (nextItem =="ULINT" || nextItem =="LINT" || nextItem == "LREAL" || nextItem =="LWORD" || nextItem =="TIME"){
       alignment=8;
     }
     else if (nextItem.substr(0,7) == "STRING["){
