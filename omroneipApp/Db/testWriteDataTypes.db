@@ -13,6 +13,12 @@ record(bo, "$(P)writeBool") {
     field(ONAM, "On")
 }
 
+record(longout, "$(P)writeInt8") {
+    field(DTYP, "asynInt32")
+    field(OUT, "@asyn($(PORT), 0, 1)testSINT SINT 1 none &allow_packing=0")
+}
+
+
 record(longout, "$(P)writeInt16") {
     field(DTYP, "asynInt32")
     field(OUT, "@asyn($(PORT), 0, 1)transportArray1[$(I)] INT 1 none none")
@@ -41,6 +47,11 @@ record(waveform, "$(P)writeInt32Array") {
 record(ao, "$(P)writeInt64") {
     field(DTYP, "asynInt64")
     field(OUT, "@asyn($(PORT), 0, 1)Zones[1].ZTC.SampleTimeL LINT 1 none none")
+}
+
+record(longout, "$(P)writeUInt8") {
+    field(DTYP, "asynInt32")
+    field(OUT, "@asyn($(PORT), 0, 1)testUSINT USINT 1 none &allow_packing=0")
 }
 
 record(longout, "$(P)writeUInt16") {

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--Saved on 2024-04-24 16:06:11 by epics-dev-->
+<!--Saved on 2024-06-11 17:10:10 by epics-dev-->
 <display version="2.0.0">
   <name>omroneip_datatypes</name>
   <macros>
@@ -280,20 +280,20 @@
     <name>Text Update_17</name>
     <pv_name>$(P)readBool</pv_name>
     <x>120</x>
-    <y>100</y>
+    <y>70</y>
   </widget>
   <widget type="label" version="2.0.0">
     <name>Label_21</name>
     <text>Bool</text>
     <x>70</x>
-    <y>100</y>
+    <y>70</y>
     <width>50</width>
   </widget>
   <widget type="bool_button" version="2.0.0">
     <name>Boolean Button</name>
     <pv_name>$(P)writeBool</pv_name>
     <x>230</x>
-    <y>100</y>
+    <y>70</y>
     <height>20</height>
     <labels_from_pv>true</labels_from_pv>
   </widget>
@@ -328,5 +328,51 @@
     <y>560</y>
     <width>1270</width>
     <format>4</format>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_6</name>
+    <pv_name>$(P)readInt8</pv_name>
+    <x>120</x>
+    <y>100</y>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_7</name>
+    <pv_name>$(P)readUInt8</pv_name>
+    <x>400</x>
+    <y>100</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_4</name>
+    <text>Int8</text>
+    <x>70</x>
+    <y>100</y>
+    <width>50</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_10</name>
+    <text>UInt8</text>
+    <x>350</x>
+    <y>100</y>
+    <width>50</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_13</name>
+    <pv_name>$(P)writeInt8</pv_name>
+    <x>230</x>
+    <y>100</y>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_15</name>
+    <pv_name>$(P)writeUInt8</pv_name>
+    <x>510</x>
+    <y>100</y>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_18</name>
+    <pv_name>$(P)readBoolArray</pv_name>
+    <x>380</x>
+    <y>70</y>
+    <width>520</width>
+    <format>10</format>
   </widget>
 </display>

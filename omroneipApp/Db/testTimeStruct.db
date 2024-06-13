@@ -1,0 +1,30 @@
+#Test reading a structure which contains TIME data
+#The entire structure testTimeStruct2 should be downloaded. These records will then get data from this structure based
+#on the structure definition loaded.
+
+record(ai, "$(P)readDT") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myTimeStruct.testDT TIME 1 testTimeStruct2[3] &allow_packing=0")
+}
+
+record(lsi, "$(P)readDT2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myTimeStruct.testDT TIME 1 testTimeStruct2[3] &allow_packing=0&read_as_string=1")
+    field(SIZV, "128")
+}
+
+record(waveform, "$(P)readUDT") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myTimeStruct UDT 1 none none")
+    field(NELM, "1996")
+}
+
+record(ai, "$(P)readFloat64") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myTimeStruct.testDouble LREAL 1 testTimeStruct2[4] none")
+}

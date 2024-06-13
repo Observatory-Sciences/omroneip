@@ -1,0 +1,72 @@
+#Read as int64
+record(ai, "$(P)readDT") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime TIME 1 none &allow_packing=0")
+}
+
+record(ai, "$(P)readTIME") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime2 TIME 1 none &allow_packing=0")
+}
+
+record(ai, "$(P)readDATE") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime4 TIME 1 none &allow_packing=0")
+}
+
+record(ai, "$(P)readTOD") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime5 TIME 1 none &allow_packing=0")
+}
+#Read as string
+record(lsi, "$(P)readDT2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime TIME 1 none &allow_packing=0&read_as_string=1")
+    field(SIZV, "128")
+}
+
+record(lsi, "$(P)readTIME2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime2 TIME 1 none &allow_packing=0&read_as_string=1")
+    field(SIZV, "128")
+}
+###Dont do this! Read as asynInt64 instead
+record(lsi, "$(P)readDATE2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime4 TIME 1 none &allow_packing=0&read_as_string=1")
+    field(SIZV, "128")
+}
+###Dont do this! Read as asynInt64 instead
+record(lsi, "$(P)readTOD2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime5 TIME 1 none &allow_packing=0&read_as_string=1")
+    field(SIZV, "128")
+}
+#Write records
+record(ao, "$(P)writeDT") {
+    field(DTYP, "asynInt64")
+    field(OUT, "@asyn($(PORT), 0, 1)testTime TIME 1 none &allow_packing=0")
+}
+
+record(ao, "$(P)writeTIME") {
+    field(DTYP, "asynInt64")
+    field(OUT, "@asyn($(PORT), 0, 1)testTime2 TIME 1 none &allow_packing=0")
+}
+
+record(ao, "$(P)writeDATE") {
+    field(DTYP, "asynInt64")
+    field(OUT, "@asyn($(PORT), 0, 1)testTime4 TIME 1 none &allow_packing=0")
+}
+
+record(ao, "$(P)writeTOD") {
+    field(DTYP, "asynInt64")
+    field(OUT, "@asyn($(PORT), 0, 1)testTime5 TIME 1 none &allow_packing=0")
+}

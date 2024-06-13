@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--Saved on 2024-06-13 15:08:38 by epics-dev-->
+<display version="2.0.0">
+  <name>testTime</name>
+  <macros>
+    <P>omronEIP:</P>
+  </macros>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update</name>
+    <pv_name>$(P)readDT</pv_name>
+    <x>40</x>
+    <y>30</y>
+    <width>200</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry</name>
+    <pv_name>$(P)writeDT</pv_name>
+    <x>530</x>
+    <y>30</y>
+    <width>200</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_1</name>
+    <pv_name>$(P)readTIME</pv_name>
+    <x>40</x>
+    <y>70</y>
+    <width>200</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_1</name>
+    <pv_name>$(P)writeTIME</pv_name>
+    <x>530</x>
+    <y>70</y>
+    <width>200</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_2</name>
+    <pv_name>$(P)readDATE</pv_name>
+    <x>40</x>
+    <y>110</y>
+    <width>200</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_2</name>
+    <pv_name>$(P)writeDATE</pv_name>
+    <x>530</x>
+    <y>110</y>
+    <width>200</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_3</name>
+    <pv_name>$(P)readTOD</pv_name>
+    <x>40</x>
+    <y>150</y>
+    <width>200</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_3</name>
+    <pv_name>$(P)writeTOD</pv_name>
+    <x>530</x>
+    <y>150</y>
+    <width>200</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_5</name>
+    <pv_name>$(P)readDT2</pv_name>
+    <x>260</x>
+    <y>30</y>
+    <width>250</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_6</name>
+    <pv_name>$(P)readTIME2</pv_name>
+    <x>260</x>
+    <y>70</y>
+    <width>250</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_7</name>
+    <pv_name>$(P)readDATE2</pv_name>
+    <x>260</x>
+    <y>110</y>
+    <width>250</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_8</name>
+    <pv_name>$(P)readTOD2</pv_name>
+    <x>260</x>
+    <y>150</y>
+    <width>250</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label</name>
+    <text>Only DATE_AND_TIME and TIME variables should be displayed as strings. If you display a DATE variable (as the PLC only writes the date to it) the time of day part of the string will be missing and so will show 20:30:00. If you try and display TIME_OF_DAY, then the date part will be missing and will show 1970-01-01. The DATE is also affected by the timezone offset, meaning that the day could be changed by this.</text>
+    <x>40</x>
+    <y>190</y>
+    <width>690</width>
+    <height>80</height>
+  </widget>
+</display>

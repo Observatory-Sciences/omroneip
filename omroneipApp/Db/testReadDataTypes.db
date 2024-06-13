@@ -15,6 +15,12 @@ record(bi, "$(P)readBool") {
     field(ONAM, "On")
 }
 
+record(longin, "$(P)readInt8") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testSINT SINT 1 none &allow_packing=0")
+}
+
 record(longin, "$(P)readInt16") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
@@ -48,6 +54,12 @@ record(ai, "$(P)readInt64") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt64")
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[$(I)].ZTC.SampleTimeL LINT 1 UDT801_ZTC[13] none")
+}
+
+record(longin, "$(P)readUInt8") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testUSINT USINT 1 none &allow_packing=0")
 }
 
 record(longin, "$(P)readUInt16") {
