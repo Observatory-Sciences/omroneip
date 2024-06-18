@@ -12,7 +12,8 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
   const char * functionName = "drvInfoParser";
   const std::string str(drvInfo);
   char delim = ' ';
-  char escape = '/';
+  char escape = '/'; // I added support for tagNames which include spaces if inside the escape char, however the PLC does not support 
+  // this and it is not well tested. You should also be able to define a poller with a space in it, if you wanted to for some reason
   drvInfoMap keyWords = {
       {"pollerName", "none"}, // optional
       {"tagName", "none"},  
@@ -23,7 +24,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
       {"tagExtras", "none"},
       {"strCapacity", "0"}, // only needed for getting strings from UDTs  
       {"optimisationFlag", "not requested"}, // stores the status of optimisation, ("not requested", "attempt optimisation","dont optimise","optimisation failed","optimised","master")
-      {"stringValid", "true"}, // set to false if errors are detected which aborts creation of tag and asyn parameter
+      {"stringValid", "true"}, // set to false if errors are detected which aborts creation of tag and asyn parameter, return early if false
       {"UDTreadSize", "0"},
       {"readAsString", "0"} // currently just used to optionally output the TIME dtypes as user friendly strings in the local timezone
   };
@@ -87,13 +88,16 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
   if (words.front()[0] == '@')
   {
     // Sort out potential readpoller reference
-    if (words.front() == "@driverInitPoller"){
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, this poller name is reserved and cannot be used: %s\n", driverName, functionName, words.front().c_str());
-      keyWords.at("stringValid") = "false";
-    }
-    else {
-      keyWords.at("pollerName") = words.front().substr(1, words.front().size() - 1);
+    if (pDriver->pollerList_.find(words.front().substr(1)) != pDriver->pollerList_.end()) // check if poller exists
+    {
+      keyWords.at("pollerName") = words.front().substr(1);
       words.pop_front();
+    }
+    else
+    {
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, the named poller: %s does not exist!\n", driverName, functionName, words.front().c_str());
+      keyWords.at("stringValid") = "false";
+      return keyWords;
     }
   }
 
@@ -101,6 +105,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
   {
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Record is missing parameters. Expected 5 space seperated terms (or 6 including poller) but recieved: %ld\n", driverName, functionName, words.size());
     keyWords.at("stringValid") = "false";
+    return keyWords;
   }
 
   int params = words.size();
@@ -135,12 +140,14 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
           {
             asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s A startIndex of < 1 is forbidden\n", driverName, functionName);
             keyWords.at("stringValid") = "false";
+            return keyWords;
           }
         }
         catch(...)
         {
           asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s startIndex must be an integer.\n", driverName, functionName);
           keyWords.at("stringValid") = "false";
+          return keyWords;
         }
       }
       keyWords.at("tagName") = thisWord;
@@ -162,6 +169,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
       {
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Datatype invalid.\n", driverName, functionName);
         keyWords.at("stringValid") = "false";
+        return keyWords;
       }
       words.pop_front();
     }
@@ -182,6 +190,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
             if (keyWords.at("dataType")=="STRING" || keyWords.at("dataType")=="LINT" || keyWords.at("dataType")=="ULINT"){
               asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error! sliceSize must be 1 for this datatype.\n", driverName, functionName);
               keyWords.at("stringValid") = "false";
+              return keyWords;
             }
           }
           else if (thisWord == "0")
@@ -192,12 +201,14 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
           {
             asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s You cannot get a slice of a whole tag. Try tag_name[startIndex] to specify elements for slice.\n", driverName, functionName);
             keyWords.at("stringValid") = "false";
+            return keyWords;
           }
         }
         else
         {
           asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid sliceSize, must be integer.\n", driverName, functionName);
           keyWords.at("stringValid") = "false";
+          return keyWords;
         }
       }
       words.pop_front();
@@ -255,6 +266,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
           if (!indexFound){
             asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find a valid index for the requested structure: %s\n", driverName, functionName, words.front().c_str());
             keyWords.at("stringValid") = "false";
+            return keyWords;
           }
           
           //look for matching structure in structMap_
@@ -273,6 +285,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
                 offset=0;
                 asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid index or structure name: %s\n", driverName, functionName, thisWord.c_str());
                 keyWords.at("stringValid") = "false";
+                return keyWords;
               }
               break;
             }
@@ -281,6 +294,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
           {
             asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find structure requested: %s. Have you loaded a struct file?\n", driverName, functionName, thisWord.c_str());
             keyWords.at("stringValid") = "false";
+            return keyWords;
             offset=0;
           }
         }
@@ -345,6 +359,9 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
         }
         // look for and process the strings: str_max_capacity, UDT_read_size and as_time
         processExtrasExceptions(thisWord, keyWords, extrasString);
+        if (keyWords.at("stringValid") == "false"){
+          return keyWords;
+        }
       }
 
       //Add the non default tag attributes to the map
@@ -398,8 +415,8 @@ void omronUtilities::processExtrasExceptions(std::string thisWord, drvInfoMap &k
         keyWords.at("strCapacity") = size;  
       }
       catch(...){
-        keyWords.at("stringValid") = "false";
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid integer for str_max_capacity: %s\n", driverName, functionName, size.c_str());
+        keyWords.at("stringValid") = "false";
       }
     }
     else{
@@ -1010,6 +1027,7 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
   return 1;
 }
 
-omronUtilities::~omronUtilities(){
-
+omronUtilities::~omronUtilities()
+{
+  std::cout<<"omronUtilities shutting down"<<std::endl;
 }
