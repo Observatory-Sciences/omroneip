@@ -17,9 +17,9 @@ asynSetTraceMask omronDriver 0 0x00FF #everything
 #asynSetTraceMask omronDriver 0 0x0008 #TRACEIO_DRIVER
 
 #drvOmronEIPConfigPoller(driverPortName, pollerName, updateRate)
-drvOmronEIPConfigPoller("omronDriver", "fastPoller", 1) #This can be lowered to 0.1
-drvOmronEIPConfigPoller("omronDriver", "mediumPoller", 2)
-drvOmronEIPConfigPoller("omronDriver", "slowPoller", 10)
+#drvOmronEIPConfigPoller("omronDriver", "fastPoller", 1) #This can be lowered to 0.1
+#drvOmronEIPConfigPoller("omronDriver", "mediumPoller", 2)
+#drvOmronEIPConfigPoller("omronDriver", "slowPoller", 10)
 
 #drvOmronEIPStructDefine(driverPortName, pathToFile)
 drvOmronEIPStructDefine("omronDriver", "iocBoot/iocTest/structDefs.csv")
@@ -27,7 +27,7 @@ drvOmronEIPStructDefine("omronDriver", "iocBoot/iocTest/structDefs.csv")
 #dbLoadRecords("db/test.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
 
 #dbLoadRecords("db/testTime.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
-dbLoadRecords("db/testTimeStruct.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
+#dbLoadRecords("db/testTimeStruct.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
 #dbLoadRecords("db/testStrings.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
 #dbLoadRecords("db/testStatusChannels.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
 #dbLoadRecords("db/testHeatingZones.db", "P=${P}, PORT=omronDriver, POLLER=mediumPoller")

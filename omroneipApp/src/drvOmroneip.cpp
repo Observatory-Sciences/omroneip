@@ -31,7 +31,7 @@ static void omronExitCallback(void *pPvt)
 {
   drvOmronEIP *pDriver = (drvOmronEIP *)pPvt;
   pDriver->omronExiting_ = true;
-  epicsThreadSleep(1);
+  epicsThreadSleep(3);
 }
 
 /* This function is called by the IOC load system after iocInit() or iocRun() have completed */
@@ -139,7 +139,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
     if (keyWords.at("stringValid") != "true")
     {
       readFlag = false;
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, drvInfo string is invalid, record with drvInfo: %s was not created!\n", driverName, functionName, drvInfo);
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, drvInfo string is invalid, record with drvInfo: '%s' was not created!\n", driverName, functionName, drvInfo);
       tag = "Invalid tag!";
     }
     else 

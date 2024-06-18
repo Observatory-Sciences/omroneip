@@ -9,7 +9,7 @@ dbLoadDatabase("dbd/omroneipApp.dbd")
 omroneipApp_registerRecordDeviceDriver(pdbbase)
 
 #drvOmronEIPConfigure(driverPortName, gateway, route_path, plc, libplctag_debug) 
-drvOmronEIPConfigure("omronDriver", "127.0.0.1", "${PLC_GATEWAY}", "${PLC}", "1")
+drvOmronEIPConfigure("omronDriver", "127.0.0.1", "${PLC_GATEWAY}", "${PLC}", "1", "0")
 
 #drvOmronEIPConfigPoller(driverPortName, pollerName, updateRate)
 drvOmronEIPConfigPoller("omronDriver", "fastPoller", 1) #This can be lowered to 0.1

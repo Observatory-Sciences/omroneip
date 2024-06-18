@@ -1,29 +1,15 @@
+record(ai, "$(P)readTime2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt64")
+    field(INP, "@asyn($(PORT), 0, 1)/@fastPoller/ testTime TIME 1 none none")
+}
+
 #record(stringin, "$(P)readTime") {
 #    field(SCAN, "Passive")
 #    field(DTYP,"Soft Timestamp")
 #    field(TSEL,"$(P)readDT.VAL PP")
 #    field(INP, "@%Y-%m-%d %H:%M:%S.%f")
 #}
-
-record(ai, "$(P)readTime") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynInt64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime TIME 1 none none")
-}
-
-record(lsi, "$(P)readTime2") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime TIME 1 none &read_as_string=1")
-    field(SIZV, "128")
-}
-
-#record(ai, "$(P)readDT") {
-#    field(SCAN, "I/O Intr")
-#    field(DTYP, "asynInt64")
-#    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime LINT 1 none &allow_packing=0")
-#}
-
 
 #record(waveform, "$(P)readBoolArray") {
 #    field(SCAN, "I/O Intr")
