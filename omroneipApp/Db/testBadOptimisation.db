@@ -1,0 +1,45 @@
+#Requesting optimisation with a single read request, should report error and not poll
+record(ai, "$(P)$(R)readFloat1") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVValue REAL 1 PVData[2] &optimise=1")
+}
+
+#Requesting optimisation with two identical read requests ????
+record(ai, "$(P)$(R)readFloat2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[2].PVValue REAL 1 PVData[2] &optimise=1")
+}
+record(ai, "$(P)$(R)readFloat3") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[2].PVValue REAL 1 PVData[2] &optimise=1")
+}
+
+#Requesting optimisation with a string read without defining the str_max_capacity, should report error and not create a tag
+record(ai, "$(P)$(R)readFloat4") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[3].PVValue REAL 1 PVData[2] &optimise=1")
+}
+
+record(lsi, "$(P)$(R)readString1") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[3].PVName STRING 1 PVData[0] &optimise=1")
+    field(SIZV, "61")
+}
+
+#Requesting optimisation and setting the offset beyond the end of the UDT, should give buffer overflow warning
+record(ai, "$(P)$(R)readFloat5") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[4].PVValue REAL 1 PVData[2] &optimise=1")
+}
+
+record(ai, "$(P)$(R)readFloat6") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[4].PVValue REAL 1 500 &optimise=1")
+}

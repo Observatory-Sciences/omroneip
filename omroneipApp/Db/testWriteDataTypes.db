@@ -18,6 +18,12 @@ record(longout, "$(P)writeInt8") {
     field(OUT, "@asyn($(PORT), 0, 1)testSINT SINT 1 none &allow_packing=0")
 }
 
+record(waveform, "$(P)writeInt8Array") {
+    field(FTVL, "CHAR")
+    field(DTYP, "asynInt8ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)sintArray[1] SINT 10 none none")
+    field(NELM, "10")
+}
 
 record(longout, "$(P)writeInt16") {
     field(DTYP, "asynInt32")
@@ -52,6 +58,13 @@ record(ao, "$(P)writeInt64") {
 record(longout, "$(P)writeUInt8") {
     field(DTYP, "asynInt32")
     field(OUT, "@asyn($(PORT), 0, 1)testUSINT USINT 1 none &allow_packing=0")
+}
+
+record(waveform, "$(P)writeUInt8Array") {
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)usintArray[1] USINT 10 none none")
+    field(NELM, "10")
 }
 
 record(longout, "$(P)writeUInt16") {

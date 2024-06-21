@@ -25,8 +25,9 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
       {"strCapacity", "0"}, // only needed for getting strings from UDTs  
       {"optimisationFlag", "not requested"}, // stores the status of optimisation, ("not requested", "attempt optimisation","dont optimise","optimisation failed","optimised","master")
       {"stringValid", "true"}, // set to false if errors are detected which aborts creation of tag and asyn parameter, return early if false
-      {"UDTreadSize", "0"},
-      {"readAsString", "0"} // currently just used to optionally output the TIME dtypes as user friendly strings in the local timezone
+      {"offsetReadSize", "0"},
+      {"readAsString", "0"}, // currently just used to optionally output the TIME dtypes as user friendly strings in the local timezone
+      {"optimise", "0"} // if 0 then we use the offset to look within a datatype, if 1 then we use it to get a datatype from within an array/UDT
   };
   std::list<std::string> words; // Contains a list of string parameters supplied by the user through a record's drvInfo interface.
   std::string substring;
@@ -110,6 +111,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
 
   int params = words.size();
   bool indexable = false;
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "============================================================================================\n");
   for (int i = 0; i < params; i++)
   {
     const std::string thisWord = words.front(); // The word which we are currently processing to extract the required information
@@ -224,7 +226,6 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
       // user has chosen not to use an offset
       if (thisWord == "none")
       {
-        keyWords.at("optimisationFlag") = "dont optimise";
         keyWords.at("offset") = "0";
       }
       else {
@@ -232,7 +233,6 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
         try
         {
           offset = std::stoi(thisWord);
-          keyWords.at("optimisationFlag") = "attempt optimisation";
         }
         catch(...)
         {
@@ -251,7 +251,6 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
                   {
                     //struct integer found
                     structIndices.push_back(std::stoi(offsetSubstring.substr(0,m))); // try to convert the string between the brackets to an int
-                    keyWords.at("optimisationFlag") = "attempt optimisation";
                     indexFound = true;
                     firstIndex = false;
                   }
@@ -328,6 +327,9 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
         else
           extrasString = thisWord, extrasWord = thisWord;
 
+        // look for and process the strings: str_max_capacity, offset_read_size and as_time
+        processExtrasExceptions(thisWord, keyWords, extrasString, defaultTagAttribs);
+
         for (auto &attrib : defaultTagAttribs)
         {
           auto pos = extrasWord.find(attrib.first);
@@ -357,8 +359,6 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
             }
           }
         }
-        // look for and process the strings: str_max_capacity, UDT_read_size and as_time
-        processExtrasExceptions(thisWord, keyWords, extrasString);
         if (keyWords.at("stringValid") == "false"){
           return keyWords;
         }
@@ -389,12 +389,117 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
   return keyWords;
 }
 
-void omronUtilities::processExtrasExceptions(std::string thisWord, drvInfoMap &keyWords, std::string &extrasString)
+void omronUtilities::processExtrasExceptions(std::string thisWord, drvInfoMap &keyWords, std::string &extrasString, drvInfoMap &defaultTagAttribs)
 {
   static const char *functionName = "processExtrasExceptions";
-  // we check to see if str_max_capacity is set, this is needed to get strings from UDTs
-  size_t pos = thisWord.find("str_max_capacity=");
   std::string size;
+
+  // we check to see if offset_read_size is defined. This is a bit different as it is not used in libplctag, so is removed from extrasString
+  size_t pos = thisWord.find("offset_read_size=");
+  if (pos != std::string::npos)
+  {
+    if (keyWords.at("dataType")=="UDT" || keyWords.at("dataType")=="STRING"){
+      std::string remaining = thisWord.substr(pos + sizeof("offset_read_size=")-1, thisWord.size());
+      auto nextPos = remaining.find('&');
+      if (nextPos != std::string::npos)
+      {
+        size = remaining.substr(0, nextPos);
+      }
+      else
+      {
+        size = remaining.substr(0, remaining.size());
+      }
+
+      try
+      {
+        //offset_read_size found
+        std::stoi(size); // try to convert the string to an int
+        keyWords.at("offsetReadSize") = size;  
+        extrasString.erase(pos, nextPos-pos);
+      }
+      catch(...){
+        keyWords.at("stringValid") = "false";
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid integer for offset_read_size: %s\n", driverName, functionName, size.c_str());
+      }
+    }
+    else {
+      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, offset_read_size should only be set for UDT type.\n", 
+                  driverName, functionName);
+    }
+  }
+
+  // we check to see if read_as_string is defined. This is a bit different as it is not used in libplctag, so is removed from extrasString
+  pos = thisWord.find("read_as_string=");
+  if (pos != std::string::npos)
+  {
+    if (keyWords.at("dataType")=="TIME"){
+      std::string remaining = thisWord.substr(pos + sizeof("read_as_string=")-1, thisWord.size());
+      auto nextPos = remaining.find('&');
+      if (nextPos != std::string::npos)
+      {
+        size = remaining.substr(0, nextPos);
+      }
+      else
+      {
+        size = remaining.substr(0, remaining.size());
+      }
+
+      try
+      {
+        //read_as_string found
+        std::stoi(size); // try to convert the string to an int
+        keyWords.at("readAsString") = size;  
+        extrasString.erase(pos, nextPos-pos);
+      }
+      catch(...){
+        keyWords.at("stringValid") = "false";
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid value for as_string=: %s\n", driverName, functionName, size.c_str());
+      }
+    }
+    else {
+      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, read_as_string= should only be set for TIME type.\n", 
+                  driverName, functionName);
+    }
+  }
+
+  // we check to see if &optimise= is defined. This is a bit different as it is not used in libplctag, so is removed from extrasString
+  pos = thisWord.find("optimise=");
+  if (pos != std::string::npos)
+  {
+    std::string remaining = thisWord.substr(pos + sizeof("optimise=")-1, thisWord.size());
+    auto nextPos = remaining.find('&');
+    if (nextPos != std::string::npos)
+    {
+      size = remaining.substr(0, nextPos);
+    }
+    else
+    {
+      size = remaining.substr(0, remaining.size());
+    }
+
+    try
+    {
+      //optimise= found
+      std::stoi(size); // try to convert the string to an int
+      keyWords.at("optimise") = size;  
+      keyWords.at("optimisationFlag") = "attempt optimisation";
+      defaultTagAttribs = { //we need different defaults if doing optimisation
+          {"allow_packing=", "1"},
+          {"str_is_zero_terminated=", "1"},
+          {"str_is_fixed_length=", "0"},
+          {"str_is_counted=", "0"},
+          {"str_count_word_bytes=", "0"},
+          {"str_pad_to_multiple_bytes=", "0"}};
+      extrasString.erase(pos, nextPos-pos);
+    }
+    catch(...){
+      keyWords.at("stringValid") = "false";
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid value for optimise=: %s\n", driverName, functionName, size.c_str());
+    }
+  }
+
+  // we check to see if str_max_capacity is set, this is needed to get strings from UDTs
+  pos = thisWord.find("str_max_capacity=");
   if (keyWords.at("dataType")=="STRING"){
     if (pos != std::string::npos)
     {
@@ -419,77 +524,14 @@ void omronUtilities::processExtrasExceptions(std::string thisWord, drvInfoMap &k
         keyWords.at("stringValid") = "false";
       }
     }
-    else{
+    else if (keyWords.at("optimise")=="0" && keyWords.at("offset") == "0"){
       asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, str_max_capacity has not been defined, this can cause errors when reading strings from structures and when writing strings. This should be defined.\n", 
                   driverName, functionName);
     }
-  }
-
-  // we check to see if UDT_read_size is defined. This is a bit different as it is not used in libplctag, so is removed from extrasString
-  pos = thisWord.find("UDT_read_size=");
-  if (pos != std::string::npos)
-  {
-    if (keyWords.at("dataType")=="UDT"){
-      std::string remaining = thisWord.substr(pos + sizeof("UDT_read_size=")-1, thisWord.size());
-      auto nextPos = remaining.find('&');
-      if (nextPos != std::string::npos)
-      {
-        size = remaining.substr(0, nextPos);
-      }
-      else
-      {
-        size = remaining.substr(0, remaining.size());
-      }
-
-      try
-      {
-        //UDT_read_size found
-        std::stoi(size); // try to convert the string to an int
-        keyWords.at("UDTreadSize") = size;  
-        extrasString.erase(pos, nextPos-pos);
-      }
-      catch(...){
-        keyWords.at("stringValid") = "false";
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid integer for UDT_read_size: %s\n", driverName, functionName, size.c_str());
-      }
-    }
     else {
-      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, UDT_read_size should only be set for UDT type.\n", 
-                  driverName, functionName);
-    }
-  }
-
-  // we check to see if read_as_string is defined. This is a bit different as it is not used in libplctag, so is removed from extrasString
-  pos = thisWord.find("read_as_string=");
-  if (pos != std::string::npos)
-  {
-    if (keyWords.at("dataType")=="TIME"){
-      std::string remaining = thisWord.substr(pos + sizeof("read_as_string=")-1, thisWord.size());
-      auto nextPos = remaining.find('&');
-      if (nextPos != std::string::npos)
-      {
-        size = remaining.substr(0, nextPos);
-      }
-      else
-      {
-        size = remaining.substr(0, remaining.size());
-      }
-
-      try
-      {
-        //UDT_read_size found
-        std::stoi(size); // try to convert the string to an int
-        keyWords.at("readAsString") = size;  
-        extrasString.erase(pos, nextPos-pos);
-      }
-      catch(...){
-        keyWords.at("stringValid") = "false";
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid value for as_string=: %s\n", driverName, functionName, size.c_str());
-      }
-    }
-    else {
-      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, read_as_string= should only be set for TIME type.\n", 
-                  driverName, functionName);
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, str_max_capacity has not been defined, this must be defined when attempting optimisations or using offsets!\n", 
+            driverName, functionName);
+      keyWords.at("stringValid") = "false";
     }
   }
 }

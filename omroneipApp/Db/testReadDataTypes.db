@@ -21,6 +21,14 @@ record(longin, "$(P)readInt8") {
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testSINT SINT 1 none &allow_packing=0")
 }
 
+record(waveform, "$(P)readInt8Array") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "CHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) sintArray[1] SINT 10 none none")
+    field(NELM, "10")
+}
+
 record(longin, "$(P)readInt16") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
@@ -60,6 +68,14 @@ record(longin, "$(P)readUInt8") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testUSINT USINT 1 none &allow_packing=0")
+}
+
+record(waveform, "$(P)readUInt8Array") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) usintArray[1] USINT 10 none none")
+    field(NELM, "10")
 }
 
 record(longin, "$(P)readUInt16") {

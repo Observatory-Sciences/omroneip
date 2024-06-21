@@ -3,22 +3,32 @@
 record(lsi, "$(P)readString1") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVName STRING 1 PVData[0] &str_max_capacity=60")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVName STRING 1 PVData[0] &optimise=1&str_max_capacity=60")
     field(SIZV, "61")
 }
 
 #Required to make the above test work, this second string read from ISISTestMultiple triggers an optimisation
 #This downloads the UDT in its entirety, meaning that the string is formatted differently for both this and the previous record
-#As the string size is not defined, we dont know how much data the string contains and so an error is printed
+#This means that str_max_capacity must be defined
 record(lsi, "$(P)readString2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVDesc STRING 1 PVData[1] none")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVDesc STRING 1 PVData[1] &optimise=1&str_max_capacity=40")
     field(SIZV, "41")
 }
 
-#Test reading a string within an array with default settings
+#As str_max_capacity is not defined, we get an error
 record(lsi, "$(P)readString3") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVDesc STRING 1 PVData[1] &optimise=1")
+    field(SIZV, "41")
+}
+
+###################################################################################################################
+
+#Test reading a string within an array with default settings
+record(lsi, "$(P)readString4") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myStringArray[1] STRING 1 none none")
@@ -27,7 +37,7 @@ record(lsi, "$(P)readString3") {
 
 #Test reading a slice of strings from an array with default settings
 #This should give an error as this is not supported, (UDT must be used)
-record(lsi, "$(P)readString4") {
+record(lsi, "$(P)readString5") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myStringArray[1] STRING 2 none none")
@@ -35,7 +45,7 @@ record(lsi, "$(P)readString4") {
 }
 
 #Test reading a string directly with default settings
-record(lsi, "$(P)readString5") {
+record(lsi, "$(P)readString6") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVDesc STRING 1 none none")
@@ -43,11 +53,34 @@ record(lsi, "$(P)readString5") {
 }
 
 #Same as above but using stringin
-record(stringin, "$(P)readString6") {
+record(stringin, "$(P)readString7") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[2].PVDesc STRING 1 none none")
 }
+
+#We request the 2 chars starting from the 4th char
+record(stringin, "$(P)readString8") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[2].PVDesc STRING 1 3 &str_max_capacity=40&offset_read_size=2")
+}
+
+#We request all the data starting at the 3rd char
+record(stringin, "$(P)readString9") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[2].PVDesc STRING 1 2 &str_max_capacity=40")
+}
+
+#Incorrectly overwrite some attributes for fun
+record(stringin, "$(P)readString10") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[2].PVDesc STRING 1 2 &str_max_capacity=40&str_is_zero_terminated=1&str_is_fixed_length=0&str_pad_to_multiple_bytes=0&str_is_counted=0&str_count_word_bytes=0")
+}
+
+###############################################################################################################
 
 #Test writing a string within a UDT with default settings
 record(lso, "$(P)writeString1") {
@@ -59,7 +92,7 @@ record(lso, "$(P)writeString1") {
 #Test writing a string within a UDT with default settings without defining string capacity (may error on write)
 record(lso, "$(P)writeString2") {
     field(DTYP, "asynOctetWrite")
-    field(OUT, "@asyn($(PORT), 0, 1)ISISTestMultiple[1].PVDesc STRING 1 none none")
+    field(OUT, "@asyn($(PORT), 0, 1)ISISTestMultiple[2].PVDesc STRING 1 none none")
     field(SIZV, "41")
 }
 
@@ -76,5 +109,12 @@ record(lso, "$(P)writeString3") {
 record(lso, "$(P)writeString4") {
     field(DTYP, "asynOctetWrite")
     field(OUT, "@asyn($(PORT), 0, 1)ISISTestMultiple[1].PVName STRING 1 none &str_is_zero_terminated=1&str_is_fixed_length=0&str_pad_to_multiple_bytes=0&str_is_counted=0&str_count_word_bytes=0&str_max_capacity=40")
+    field(SIZV, "41")
+}
+
+#Test writing a string within a UDT with default settings
+record(lso, "$(P)writeString5") {
+    field(DTYP, "asynOctetWrite")
+    field(OUT, "@asyn($(PORT), 0, 1)ISISTestMultiple[2].PVDesc STRING 1 none &str_max_capacity=40")
     field(SIZV, "41")
 }

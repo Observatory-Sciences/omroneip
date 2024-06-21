@@ -64,8 +64,9 @@ struct omronDrvUser_t
   std::string optimisationFlag; //Contains a string describing the optimisation state of an asyn parameter
   size_t strCapacity; //Size of the string within the PLC
   size_t tagOffset; //Bytes offset within a tags data to read from
-  size_t UDTreadSize; //Number of bytes to read from a UDT. Can be paired with tagOffset to read specific chunks of data from a UDT
+  size_t offsetReadSize; //Can be paired with tagOffset to read specific chunks of data from a UDT or string
   bool readAsString; //Whether to output data as a string (only valid for TIME dtypes atm)
+  bool optimise; //if 0 then we use the offset to look within a datatype, if 1 then we use it to get a datatype from within an array/UDT
 };
 
 
@@ -205,7 +206,7 @@ public:
    int findRequestedOffset(std::vector<size_t> indices, std::string structMap);
    /* Some attributes entered by the user into the extras part of drvInfo need special attention. This function takes care of this
       and updates extrasString and keyWords */
-   void processExtrasExceptions(std::string thisWord, drvInfoMap &keyWords, std::string &extrasString);
+   void processExtrasExceptions(std::string thisWord, drvInfoMap &keyWords, std::string &extrasString, drvInfoMap &defaultTagAttribs);
    /* This is responsible for parsing drvInfo when records are created. It takes the drvInfo string and parses it for required data.
       It returns a map of all of the data required by the driver to setup the asyn parameter and a boolean which indicates the validity of the data. 
       This function is called twice, once before and once after database initialization, the first time we just return asynDisabled. */
