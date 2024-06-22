@@ -2,6 +2,6 @@ record(waveform, "$(P)readStatusChannels") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels UDT 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels UDT 1 none none")
     field(NELM, "1996")
 }
