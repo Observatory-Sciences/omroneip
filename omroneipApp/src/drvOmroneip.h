@@ -169,6 +169,7 @@ class omronEIPPoller{
       const char* belongsTo_;
       const char* pollerName_;
       double updateRate_;
+      int myTagCount_;
 };
 
 /* Class which contains generic functions required by the driver */

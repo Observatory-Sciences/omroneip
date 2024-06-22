@@ -23,7 +23,8 @@ static int optimiseTagsC(void *drvPvt)
 omronEIPPoller::omronEIPPoller(const char *portName, const char *pollerName, double updateRate):
                               belongsTo_(portName),
                               pollerName_(pollerName),
-                              updateRate_(updateRate)
+                              updateRate_(updateRate),
+                              myTagCount_(0)
 {
 }
 
@@ -567,15 +568,17 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
     // are asynchronously waiting for all tags in this poller to be read. 
     if (status == PLCTAG_STATUS_PENDING)
     {
-      // Wait for the timeout specified in the records INP/OUT field
-      // To be precise, this is the time between when the last read request for this poll was sent and the current time,
-      // this means that the first read requests will have slightly longer than their timeout period for their data to return.
       timeoutTimeTaken = (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - timeoutStartTime).count())*0.001; //seconds
+      // We wait so that we dont spam libplctag with status requests which can cause 100ms freezes
+      epicsThreadSleep(0.01);
       if (timeoutTimeTaken>=drvUser->timeout)
       {
+        // If the timeout specified in the records INP/OUT field is hit, we set the status to asynTimeout
+        // To be precise, this is the timeout to enter this loop is the time between the last read request for this poller being sent and the current time,
+        // this means that the first read requests will have slightly longer than their timeout period for their data to return.
         setParamStatus(asynIndex, asynTimeout);
         readFailed = true;
-        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Timeout finishing read tag %d: %s. Decrease the polling rate or increase the timeout.\n", 
+        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning! Timeout finishing read tag %d: %s. Decrease the polling rate or increase the timeout.\n", 
                     driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
         still_pending = 0;
       }
@@ -930,10 +933,8 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
       if (drvUser->offsetReadSize != 0){
         bytes = drvUser->offsetReadSize; //user may request a byte size rather than reading the entire UDT
       }
-      if (bytes+offset <= plc_tag_get_size(drvUser->tagIndex)){
-        bytes = tagSize-(offset); //read all data after offset
-        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Tag index: %d You are attempting to read beyond the end of the buffer, output has been truncated\n", 
-                    driverName, functionName, drvUser->tagIndex);
+      if (bytes+offset <= tagSize){
+        bytes = tagSize-offset; //read all data after offset
       }
       else {
         bytes = 0;
@@ -1020,10 +1021,15 @@ void drvOmronEIP::readPoller()
   std::string tag;
   int status;
   int timeTaken = 0;
+  double pollingDelay = 0; //To stop from overloading the PLC, we divide read requests throughout the polling interval
   //The poller may not be fully initialised until the startPollers_ flag is set to 1, do not attempt to get the pPoller yet
   while (!this->startPollers_ && !omronExiting_) {epicsThreadSleep(0.1);}
   omronEIPPoller* pPoller = pollerList_.at(threadName);
   double interval = pPoller->updateRate_;
+  for (auto tag: tagMap_){
+    if (tag.second->pollerName == threadName)
+      pPoller->myTagCount_ +=1;
+  }
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Starting poller: %s with interval: %f\n", driverName, functionName, threadName.c_str(), interval);
   while (!omronExiting_)
   {
@@ -1033,7 +1039,7 @@ void drvOmronEIP::readPoller()
       epicsThreadSleep(waitTime);
     }
     else {
-      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Warning! Reads taking longer than requested! %f > %f\n", driverName, functionName, ((double)timeTaken / 1000), interval);
+      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning! Reads taking longer than requested! %f > %f\n", driverName, functionName, ((double)timeTaken / 1000000), interval);
     }
 
     for (auto x : tagMap_)
@@ -1042,6 +1048,11 @@ void drvOmronEIP::readPoller()
       {
         asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Reading tag: %d with polling interval: %f seconds\n", driverName, functionName, x.second->tagIndex, interval);
         plc_tag_read(x.second->tagIndex, 0); // read from plc as fast as possible, we will check status and timeouts later
+        // Split up read requests within timing interval
+        if (interval >= 1 && pPoller->myTagCount_>1){
+          pollingDelay = (interval-0.2*interval)/pPoller->myTagCount_;
+          epicsThreadSleep(pollingDelay);
+        }
       }
     }
 
@@ -1105,7 +1116,7 @@ asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, si
   }
   else if (datatype == "WORD" || datatype == "DWORD" || datatype == "LWORD")
   {
-    size_t bytes;
+    size_t bytes = 0;
     if (datatype == "WORD") {bytes = 2;}
     else if (datatype == "DWORD") {bytes = 4;}
     else if (datatype == "LWORD") {bytes = 8;}
