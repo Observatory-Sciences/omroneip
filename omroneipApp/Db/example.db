@@ -1,0 +1,53 @@
+#For a read PV, the drvInfo string should look like: 
+# @poller name[start_index] datatype sliceSize offset extras
+#And for a write PV:
+# name[start_index] datatype sliceSize offset extras
+#Where [start_index] is only required for reading from within an array or structure
+#
+# record(ai, "$(P)testRead) {
+#     field(DTYP, "asynInt32")
+#     field(INP, "asyn(PORT, ADDR, TIMEOUT)@poller name[start_index] datatype sliceSize offset extras")
+# }
+
+#Read a single INT stored in element 0 of transportArray1 
+record(longin, "$(P)readInt16") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER1) intArray[1] INT 1 none none")
+}
+
+#Read 10 INTs from transportArray1 
+record(waveform, "$(P)readInt16Array") {
+    field(SCAN, "I/O Intr")
+    field(FTVL, "SHORT")
+    field(DTYP, "asynInt16ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER2) intArray[1] INT 10 none none")
+    field(NELM, "10")
+}
+#Write 10 INTs to transportArray1
+record(waveform, "$(P)writeInt16Array") {
+    field(FTVL, "SHORT")
+    field(DTYP, "asynInt16ArrayOut")
+    field(INP, "@asyn($(PORT), 0, 1)intArray[1] INT 10 none none")
+    field(NELM, "10")
+}
+
+#Read 64 bit float from the variable testLREAL
+record(ai, "$(P)readFloat64") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER1) testLREAL LREAL 1 none none")
+}
+#Write 64 bit float
+record(ao, "$(P)writeFloat64") {
+    field(DTYP, "asynFloat64")
+    field(OUT, "@asyn($(PORT), 0, 1)testLREAL LREAL 1 none none")
+}
+
+#Read 256 byte string
+record(lsi, "$(P)readString") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER1) testString STRING 1 none str_max_capacity=256")
+    field(SIZV, "256")
+}
