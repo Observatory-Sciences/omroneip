@@ -1,64 +1,93 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--Saved on 2024-03-13 11:23:13 by epics-dev-->
+<!--Saved on 2024-06-22 17:08:02 by epics-dev-->
 <display version="2.0.0">
-  <name>omroneip_structs</name>
+  <name>omroneip_stfcTests</name>
   <macros>
     <P>omronEIP:</P>
   </macros>
   <widget type="textupdate" version="2.0.0">
     <name>Text Update_19</name>
     <pv_name>$(P)0:readISIS</pv_name>
-    <y>10</y>
+    <x>10</x>
+    <y>40</y>
     <width>10000</width>
     <format>4</format>
   </widget>
   <widget type="textupdate" version="2.0.0">
     <name>Text Update_20</name>
     <pv_name>$(P)1:readISIS</pv_name>
-    <y>30</y>
+    <x>10</x>
+    <y>60</y>
     <width>10000</width>
     <format>4</format>
   </widget>
   <widget type="textupdate" version="2.0.0">
     <name>Text Update_21</name>
     <pv_name>$(P)3:readISIS</pv_name>
-    <y>70</y>
+    <x>10</x>
+    <y>100</y>
     <width>10000</width>
     <format>4</format>
   </widget>
   <widget type="textupdate" version="2.0.0">
     <name>Text Update_22</name>
     <pv_name>$(P)2:readISIS</pv_name>
-    <y>50</y>
+    <x>10</x>
+    <y>80</y>
     <width>10000</width>
     <format>4</format>
   </widget>
   <widget type="textupdate" version="2.0.0">
     <name>Text Update_23</name>
     <pv_name>$(P)readHeatingZones0</pv_name>
-    <y>120</y>
+    <x>10</x>
+    <y>160</y>
     <width>10000</width>
     <format>4</format>
   </widget>
   <widget type="textupdate" version="2.0.0">
     <name>Text Update_24</name>
-    <pv_name>$(P)readZoneHeaters</pv_name>
-    <y>140</y>
+    <pv_name>$(P)readTCRaw</pv_name>
+    <x>10</x>
+    <y>180</y>
     <width>10000</width>
     <format>4</format>
   </widget>
   <widget type="textupdate" version="2.0.0">
     <name>Text Update_25</name>
-    <pv_name>$(P)readHeatingZones1</pv_name>
-    <y>160</y>
+    <pv_name>$(P)readZoneHeaters</pv_name>
+    <x>10</x>
+    <y>200</y>
     <width>10000</width>
     <format>4</format>
   </widget>
   <widget type="textupdate" version="2.0.0">
     <name>Text Update_26</name>
     <pv_name>$(P)readStatusChannels</pv_name>
-    <y>210</y>
+    <x>10</x>
+    <y>260</y>
     <width>10000</width>
     <format>4</format>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label</name>
+    <text>Read ISIS UDTs at 0.1Hz</text>
+    <x>10</x>
+    <y>10</y>
+    <width>330</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_1</name>
+    <text>Read heating zone UDTs at 0.5Hz</text>
+    <x>10</x>
+    <y>130</y>
+    <width>330</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_2</name>
+    <text>Read status channels UDTs at 10Hz</text>
+    <x>10</x>
+    <y>230</y>
+    <width>330</width>
   </widget>
 </display>
