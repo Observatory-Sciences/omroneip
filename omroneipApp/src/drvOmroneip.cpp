@@ -1108,7 +1108,7 @@ void drvOmronEIP::readPoller()
       pPoller->myTagCount_ +=1;
   }
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Starting poller: %s with interval: %f\n", driverName, functionName, threadName.c_str(), interval);
-  std::chrono::time_point startTime = std::chrono::system_clock::now();
+  auto startTime = std::chrono::system_clock::now();
   while (!omronExiting_)
   {
     startTime = std::chrono::system_clock::now();
@@ -1147,7 +1147,7 @@ void drvOmronEIP::readPoller()
     if (status!=asynSuccess) {
       asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, while performing asyn callbacks on read poller: %s\n", driverName, functionName, threadName.c_str());
     }
-    std::chrono::time_point endTime = std::chrono::system_clock::now();
+    auto endTime = std::chrono::system_clock::now();
     timeTaken = std::chrono::duration_cast<std::chrono::nanoseconds>(endTime - startTime).count() - waitTime*1E9;
     if (timeTaken>0)
       asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Poller: %s finished processing in: %d msec\n\n", driverName, functionName, threadName.c_str(), (int)(timeTaken/1E6));
