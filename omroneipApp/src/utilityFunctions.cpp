@@ -76,13 +76,13 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
 
   if (escaped)
   {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Escape character never closed. Record invalid\n", driverName, functionName);
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Escape character never closed. Record invalid\n", driverName, functionName);
     keyWords.at("stringValid") = "false";
   }
 
   if (words.size() < 1)
   {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s No arguments supplied to driver\n", driverName, functionName);
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, No arguments supplied to driver\n", driverName, functionName);
     keyWords.at("stringValid") = "false";
   }
 
@@ -96,7 +96,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
     }
     else
     {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, the named poller: %s does not exist!\n", driverName, functionName, words.front().c_str());
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, the named poller: %s does not exist!\n", driverName, functionName, words.front().c_str());
       keyWords.at("stringValid") = "false";
       return keyWords;
     }
@@ -104,7 +104,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
 
   if (words.size() < 5)
   {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Record is missing parameters. Expected 5 space seperated terms (or 6 including poller) but recieved: %ld\n", driverName, functionName, words.size());
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Record is missing parameters. Expected 5 space seperated terms (or 6 including poller) but recieved: %ld\n", driverName, functionName, words.size());
     keyWords.at("stringValid") = "false";
     return keyWords;
   }
@@ -140,14 +140,14 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
         {                
           if (std::stoi(startIndex) < 1)
           {
-            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s A startIndex of < 1 is forbidden\n", driverName, functionName);
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, A startIndex of < 1 is forbidden\n", driverName, functionName);
             keyWords.at("stringValid") = "false";
             return keyWords;
           }
         }
         catch(...)
         {
-          asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s startIndex must be an integer.\n", driverName, functionName);
+          asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, startIndex must be an integer.\n", driverName, functionName);
           keyWords.at("stringValid") = "false";
           return keyWords;
         }
@@ -343,10 +343,14 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
               size = remaining.substr(0, nextPos);
               extrasString = extrasWord.erase(pos-1, attrib.first.size() + nextPos + 1);
             }
-            else
+            else if (pos!=0)
             {
               size = remaining.substr(0, remaining.size());
               extrasString = extrasWord.erase(pos-1, extrasWord.size()-(pos-1));
+            }
+            else { //user has forgotten to add & at the start
+              size = remaining.substr(0, remaining.size()); 
+              extrasString = extrasWord.erase(pos, extrasWord.size()-pos);
             }
 
             if (size == attrib.second) // if defined value is identical to default, continue
@@ -423,7 +427,7 @@ void omronUtilities::processExtrasExceptions(std::string thisWord, drvInfoMap &k
       }
     }
     else {
-      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, offset_read_size should only be set for UDT type.\n", 
+      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, offset_read_size should only be set for UDT type.\n", 
                   driverName, functionName);
     }
   }
@@ -453,11 +457,11 @@ void omronUtilities::processExtrasExceptions(std::string thisWord, drvInfoMap &k
       }
       catch(...){
         keyWords.at("stringValid") = "false";
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid value for as_string=: %s\n", driverName, functionName, size.c_str());
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid value for as_string=: %s\n", driverName, functionName, size.c_str());
       }
     }
     else {
-      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, read_as_string= should only be set for TIME type.\n", 
+      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, read_as_string= should only be set for TIME type.\n", 
                   driverName, functionName);
     }
   }
@@ -525,11 +529,11 @@ void omronUtilities::processExtrasExceptions(std::string thisWord, drvInfoMap &k
       }
     }
     else if (keyWords.at("optimise")=="0" && keyWords.at("offset") == "0"){
-      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, str_max_capacity has not been defined, this can cause errors when reading strings from structures and when writing strings. This should be defined.\n", 
+      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, str_max_capacity has not been defined, this can cause errors when reading strings from structures and when writing strings. This should be defined.\n", 
                   driverName, functionName);
     }
     else {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, str_max_capacity has not been defined, this must be defined when attempting optimisations or using offsets!\n", 
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, str_max_capacity has not been defined, this must be defined when attempting optimisations or using offsets!\n", 
             driverName, functionName);
       keyWords.at("stringValid") = "false";
     }
@@ -576,7 +580,7 @@ int omronUtilities::findRequestedOffset(std::vector<size_t> indices, std::string
         dtype = dtypeRow[j];
       }
       else {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid index: %ld for structure: %s\n", driverName, functionName, index, structName.c_str());
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid index: %ld for structure: %s\n", driverName, functionName, index, structName.c_str());
         return -1; 
       }
 
@@ -620,7 +624,7 @@ int omronUtilities::findRequestedOffset(std::vector<size_t> indices, std::string
         j++;
       }
       else {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Failed to calculate offset due to invalid datatype: %s\n", driverName, functionName, dtype.c_str());
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Failed to calculate offset due to invalid datatype: %s\n", driverName, functionName, dtype.c_str());
         return -1;
       }
     }
@@ -641,7 +645,7 @@ asynStatus omronUtilities::createStructMap(structDtypeMap rawMap)
     kv.second = expandStructsRecursive(expandedMap, kv.first);
     if (std::find(kv.second.begin(), kv.second.end(), "Invalid") != kv.second.end()){
       //If either expandStructsRecursive or expandArrayRecursive returned "Invalid" then return asynError
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Encountered an error while expanding struct: %s\n", driverName, functionName, kv.first.c_str());
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Encountered an error while expanding struct: %s\n", driverName, functionName, kv.first.c_str());
       return asynError;
     }
   }
@@ -677,7 +681,7 @@ asynStatus omronUtilities::createStructMap(structDtypeMap rawMap)
   pDriver->structMap_= structMap;
   if (status < 0)
   {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s An error occured while calculating the offsets within the loaded struct file\n", driverName, functionName);
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, an error occured while calculating the offsets within the loaded struct file\n", driverName, functionName);
     return asynError;
   }
   return asynSuccess;
@@ -689,7 +693,7 @@ std::vector<std::string> omronUtilities::expandArrayRecursive(structDtypeMap con
   // "ARRAY[x..y] OF z"
   std::vector<std::string> expandedData;
   std::string ss = arrayDesc.substr(7,arrayDesc.size()-7);
-  size_t arrayLength = 0;
+  int arrayLength = 0;
   bool dimsFound = false;
   std::string dtype;
 
@@ -699,27 +703,27 @@ std::vector<std::string> omronUtilities::expandArrayRecursive(structDtypeMap con
     if (ss.substr(i,1)== "]")
     {
       // Get the x..y part and find x and y in order to get the array size
-      std::string arrayDims = ss.substr(7, i);
-      std::string arrayStartString = arrayDims.substr(0, arrayDims.size()-arrayDims.find(".."));
+      std::string arrayDims = ss.substr(0, i);
+      std::string arrayStartString = arrayDims.substr(0, arrayDims.find(".."));
       std::string arrayEndString = arrayDims.substr(arrayDims.find("..")+2);
       try
       {
-        size_t arrayStart = std::stoi(arrayStartString);
-        size_t arrayEnd = std::stoi(arrayEndString);
+        int arrayStart = std::stoi(arrayStartString);
+        int arrayEnd = std::stoi(arrayEndString);
         arrayLength = arrayEnd-arrayStart+1;
         if (arrayStart < 0 || arrayEnd < 0 || arrayLength < 0) throw -1;
         dimsFound = true;
       }
       catch (...)
       {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Array dimensions are invalid.\n", driverName, functionName);
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, array dimensions are invalid.\n", driverName, functionName);
       }
       break;
     }
   }
   if (!dimsFound)
   {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s ARRAY type must be of the following format: \"ARRAY[x..y] OF z\", definition: %s is invalid\n", driverName, functionName, arrayDesc.c_str());
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, ARRAY type must be of the following format: \"ARRAY[x..y] OF z\", definition: %s is invalid\n", driverName, functionName, arrayDesc.c_str());
     expandedData.push_back("Invalid");
     return expandedData;
   }
@@ -737,12 +741,12 @@ std::vector<std::string> omronUtilities::expandArrayRecursive(structDtypeMap con
   {
     // We assume that we have an array of structs and so we call the expandStructsRecursive function to get the raw dtypes from the struct
     std::vector<std::string> embeddedDtypes = expandStructsRecursive(rawMap, dtype);
-    singleExpandedData.push_back(dtype);
+    singleExpandedData.push_back("start:" + dtype);
     singleExpandedData.insert(std::end(singleExpandedData), std::begin(embeddedDtypes), std::end(embeddedDtypes));
-    singleExpandedData.push_back("end:struct"+dtype);
+    singleExpandedData.push_back("end:"+dtype);
   }
 
-  for (size_t i = 0; i<arrayLength; i++) {
+  for (size_t i = 0; i<(size_t)arrayLength; i++) {
     expandedData.insert(std::end(expandedData), std::begin(singleExpandedData), std::end(singleExpandedData));
   }
   return expandedData;
@@ -751,8 +755,13 @@ std::vector<std::string> omronUtilities::expandArrayRecursive(structDtypeMap con
 std::vector<std::string> omronUtilities::expandStructsRecursive(structDtypeMap const& rawMap, std::string structName)
 {
   static const char *functionName = "expandStructsRecursive";
-  std::vector<std::string> row = rawMap.at(structName);
   std::vector<std::string> expandedRow;
+  if (rawMap.find(structName)==rawMap.end()){
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Failed to find definition for struct: %s. \n", driverName, functionName, structName.c_str());
+    expandedRow.push_back("Invalid");
+    return expandedRow;
+  }
+  std::vector<std::string> row = rawMap.at(structName);
   const std::string arrayIdentifier = "\"ARRAY[";
   for (std::string dtype : row)
   {
@@ -789,7 +798,7 @@ std::vector<std::string> omronUtilities::expandStructsRecursive(structDtypeMap c
       }
       catch (...)
       {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Failed to find the standard datatype: %s. Definition for %s and its dependents failed.\n", driverName, functionName, dtype.c_str(), structName.c_str());
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Failed to find the standard datatype: %s. Definition for %s and its dependents failed.\n", driverName, functionName, dtype.c_str(), structName.c_str());
         expandedRow.push_back("Invalid");
         return expandedRow;
       }
@@ -815,7 +824,7 @@ std::string omronUtilities::findArrayDtype(structDtypeMap const& expandedMap, st
   }
 
   // If we get here then we have an invalid array definition
-  asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid array definition: %s\n", driverName, functionName, arrayDesc.c_str());
+  asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid array definition: %s\n", driverName, functionName, arrayDesc.c_str());
   return "Invalid";
 }
 
@@ -829,7 +838,7 @@ int omronUtilities::getBiggestDtype(structDtypeMap const& expandedMap, std::stri
   const std::string arrayIdentifier = "\"ARRAY[";
   for (std::string dtype : expandedRow) {
     // Extract the dtype from an array definition string
-    if (dtype.substr(0,7) == arrayIdentifier) { //FIX ME !!!!!!
+    if (dtype.substr(0,7) == arrayIdentifier) {
       dtype = findArrayDtype(expandedMap, dtype);
       if (dtype == "Invalid")
       {
@@ -840,13 +849,9 @@ int omronUtilities::getBiggestDtype(structDtypeMap const& expandedMap, std::stri
     else if (dtype == "DWORD" || dtype == "UDINT" || dtype == "DINT" || dtype == "REAL") {thisSize = 4;}
     else if (dtype == "BOOL" || dtype == "WORD" || dtype == "UINT" || dtype == "INT") {thisSize = 2;}
     else if (dtype.substr(0,6) == "STRING" || dtype =="SINT" || dtype =="USINT") {thisSize = 1;}
-    else if (dtype.substr(0,4)=="end:") {continue;} // We find the size of the struct from the start: tag, so the end: tag is skipped
-    else if (expandedMap.find(dtype.substr(dtype.find("start:")+6))!=expandedMap.end()){
-      // Check to see if any element within the expandedRow is a start:structName. If it is then we must lookup the biggest dtype in this struct
-      thisSize = getBiggestDtype(expandedMap, dtype.substr(dtype.find("start:")+6));
-    }
+    else if (dtype.substr(0,9)=="end:array" || dtype.substr(0,11)=="start:array") {continue;} 
     else {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find the size of dtype: %s\n", driverName, functionName, dtype.c_str());
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Could not find the size of dtype: %s\n", driverName, functionName, dtype.c_str());
       return -1;
     }
     if (thisSize>biggestSize)
@@ -868,7 +873,7 @@ int omronUtilities::getEmbeddedAlignment(structDtypeMap const& expandedMap, std:
   // based off the next dtype which may be raw or a struct. If a struct then get biggest from struct
   // Get next raw dtype
 
-  if (nextItem == "array"){
+  if (nextStruct == "array"){
     // If the next item is an array start tag, then we need to get the alignment of the first item in the array, this may be a struct
     if (i+2 < expandedRow.size()){
       nextNextItem = expandedRow[i+2];
@@ -881,12 +886,15 @@ int omronUtilities::getEmbeddedAlignment(structDtypeMap const& expandedMap, std:
     else if (nextNextItem == "BOOL" || nextNextItem == "WORD" || nextNextItem == "UINT" || nextNextItem == "INT") {alignment = 2;}
     else if (nextNextItem == "SINT" || nextNextItem == "USINT") {alignment = 1;}
     else if (nextNextItem.substr(0,6) == "STRING") {alignment = 1;}
-    else if (expandedMap.find(nextNextItem.substr(nextNextItem.find("start:")+6))!=expandedMap.end()){
+    else if (nextNextItem == "start:array") {
+      alignment = getEmbeddedAlignment(expandedMap, structName, expandedRow[i+3], i+1);
+    }
+    else if (expandedMap.find(nextNextItem)!=expandedMap.end()){
       // Check to see if the array dtype is a start:structName. If it is then we must lookup the biggest dtype in this struct
-      alignment = getBiggestDtype(expandedMap, nextNextItem.substr(nextNextItem.find("start:")+6));
+      alignment = getBiggestDtype(expandedMap, nextNextItem);
     }
     else {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find the alignment rule for: %s\n", driverName, functionName, nextNextItem.c_str());
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Could not find the alignment rule for: %s\n", driverName, functionName, nextNextItem.c_str());
       return -1;
     }
   }
@@ -899,7 +907,7 @@ int omronUtilities::getEmbeddedAlignment(structDtypeMap const& expandedMap, std:
     }
     catch (...)
     {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid datatype: %s. Definition for: %s is invalid.\n", driverName, functionName, nextStruct.c_str(), structName.c_str());
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid datatype: %s. Definition for: %s is invalid.\n", driverName, functionName, nextStruct.c_str(), structName.c_str());
       return -1;
     }
   }
@@ -957,6 +965,10 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
     // Calculate size of the padding
     thisOffset += dtypeSize;
     if (thisOffset != 0){
+      if (alignment == 0){
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Something went wrong while calculating the alignment for dtype: %s In struct: %s\n", driverName, functionName, dtype.c_str(), structName.c_str());
+        return -1;
+      }
       if (thisOffset % alignment != 0){
         paddingSize = alignment-(thisOffset % alignment);
       }
@@ -1009,26 +1021,27 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
           intFound = true;
           try
           {
-            strLength = std::stoi(ss.substr(0,i+1));
+            strLength = std::stoi(ss.substr(0,i));
             if (strLength < 0) throw 1;
           }
           catch (...)
           {
-            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s STRING length must be an integer\n", driverName, functionName);
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, STRING length must be an integer! %s is invalid. Definition for struct: %s is invalid.\n", driverName, functionName, dtype.c_str(), structName.c_str());
             strLength = 0;
+            return -1;
           }
           break;
         }
       }
       if (!intFound)
       {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s STRING definition: %s does not specify size, definition for struct: %s is invalid.\n", driverName, functionName, dtype.c_str(), structName.c_str());
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, STRING definition: %s does not specify size, definition for struct: %s is invalid.\n", driverName, functionName, dtype.c_str(), structName.c_str());
         return -1;
       }
       dtypeSize = strLength;
     }
     else {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Failed to parse user input datatype: %s. Definition for struct: %s is invalid.\n", driverName, functionName, dtype.c_str(), structName.c_str());
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Failed to parse user input datatype: %s. Definition for struct: %s is invalid.\n", driverName, functionName, dtype.c_str(), structName.c_str());
       return -1;
     }
 
@@ -1052,7 +1065,7 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
     else if (nextItem == "none"){} // Next item is the end of the struct, so we need no padding from this dtype. However we may add padding elsewhere if the previous item is a struct 
     else if (nextItem.substr(0,4) == "end:" || nextItem.substr(0,6) == "start:")
     {
-      // If nextItem is an arrayStart or end, then set nextItem to the item after, this must be done recursively as that item could also be a struct
+      // If nextItem is an array start or end, then set nextItem to the item after, this must be done recursively as that item could also be a struct
       // We keep searching until we find a raw dtype or the end of the map. If we find the end, then return none and no additional alignment is given
       // based on the next dtype. While searching we also update the alignment if we come across a struct start or end with a larger internal
       // dtype than the current alignment.
@@ -1060,7 +1073,7 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
       if (alignment < thisAlignment){alignment=thisAlignment;} // Alignment should be 0 at this point, but we check just in case
     }
     else {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Failed to calculate the alignment of: %s. Definition for struct: %s is invalid.\n", driverName, functionName, nextItem.c_str(), structName.c_str());
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Failed to calculate the alignment of: %s. Definition for struct: %s is invalid.\n", driverName, functionName, nextItem.c_str(), structName.c_str());
       return -1;
     }
     i++;

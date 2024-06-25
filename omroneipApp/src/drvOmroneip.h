@@ -115,7 +115,7 @@ public:
    /* This waits for requested reads to come in and then takes them from libplctag and puts them into records */
    void readData(omronDrvUser_t* drvUser, int asynIndex);
    /* Creates a new instance of the omronEIPPoller class and starts a new thread named after this new poller which reads data linked to the poller name.*/
-   asynStatus createPoller(const char * portName, const char * pollerName, double updateRate);
+   asynStatus createPoller(const char * portName, const char * pollerName, double updateRate, int spreadRequests);
    /* Reimplemented from asynDriver. This is called when each record is loaded into epics. It processes the drvInfo from the record and attempts
       to create a libplctag tag and an asynParameter. It saves the handles to these key objects within the tagMap_. This tagMap_ is then used to
       process read and write requests to the driver.*/
@@ -164,11 +164,12 @@ private:
 /* Class which stores information about each poller */
 class omronEIPPoller{
   public:
-      omronEIPPoller(const char* portName, const char* pollerName, double updateRate);
+      omronEIPPoller(const char* portName, const char* pollerName, double updateRate, int spreadRequests);
       ~omronEIPPoller();
       const char* belongsTo_;
       const char* pollerName_;
       double updateRate_;
+      int spreadRequests_;
       int myTagCount_;
 };
 

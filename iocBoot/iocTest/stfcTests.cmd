@@ -20,7 +20,7 @@ drvOmronEIPConfigPoller("omronDriver", "slowPoller", 10)
 drvOmronEIPStructDefine("omronDriver", "iocBoot/iocTest/structDefs.csv")
 
 dbLoadRecords("db/testStatusChannels.db", "P=${P}, PORT=omronDriver, POLLER=fastPoller")
-#dbLoadRecords("db/testHeatingZones.db", "P=${P}, PORT=omronDriver, POLLER=mediumPoller")
-#dbLoadTemplate("iocBoot/iocTest/testISIS.substitutions") #uses slowPoller
+dbLoadRecords("db/testHeatingZones.db", "P=${P}, PORT=omronDriver, POLLER=mediumPoller")
+dbLoadTemplate("iocBoot/iocTest/testISIS.substitutions") #uses slowPoller
 
 iocInit()

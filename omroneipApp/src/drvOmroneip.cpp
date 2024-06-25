@@ -20,10 +20,11 @@ static int optimiseTagsC(void *drvPvt)
   return status;
 }
 
-omronEIPPoller::omronEIPPoller(const char *portName, const char *pollerName, double updateRate):
+omronEIPPoller::omronEIPPoller(const char *portName, const char *pollerName, double updateRate, int spreadRequests):
                               belongsTo_(portName),
                               pollerName_(pollerName),
                               updateRate_(updateRate),
+                              spreadRequests_(spreadRequests),
                               myTagCount_(0)
 {
 }
@@ -84,16 +85,16 @@ drvOmronEIP::drvOmronEIP(const char *portName,
                           (EPICSTHREADFUNC)optimiseTagsC,
                           this) == NULL);
   if (status!=0){
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Driver initialisation failed.\n", driverName, functionName);
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Driver initialisation failed.\n", driverName, functionName);
   }
   utilities = new omronUtilities(this); //smart pointerify this
   initialized_ = true;
 }
 
-asynStatus drvOmronEIP::createPoller(const char *portName, const char *pollerName, double updateRate)
+asynStatus drvOmronEIP::createPoller(const char *portName, const char *pollerName, double updateRate, int spreadRequests)
 {
   int status;
-  omronEIPPoller* pPoller = new omronEIPPoller(portName, pollerName, updateRate);
+  omronEIPPoller* pPoller = new omronEIPPoller(portName, pollerName, updateRate, spreadRequests);
   pollerList_[pPoller->pollerName_] = pPoller;
   status = (epicsThreadCreate(pPoller->pollerName_,
                             epicsThreadPriorityMedium,
@@ -141,7 +142,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
     if (keyWords.at("stringValid") != "true")
     {
       readFlag = false;
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, drvInfo string is invalid, record with drvInfo: '%s' was not created!\n", driverName, functionName, drvInfo);
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, drvInfo string is invalid, record with drvInfo: '%s' was not created!\n", driverName, functionName, drvInfo);
       tag = tagConnectionString_ + "&name=" + keyWords.at("tagName") +
         "&elem_count=" + keyWords.at("sliceSize") + keyWords.at("tagExtras");
     }
@@ -178,7 +179,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
       /* Check and report failure codes. An Asyn param will be created even on failure but the record will be given error status */
       libplctagStatus = plc_tag_status(tagIndex);
       if (libplctagStatus != PLCTAG_STATUS_OK){
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, tag creation failed! Reported: %s. Asyn parameter is not valid. drvInfo: '%s', tag string: '%s'\n", 
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, tag creation failed! Reported: %s. Asyn parameter is not valid. drvInfo: '%s', tag string: '%s'\n", 
                     driverName, functionName, plc_tag_decode_error(libplctagStatus), drvInfo, tag.c_str());
       }
     }
@@ -204,63 +205,84 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
       newDrvUser->readAsString = std::stoi(keyWords.at("readAsString"));
       newDrvUser->optimise = std::stoi(keyWords.at("optimise"));
     }
+
     { /* Create the asyn param with the interface that matches the datatype */
       if (keyWords.at("dataType") == "BOOL"){
         thisAsynStatus = createParam(drvInfo, asynParamUInt32Digital, &asynIndex);
+        setUIntDigitalParam(0, asynIndex, 0, 0xFF);
       }
       else if (keyWords.at("dataType") == "SINT"){
         thisAsynStatus = createParam(drvInfo, asynParamInt32, &asynIndex);
+        setIntegerParam(asynIndex, 0);
       }
       else if (keyWords.at("dataType") == "INT"){
         thisAsynStatus = createParam(drvInfo, asynParamInt32, &asynIndex);
+        setIntegerParam(asynIndex, 0);
       }
       else if (keyWords.at("dataType") == "DINT"){
         thisAsynStatus = createParam(drvInfo, asynParamInt32, &asynIndex);
+        setIntegerParam(asynIndex, 0);
       }
       else if (keyWords.at("dataType") == "LINT"){
         thisAsynStatus = createParam(drvInfo, asynParamInt64, &asynIndex);
+        setInteger64Param(asynIndex, 0);
       }
       else if (keyWords.at("dataType") == "USINT"){
         thisAsynStatus = createParam(drvInfo, asynParamInt32, &asynIndex);
+        setIntegerParam(asynIndex, 0);
       }
       else if (keyWords.at("dataType") == "UINT"){
         thisAsynStatus = createParam(drvInfo, asynParamInt32, &asynIndex);
+        setIntegerParam(asynIndex, 0);
       }
       else if (keyWords.at("dataType") == "UDINT"){
         thisAsynStatus = createParam(drvInfo, asynParamInt32, &asynIndex);
+        setIntegerParam(asynIndex, 0);
       }
       else if (keyWords.at("dataType") == "ULINT"){
         thisAsynStatus = createParam(drvInfo, asynParamInt64, &asynIndex);
+        setInteger64Param(asynIndex, 0);
       }
       else if (keyWords.at("dataType") == "REAL"){
         thisAsynStatus = createParam(drvInfo, asynParamFloat64, &asynIndex);
+        setDoubleParam(asynIndex, 0);
       }
       else if (keyWords.at("dataType") == "LREAL"){
         thisAsynStatus = createParam(drvInfo, asynParamFloat64, &asynIndex);
+        setDoubleParam(asynIndex, 0);
       }
       else if (keyWords.at("dataType") == "STRING"){
         thisAsynStatus = createParam(drvInfo, asynParamOctet, &asynIndex);
+        setStringParam(asynIndex, "");
       }
       else if (keyWords.at("dataType") == "WORD"){
         thisAsynStatus = createParam(drvInfo, asynParamInt8Array, &asynIndex);
+        doCallbacksInt8Array(0, 1, asynIndex, 0);
       }
       else if (keyWords.at("dataType") == "DWORD"){
         thisAsynStatus = createParam(drvInfo, asynParamInt8Array, &asynIndex);
+        doCallbacksInt8Array(0, 1, asynIndex, 0);
       }
       else if (keyWords.at("dataType") == "LWORD"){
         thisAsynStatus = createParam(drvInfo, asynParamInt8Array, &asynIndex);
+        doCallbacksInt8Array(0, 1, asynIndex, 0);
       }
       else if (keyWords.at("dataType") == "UDT"){
         thisAsynStatus = createParam(drvInfo, asynParamInt8Array, &asynIndex);
+        doCallbacksInt8Array(0, 1, asynIndex, 0);
       }
       else if (keyWords.at("dataType") == "TIME"){
-        if (newDrvUser->readAsString)
+        if (newDrvUser->readAsString) {
           thisAsynStatus = createParam(drvInfo, asynParamOctet, &asynIndex);
-        else
+          setStringParam(asynIndex, "");
+        }
+        else {
           thisAsynStatus = createParam(drvInfo, asynParamInt64, &asynIndex);
+          setInteger64Param(asynIndex, 0);
+        }
       }
       else{
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid datatype: %s\n", driverName, functionName, keyWords.at("dataType").c_str());
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid datatype: %s\n", driverName, functionName, keyWords.at("dataType").c_str());
       }
     }
 
@@ -279,19 +301,25 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
         callParamCallbacks();
         asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Created libplctag tag with tag index: %d, asyn index: %d and tag string: %s\n", driverName, functionName, tagIndex, asynIndex, tag.c_str());
       }
-      // For unsuccessfull tags, set record to error, they will never connect to the PLC or be useful, but will be valid asynParameters so are not disabled
+      // For unsuccessfull tags, set record to error, they will never connect to the PLC or be useful, but will be valid asynParameters
       else if (libplctagStatus == PLCTAG_STATUS_PENDING) 
       {
         setParamStatus(asynIndex, asynTimeout);
+        setParamAlarmStatus(asynIndex, asynTimeout);
+        setParamAlarmSeverity(asynIndex, INVALID_ALARM);
       }
       else
       {
         setParamStatus(asynIndex, asynError);
+        setParamAlarmStatus(asynIndex, asynError);
+        setParamAlarmSeverity(asynIndex, INVALID_ALARM);
       }
     }
     else {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Creation of asyn parameter failed for drvInfo: %s Asyn status:%d\n", driverName, functionName, drvInfo, thisAsynStatus);
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Creation of asyn parameter failed for drvInfo: %s Asyn status:%d\n", driverName, functionName, drvInfo, thisAsynStatus);
       setParamStatus(asynIndex, asynError);
+      setParamAlarmStatus(asynIndex, asynError);
+      setParamAlarmSeverity(asynIndex, INVALID_ALARM);
     }
   }
 
@@ -299,7 +327,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
   // Create the link from the record to the param
   thisAsynStatus = asynPortDriver::drvUserCreate(pasynUser, drvInfo, pptypeName, psize);
   if (thisAsynStatus!=asynSuccess || libplctagStatus!=PLCTAG_STATUS_OK){
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Creation of asyn parameter failed for drvInfo: %s Asyn status:%d\n", driverName, functionName, drvInfo, thisAsynStatus);
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Creation of asyn parameter failed for drvInfo: %s Asyn status:%d\n", driverName, functionName, drvInfo, thisAsynStatus);
     return asynSuccess; // Yes this is stupid but if i return asynError or asynDisabled, asyn seg faults when setting up the waveform interface
   }
   return asynSuccess;
@@ -359,7 +387,7 @@ asynStatus drvOmronEIP::optimiseTags()
         thisTag.second->optimisationFlag = "optimisation failed";
         thisTag.second->readFlag = false;
         thisTag.second->tagOffset=0; //optimisation failed, so point to start of dtype
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s  Error, attempt to create optimised tag for asyn index: %d failed.\n", driverName, functionName, thisTag.first);
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s  Err, attempt to create optimised tag for asyn index: %d failed.\n", driverName, functionName, thisTag.first);
       }
     }
   }
@@ -392,7 +420,7 @@ asynStatus drvOmronEIP::optimiseTags()
 
         if (tagIndex < 0) {
           const char* error = plc_tag_decode_error(tagIndex);
-          asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s  Error, attempt to create optimised tag for asyn index: %d failed. %s\n", driverName, functionName, commonStruct.second[0], error);
+          asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s  Err, attempt to create optimised tag for asyn index: %d failed. %s\n", driverName, functionName, commonStruct.second[0], error);
         }
         else {
           structIDList[commonStruct.first] = tagIndex;
@@ -408,7 +436,7 @@ asynStatus drvOmronEIP::optimiseTags()
       // Case where a child is found, but it is the only one, therefor no optimisation is possible and we print an error
       tagMap_.find(commonStruct.second[0])->second->optimisationFlag = "no optimisation possible";
       tagMap_.find(commonStruct.second[0])->second->readFlag = false;
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, attempt to optimise asyn index: %d failed. Parameter will not be used.\n", driverName, functionName, commonStruct.second[0]);
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, attempt to optimise asyn index: %d failed. Parameter will not be used.\n", driverName, functionName, commonStruct.second[0]);
     }
   }
 
@@ -439,7 +467,7 @@ asynStatus drvOmronEIP::optimiseTags()
         drvUser = this->tagMap_.at(asynIndex);
       }
       else {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, attempt to optimise asyn index: %d failed. Parameter will not be used.\n", driverName, functionName, asynIndex);
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, attempt to optimise asyn index: %d failed. Parameter will not be used.\n", driverName, functionName, asynIndex);
         drvUser->optimisationFlag = "optimisation failed"; // Could not find an optimisation so this tag will be read/written directly
         drvUser->tagOffset=0; //optimisation failed, so point to start of dtype
         drvUser->readFlag = false;
@@ -481,7 +509,7 @@ asynStatus drvOmronEIP::optimiseTags()
 
       if (!matchFound && commonStruct.second.size() >= countNeeded)
       {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s  Error, attempt to optimise asyn index: %d failed. The parameter will not be used.\n", driverName, functionName, asynIndex);
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s  Err, attempt to optimise asyn index: %d failed. The parameter will not be used.\n", driverName, functionName, asynIndex);
         drvUser->optimisationFlag = "optimisation failed";
         drvUser->readFlag = "false";
       }
@@ -497,7 +525,7 @@ asynStatus drvOmronEIP::optimiseTags()
       status = plc_tag_destroy(index); // Destroy old tags
       asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Destroyed redundant libplctag: %d\n", driverName, functionName, index);
       if (status!=0) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s  Error, libplctag tag destruction process failed for libplctag index %d\n", driverName, functionName, index);
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s  Err, libplctag tag destruction process failed for libplctag index %d\n", driverName, functionName, index);
       }
     }
   }
@@ -521,18 +549,36 @@ asynStatus drvOmronEIP::loadStructFile(const char * portName, const char * fileP
   std::string line, word; 
   asynStatus status = asynSuccess;
 
-  while (std::getline(infile, line)) { 
+  if (infile.fail()){
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find file: %s. Either missing or invalid permissions.\n", driverName, functionName, filePath);
+    return asynError;
+  }
 
+  if (!structMap_.empty()){
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Only one structure definition file can be loaded at once!\n", driverName, functionName);
+    return asynError;
+  }
+
+  while (std::getline(infile, line)) { 
       row.clear(); 
       std::istringstream s(line); 
       while (std::getline(s, word, ',')) 
-      {   
+      {
+        if (word[0] == '#')
+          break;
         row.push_back(word); 
       } 
-      std::string structName = row.front();
-      row.erase(row.begin());
-      structMap[structName] = row;
-    } 
+      if (row.size()==1){
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s structure: %s contains no valid members\n", driverName, functionName, row[0].c_str());
+      }
+      else if (!row.empty()){
+        std::string structName = row.front();
+        row.erase(row.begin());
+        structMap[structName] = row;
+      }
+    }
+
+
     std::string flowString;
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Loading in struct file with the following definitions:\n", driverName, functionName);
     for (auto const& i : structMap) {
@@ -560,6 +606,15 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
   double timeoutTimeTaken = 0; //time that we have been waiting for the current read request to be answered
   asynParamType myParam;
   getParamType(asynIndex, &myParam);
+  // libplctag has thread protection for single API calls. However thedfsdddre is potential that while we are reading a tag on this poller,
+  // from the plc, we can be simultaneously reading data from the tag in libplctag. This could lead to the data being read, being 
+  // overwritten as it is read, therefor we must lock the tag while reading it.
+  status = plc_tag_lock(drvUser->tagIndex);
+  if (status !=0){
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, while locking Tag index: %d libplctag reports: %s\n", 
+                driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
+    return;
+  }
   while (still_pending)
   {
     status = plc_tag_status(drvUser->tagIndex);
@@ -568,17 +623,19 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
     // are asynchronously waiting for all tags in this poller to be read. 
     if (status == PLCTAG_STATUS_PENDING)
     {
+      epicsThreadSleep(0.01);
       timeoutTimeTaken = (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - timeoutStartTime).count())*0.001; //seconds
       // We wait so that we dont spam libplctag with status requests which can cause 100ms freezes
-      epicsThreadSleep(0.01);
       if (timeoutTimeTaken>=drvUser->timeout)
       {
         // If the timeout specified in the records INP/OUT field is hit, we set the status to asynTimeout
         // To be precise, this is the timeout to enter this loop is the time between the last read request for this poller being sent and the current time,
         // this means that the first read requests will have slightly longer than their timeout period for their data to return.
         setParamStatus(asynIndex, asynTimeout);
+        setParamAlarmStatus(asynIndex, asynTimeout);
+        setParamAlarmSeverity(asynIndex, MAJOR_ALARM);
         readFailed = true;
-        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning! Timeout finishing read tag %d: %s. Decrease the polling rate or increase the timeout.\n", 
+        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, Timeout finishing read tag %d: %s. Decrease the polling rate or increase the timeout.\n", 
                     driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
         still_pending = 0;
       }
@@ -589,7 +646,7 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
       setParamAlarmStatus(asynIndex, asynError);
       setParamAlarmSeverity(asynIndex, MAJOR_ALARM);
       readFailed = true;
-      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Error finishing read tag %d: %s\n", 
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, finishing read of tag %d: %s\n", 
                   driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
       still_pending=0;
     }
@@ -600,15 +657,6 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
 
   if (!readFailed)
   {
-    // libplctag has thread protection for single API calls. However there is potential that while we are reading a tag on this poller,
-    // from the plc, we can be simultaneously reading data from the tag in libplctag. This could lead to the data being read, being 
-    // overwritten as it is read, therefor we must lock the tag while reading it.
-    status = plc_tag_lock(drvUser->tagIndex);
-    if (status !=0){
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while trying to lock tag: %s\n", 
-                  driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
-      return;
-    }
     if (datatype == "BOOL")
     {
       epicsUInt32 data;
@@ -785,13 +833,13 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
 
       if ((offset >= bufferSize-1) && !drvUser->optimise)
       {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, attempting to read at an offset beyond tag buffer!\n",
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, attempting to read at an offset beyond tag buffer!\n",
                     driverName, functionName);
         return;
       }
       else if (string_length>string_capacity+1)
       {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error, offset does not point to valid string! Did you set the string size? Is offsetReadSize > str_max_capacity? My asyn parameter ID: %d My tagIndex: %d\n", 
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, offset does not point to valid string! Did you set the string size? Is offsetReadSize > str_max_capacity? My asyn parameter ID: %d My tagIndex: %d\n", 
                     driverName, functionName, asynIndex, drvUser->tagIndex);
         return;
       }
@@ -803,7 +851,7 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
         status = plc_tag_get_string(drvUser->tagIndex, 0, pData, string_length);
       }
       if (status !=0){
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while accessing STRING data: %s\n", 
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Tag index: %d Error occured in libplctag while accessing STRING data: %s\n", 
                     driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
         return;
       }
@@ -826,7 +874,7 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
         else if (correctedString.size()>=(size_t)offset)
             correctedString = correctedString.substr(offset);
         else 
-          asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, the string length < offset+offset_read_size. Printing the entire string instead. Are the str attributes correct?\n", 
+          asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, the string length < offset+offset_read_size. Printing the entire string instead. Are the str attributes correct?\n", 
                     driverName, functionName);
 
         status = setStringParam(asynIndex, correctedString.c_str());
@@ -839,11 +887,20 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
     else if (datatype == "WORD")
     {
       int bytes = 2;
+      int tagSize = plc_tag_get_size(drvUser->tagIndex);
       int size = bytes*sliceSize;
+      if (size+offset <= tagSize){
+        size = tagSize-offset; //read all data after offset
+      }
+      else {
+        size = 0;
+        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, Tag index: %d You are attempting to read beyond the end of the buffer, output has been truncated\n", 
+                    driverName, functionName, drvUser->tagIndex);
+      }
       uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)size);
       status = plc_tag_get_raw_bytes(drvUser->tagIndex, offset, rawData, size);
       if (status !=0){
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while accessing WORD data: %s\n",
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Tag index: %d Error occured in libplctag while accessing WORD data: %s\n",
                     driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
         return;
       }
@@ -869,11 +926,20 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
     else if (datatype == "DWORD")
     {
       int bytes = 4;
+      int tagSize = plc_tag_get_size(drvUser->tagIndex);
       int size = bytes*sliceSize;
+      if (size+offset <= tagSize){
+        size = tagSize-offset; //read all data after offset
+      }
+      else {
+        size = 0;
+        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, Tag index: %d You are attempting to read beyond the end of the buffer, output has been truncated\n", 
+                    driverName, functionName, drvUser->tagIndex);
+      }
       uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)size);
       status = plc_tag_get_raw_bytes(drvUser->tagIndex, offset, rawData, size);
       if (status !=0){
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while accessing DWORD data: %s\n",
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Tag index: %d Error occured in libplctag while accessing DWORD data: %s\n",
                     driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
         return;
       }
@@ -899,11 +965,20 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
     else if (datatype == "LWORD")
     {
       int bytes = 8;
+      int tagSize = plc_tag_get_size(drvUser->tagIndex);
       int size = bytes*sliceSize;
+      if (size+offset <= tagSize){
+        size = tagSize-offset; //read all data after offset
+      }
+      else {
+        size = 0;
+        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, Tag index: %d You are attempting to read beyond the end of the buffer, output has been truncated\n", 
+                    driverName, functionName, drvUser->tagIndex);
+      }
       uint8_t *rawData = (uint8_t *)malloc((size_t)(uint8_t)size);
       status = plc_tag_get_raw_bytes(drvUser->tagIndex, offset, rawData, size);
       if (status !=0){
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while accessing LWORD data: %s\n",
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Tag index: %d Error occured in libplctag while accessing LWORD data: %s\n",
                     driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
         return;
       }
@@ -928,8 +1003,8 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
     }
     else if (datatype == "UDT")
     {
-      int tagSize = plc_tag_get_size(drvUser->tagIndex);
       int bytes = 0;
+      int tagSize = plc_tag_get_size(drvUser->tagIndex);
       if (drvUser->offsetReadSize != 0){
         bytes = drvUser->offsetReadSize; //user may request a byte size rather than reading the entire UDT
       }
@@ -938,13 +1013,13 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
       }
       else {
         bytes = 0;
-        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Tag index: %d You are attempting to read beyond the end of the buffer, output has been truncated\n", 
+        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, Tag index: %d You are attempting to read beyond the end of the buffer, output has been truncated\n", 
                     driverName, functionName, drvUser->tagIndex);
       }
       uint8_t *rawData = (uint8_t *)malloc(bytes * sizeof(uint8_t));
       status = plc_tag_get_raw_bytes(drvUser->tagIndex, offset, rawData, bytes);
       if (status !=0){
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while accessing UDT data: %s\n", 
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Tag index: %d Error occured in libplctag while accessing UDT data: %s\n", 
                     driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
         return;
       }
@@ -965,7 +1040,7 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
       free(pData);
     }
     else if (datatype == "TIME")
-    {
+    { 
       epicsInt64 data;
       data = plc_tag_get_int64(drvUser->tagIndex, offset);
       if (myParam == asynParamOctet) {
@@ -991,25 +1066,27 @@ void drvOmronEIP::readData(omronDrvUser_t* drvUser, int asynIndex)
       }
     }
     setParamStatus(asynIndex, (asynStatus)status);
-    if (status==asynError) {
-      setParamStatus(asynIndex, asynError);
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error occured while updating asyn parameter with asyn ID: %d tagIndex: %d Datatype %s\n", 
-                  driverName, functionName, asynIndex, drvUser->tagIndex, datatype.c_str());
-    }
-    else if (status==asynTimeout) {
-      setParamStatus(asynIndex, asynTimeout);
-      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Timeout occured while updating asyn parameter with asyn ID: %d tagIndex: %d Datatype %s\n", 
-                  driverName, functionName, asynIndex, drvUser->tagIndex, datatype.c_str());
-    }
-    else if (status==asynSuccess){
-      setParamStatus(asynIndex, asynSuccess);
-    }
-    status = plc_tag_unlock(drvUser->tagIndex);
-    if (status !=0){
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Tag index: %d Error occured in libplctag while trying to unlock tag: %s\n", 
-                  driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
-      return;
-    }
+  }
+
+  if (status==asynError) {
+    setParamStatus(asynIndex, asynError);
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err occured while updating asyn parameter with asyn ID: %d tagIndex: %d Datatype %s\n", 
+                driverName, functionName, asynIndex, drvUser->tagIndex, datatype.c_str());
+  }
+  else if (status==asynTimeout) {
+    setParamStatus(asynIndex, asynTimeout);
+    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, Timeout occured while updating asyn parameter with asyn ID: %d tagIndex: %d Datatype %s\n", 
+                driverName, functionName, asynIndex, drvUser->tagIndex, datatype.c_str());
+  }
+  else if (status==asynSuccess){
+    setParamStatus(asynIndex, asynSuccess);
+    setParamAlarmStatus(asynIndex, asynSuccess);
+    setParamAlarmSeverity(asynIndex, NO_ALARM);
+  }
+  status = plc_tag_unlock(drvUser->tagIndex);
+  if (status !=0){
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Tag index: %d Error occured in libplctag while trying to unlock tag: %s\n", 
+                driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
   }
   return;
 }
@@ -1031,15 +1108,17 @@ void drvOmronEIP::readPoller()
       pPoller->myTagCount_ +=1;
   }
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Starting poller: %s with interval: %f\n", driverName, functionName, threadName.c_str(), interval);
+  std::chrono::time_point startTime = std::chrono::system_clock::now();
   while (!omronExiting_)
   {
-    double waitTime = interval - ((double)timeTaken / 1000000);
-    auto startTime = std::chrono::system_clock::now();
+    startTime = std::chrono::system_clock::now();
+    double waitTime = interval - ((double)timeTaken / 1E9);
     if (waitTime >=0) {
       epicsThreadSleep(waitTime);
     }
     else {
-      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning! Reads taking longer than requested! %f > %f\n", driverName, functionName, ((double)timeTaken / 1000000), interval);
+      waitTime=0;
+      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, Reads taking longer than requested! %f > %f\n", driverName, functionName, ((double)timeTaken / 1E9), interval);
     }
 
     for (auto x : tagMap_)
@@ -1047,9 +1126,9 @@ void drvOmronEIP::readPoller()
       if (x.second->pollerName == threadName && x.second->readFlag == true)
       {
         asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Reading tag: %d with polling interval: %f seconds\n", driverName, functionName, x.second->tagIndex, interval);
-        plc_tag_read(x.second->tagIndex, 0); // read from plc as fast as possible, we will check status and timeouts later
-        // Split up read requests within timing interval
-        if (interval >= 1 && pPoller->myTagCount_>1){
+        plc_tag_read(x.second->tagIndex, 0); // read from plc, we will check status and timeouts later
+        // We sleep to split up read requests within timing interval, otherwise we can get traffic jams and missed polling intervals
+        if (pPoller->myTagCount_>1 && pPoller->spreadRequests_){
           pollingDelay = (interval-0.2*interval)/pPoller->myTagCount_;
           epicsThreadSleep(pollingDelay);
         }
@@ -1066,12 +1145,12 @@ void drvOmronEIP::readPoller()
 
     status = callParamCallbacks();
     if (status!=asynSuccess) {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error performing asyn callbacks on read poller: %s\n", driverName, functionName, threadName.c_str());
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, while performing asyn callbacks on read poller: %s\n", driverName, functionName, threadName.c_str());
     }
-    auto endTime = std::chrono::system_clock::now();
-    timeTaken = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() - waitTime*1000000;
+    std::chrono::time_point endTime = std::chrono::system_clock::now();
+    timeTaken = std::chrono::duration_cast<std::chrono::nanoseconds>(endTime - startTime).count() - waitTime*1E9;
     if (timeTaken>0)
-      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Poller: %s finished processing in: %d msec\n\n", driverName, functionName, threadName.c_str(), timeTaken/1000);
+      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Poller: %s finished processing in: %d msec\n\n", driverName, functionName, threadName.c_str(), (int)(timeTaken/1E6));
   }
 }
 
@@ -1080,35 +1159,50 @@ asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, si
   const char * functionName = "writeInt8Array";
   omronDrvUser_t *drvUser = tagMap_.at(pasynUser->reason);
   int tagIndex = drvUser->tagIndex;
-  int offset = drvUser->tagOffset;
+  size_t offset = drvUser->tagOffset;
   std::string datatype = drvUser->dataType.first;
   size_t sliceSize = drvUser->sliceSize;
   int status = 0;
   size_t tagSize = plc_tag_get_size(tagIndex);
   double timeout = pasynUser->timeout*1000;
+  bool writeOutOfBounds = 0;
   if (nElements>tagSize)
   {
     // tagSize is calculated by the library based off the initial read of the tag, the user should not try and write more data than this
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s libplctag tag index: %d. Request to write more characters than can fit into the tag! nElements>tagSize:  %ld > %ld.\n",
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, with libplctag tag index: %d. Request to write more characters than can fit into the tag! nElements>tagSize:  %ld > %ld.\n",
                driverName, functionName, tagIndex, nElements, tagSize); 
     return asynError;
   }
   else if (nElements<sliceSize){
-    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize:  %ld < %ld.\n",
+    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, with libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize:  %ld < %ld.\n",
                 driverName, functionName, tagIndex, nElements, sliceSize); 
   }
   if (datatype == "UDT")
   {
-    uint8_t *pOutput = (uint8_t *)malloc(nElements * sizeof(uint8_t));
-    memcpy(pOutput, value, nElements);
-    status = plc_tag_set_raw_bytes(tagIndex, offset, pOutput ,nElements);
+    uint8_t *pOutput = (uint8_t *)malloc(tagSize * sizeof(uint8_t));
+    //Copy data to UDT, any values which are not defined, are written as 0
+    for (size_t i = 0; i < tagSize; i++)
+    {
+      if (i>=offset && i< offset+nElements){
+        pOutput[i] = value[i-offset];
+      }
+      else {
+        pOutput[i] = 0;
+        writeOutOfBounds=1;
+      }
+    }
+
+    if (writeOutOfBounds)
+      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, with libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize*bytes:  %ld < %ld.\n",
+                driverName, functionName, tagIndex, nElements, tagSize); 
+    status = plc_tag_set_raw_bytes(tagIndex, 0, pOutput ,tagSize);
     if (status < 0) {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;
     }
     status = plc_tag_write(tagIndex, timeout);
     if (status < 0) {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;
     }
     free(pOutput);
@@ -1121,13 +1215,13 @@ asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, si
     else if (datatype == "DWORD") {bytes = 4;}
     else if (datatype == "LWORD") {bytes = 8;}
 
-    if (nElements>sliceSize*bytes){
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s libplctag tag index: %d. Request to write more data than specified in sliceSize! nElements>sliceSize*bytes:  %ld > %ld.\n",
+    if (nElements+offset>sliceSize*bytes){
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, with libplctag tag index: %d. Request to write more data than specified in sliceSize! nElements>sliceSize*bytes:  %ld > %ld.\n",
                 driverName, functionName, tagIndex, nElements, sliceSize*bytes); 
       return asynError;
     }
-    else if (nElements<sliceSize*bytes){
-      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize*bytes:  %ld < %ld.\n",
+    else if (nElements<sliceSize*bytes-offset){
+      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, with libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize*bytes:  %ld < %ld.\n",
                   driverName, functionName, tagIndex, nElements, sliceSize*bytes); 
     }
 
@@ -1137,21 +1231,26 @@ asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, si
     {
       n = bytes-1;
       for (size_t j = 0; j < bytes; j++){
-        if (nElements<=i)
-          pOutput[j+i*bytes] = 0;
+        if (nElements<=i){
+          pOutput[j+i*bytes+offset] = 0;
+          writeOutOfBounds = 1;
+        }
         else
-          pOutput[j+i*bytes] = value[n+i*bytes];
+          pOutput[j+i*bytes+offset] = value[n+i*bytes];
         n--;
       }
     }
-    status = plc_tag_set_raw_bytes(tagIndex, offset, pOutput ,sliceSize);
+    if (writeOutOfBounds)
+      asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, with libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize*bytes:  %ld < %ld.\n",
+                driverName, functionName, tagIndex, nElements, tagSize); 
+    status = plc_tag_set_raw_bytes(tagIndex, 0, pOutput ,sliceSize*bytes);
     if (status < 0) {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;
     }
     status = plc_tag_write(tagIndex, timeout);
     if (status < 0) {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;
     }
     free(pOutput);
@@ -1166,13 +1265,13 @@ asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, si
       else
         status = plc_tag_set_int8(tagIndex,offset + i, *(value+i)); 
       if (status < 0) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
         return asynError;
       }
     }
     status = plc_tag_write(tagIndex, timeout);
     if (status < 0) {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;
     }
     return asynSuccess;
@@ -1186,19 +1285,19 @@ asynStatus drvOmronEIP::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, si
       else
         status = plc_tag_set_uint8(tagIndex,offset + i, *(value+i)); 
       if (status < 0) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
         return asynError;
       }
     }
     status = plc_tag_write(tagIndex, timeout);
     if (status < 0) {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;
     }
     return asynSuccess;
   }
   else {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
     return asynError;
   }
 }
@@ -1214,12 +1313,12 @@ asynStatus drvOmronEIP::writeInt16Array(asynUser *pasynUser, epicsInt16 *value, 
   int status = 0;
   double timeout = pasynUser->timeout*1000;
   if (nElements>sliceSize){
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s libplctag tag index: %d. Request to write more values than the configured sliceSize! nElements>sliceSize:  %ld > %ld.\n",
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, with libplctag tag index: %d. Request to write more values than the configured sliceSize! nElements>sliceSize:  %ld > %ld.\n",
                driverName, functionName, tagIndex, nElements, sliceSize); 
     return asynError;
   }
   else if (nElements<sliceSize){
-    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize:  %ld < %ld.\n",
+    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, with libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize:  %ld < %ld.\n",
                 driverName, functionName, tagIndex, nElements, sliceSize); 
   }
 
@@ -1232,7 +1331,7 @@ asynStatus drvOmronEIP::writeInt16Array(asynUser *pasynUser, epicsInt16 *value, 
       else
         status = plc_tag_set_int16(tagIndex,offset + i*2, *(value+i)); 
       if (status < 0) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
         return asynError;
       }
     }
@@ -1246,19 +1345,19 @@ asynStatus drvOmronEIP::writeInt16Array(asynUser *pasynUser, epicsInt16 *value, 
       else
         status = plc_tag_set_uint16(tagIndex,offset + i*2, *(value+i)); 
       if (status < 0) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
         return asynError;
       }
     }
   }
   else {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
     return asynError;
   }
 
   status = plc_tag_write(tagIndex, timeout);
   if (status < 0) {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
     return asynError;
   }
   return asynSuccess;
@@ -1275,12 +1374,12 @@ asynStatus drvOmronEIP::writeInt32Array(asynUser *pasynUser, epicsInt32 *value, 
   int status = 0;
   double timeout = pasynUser->timeout*1000;
   if (nElements>sliceSize){
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s libplctag tag index: %d. Request to write more values than the configured sliceSize! nElements>sliceSize:  %ld > %ld.\n",
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, libplctag tag index: %d. Request to write more values than the configured sliceSize! nElements>sliceSize:  %ld > %ld.\n",
                driverName, functionName, tagIndex, nElements, sliceSize); 
     return asynError;
   }
   else if (nElements<sliceSize){
-    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize:  %ld < %ld.\n",
+    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize:  %ld < %ld.\n",
                 driverName, functionName, tagIndex, nElements, sliceSize); 
   }
 
@@ -1293,7 +1392,7 @@ asynStatus drvOmronEIP::writeInt32Array(asynUser *pasynUser, epicsInt32 *value, 
       else
         status = plc_tag_set_int32(tagIndex,offset + i*4, *(value+i)); 
       if (status < 0) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
         return asynError;
       }
     }
@@ -1307,19 +1406,19 @@ asynStatus drvOmronEIP::writeInt32Array(asynUser *pasynUser, epicsInt32 *value, 
       else
         status = plc_tag_set_uint32(tagIndex,offset + i*4, *(value+i)); 
       if (status < 0) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
         return asynError;
       }
     }
   }
   else {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
     return asynError;
   }
 
   status = plc_tag_write(tagIndex, timeout);
   if (status < 0) {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
     return asynError;
   }
   return asynSuccess;
@@ -1336,12 +1435,12 @@ asynStatus drvOmronEIP::writeFloat32Array(asynUser *pasynUser, epicsFloat32 *val
   int status = 0;
   double timeout = pasynUser->timeout*1000;
   if (nElements>sliceSize){
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s libplctag tag index: %d. Request to write more values than the configured sliceSize! nElements>sliceSize:  %ld > %ld.\n",
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, libplctag tag index: %d. Request to write more values than the configured sliceSize! nElements>sliceSize:  %ld > %ld.\n",
                driverName, functionName, tagIndex, nElements, sliceSize); 
     return asynError;
   }
   else if (nElements<sliceSize){
-    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize:  %ld < %ld.\n",
+    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize:  %ld < %ld.\n",
                 driverName, functionName, tagIndex, nElements, sliceSize); 
   }
 
@@ -1354,19 +1453,19 @@ asynStatus drvOmronEIP::writeFloat32Array(asynUser *pasynUser, epicsFloat32 *val
       else
         status = plc_tag_set_float32(tagIndex,offset + i*4, *(value+i)); 
       if (status < 0) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
         return asynError;
       }
     }
   }
   else {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
     return asynError;
   }
 
   status = plc_tag_write(tagIndex, timeout);
   if (status < 0) {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
     return asynError;
   }
   return asynSuccess;
@@ -1383,12 +1482,12 @@ asynStatus drvOmronEIP::writeFloat64Array(asynUser *pasynUser, epicsFloat64 *val
   int status = 0;
   double timeout = pasynUser->timeout*1000;
   if (nElements>sliceSize){
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s libplctag tag index: %d. Request to write more values than the configured sliceSize! nElements>sliceSize:  %ld > %ld.\n",
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, libplctag tag index: %d. Request to write more values than the configured sliceSize! nElements>sliceSize:  %ld > %ld.\n",
                driverName, functionName, tagIndex, nElements, sliceSize); 
     return asynError;
   }
   else if (nElements<sliceSize){
-    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize:  %ld < %ld.\n",
+    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, libplctag tag index: %d. Request to write less values than the configured sliceSize, missing data will be written as null. nElements<sliceSize:  %ld < %ld.\n",
                 driverName, functionName, tagIndex, nElements, sliceSize); 
   }
 
@@ -1401,19 +1500,19 @@ asynStatus drvOmronEIP::writeFloat64Array(asynUser *pasynUser, epicsFloat64 *val
       else
         status = plc_tag_set_float64(tagIndex,offset + i*8, *(value+i)); 
       if (status < 0) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
         return asynError;
       }
     }
   }
   else {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
     return asynError;
   }
 
   status = plc_tag_write(tagIndex, timeout);
   if (status < 0) {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
     return asynError;
   }
   return asynSuccess;
@@ -1432,18 +1531,18 @@ asynStatus drvOmronEIP::writeUInt32Digital(asynUser *pasynUser, epicsUInt32 valu
   {
     status = plc_tag_set_bit(tagIndex, offset, value);
     if (status < 0) {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;
     }
     status = plc_tag_write(tagIndex, timeout);
     if (status < 0) {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;
     }
     return asynSuccess;
   }
   else {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
     return asynError;
   }
 }
@@ -1470,17 +1569,17 @@ asynStatus drvOmronEIP::writeInt32(asynUser *pasynUser, epicsInt32 value)
   else if (datatype == "UDINT")
     status = plc_tag_set_uint32(tagIndex, offset, (epicsUInt32)value);
   else {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
     return asynError;
   }
 
   if (status < 0) {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
     return asynError;
   }
   status = plc_tag_write(tagIndex, timeout);
   if (status < 0) {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
     return asynError;
   }
   return asynSuccess;
@@ -1500,17 +1599,17 @@ asynStatus drvOmronEIP::writeInt64(asynUser *pasynUser, epicsInt64 value)
   else if (datatype == "ULINT")
     status = plc_tag_set_int64(tagIndex, offset, (epicsUInt64)value);
   else {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
     return asynError;
   }
   
   if (status < 0) {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
     return asynError;
   }
   status = plc_tag_write(tagIndex, timeout);
   if (status < 0) {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
     return asynError;
   }
   return asynSuccess;
@@ -1530,17 +1629,17 @@ asynStatus drvOmronEIP::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
   else if (datatype == "LREAL")
     status = plc_tag_set_float64(tagIndex, offset, value);
   else {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
     return asynError;
   }
 
   if (status < 0) {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
     return asynError;
   }
   status = plc_tag_write(tagIndex, timeout);
   if (status < 0) {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
     return asynError;
   }
   return asynSuccess;
@@ -1572,28 +1671,28 @@ asynStatus drvOmronEIP::writeOctet(asynUser *pasynUser, const char *value, size_
     }
     status = plc_tag_set_size(tagIndex, string_capacity + 2);     // Allow room for string length
     if (status < 0) {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Resizing libplctag tag buffer returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Resizing libplctag tag buffer returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;
     }
     status = plc_tag_set_string(tagIndex, offset, stringOut); // Set the data
     if (status < 0) {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;
     }
     status = plc_tag_set_size(tagIndex, nChars + 2);              // Reduce the tag buffer to delete any data beyond the string we pass in
     if (status < 0) {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Resizing libplctag tag buffer returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Resizing libplctag tag buffer returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;
     }
     status = plc_tag_write(tagIndex, timeout);
     if (status < 0) {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Write attempt returned %s\n", driverName, functionName, plc_tag_decode_error(status)); 
       return asynError;
     }
     memcpy(nActual, &nChars, sizeof(size_t));
   }
   else {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid asyn interface for dtype: %s\n", driverName, functionName, datatype.c_str()); 
     return asynError;
   }
   return asynSuccess;
@@ -1665,7 +1764,9 @@ extern "C"
 
   /* drvOmronEIPConfigPoller() - Creates a new poller with user provided settings and adds it to the driver */
   asynStatus drvOmronEIPConfigPoller(const char *portName,
-                                  const char *pollerName, double updateRate)
+                                    const char *pollerName, 
+                                    double updateRate,
+                                    int spreadRequests)
   {
     drvOmronEIP* pDriver = (drvOmronEIP*)findAsynPortDriver(portName);
     if (!pDriver){
@@ -1674,7 +1775,7 @@ extern "C"
     }
     else
     {
-      return pDriver->createPoller(portName, pollerName, updateRate); 
+      return pDriver->createPoller(portName, pollerName, updateRate, spreadRequests); 
     }
   }
 
@@ -1683,17 +1784,19 @@ extern "C"
   static const iocshArg pollerConfigArg0 = {"Port name", iocshArgString};
   static const iocshArg pollerConfigArg1 = {"Poller name", iocshArgString};
   static const iocshArg pollerConfigArg2 = {"Update rate", iocshArgDouble};
+  static const iocshArg pollerConfigArg3 = {"Spread requests", iocshArgInt};
 
-  static const iocshArg *const drvOmronEIPConfigPollerArgs[3] = {
+  static const iocshArg *const drvOmronEIPConfigPollerArgs[4] = {
       &pollerConfigArg0,
       &pollerConfigArg1,
-      &pollerConfigArg2};
+      &pollerConfigArg2,
+      &pollerConfigArg3};
 
-  static const iocshFuncDef drvOmronEIPConfigPollerFuncDef = {"drvOmronEIPConfigPoller", 3, drvOmronEIPConfigPollerArgs};
+  static const iocshFuncDef drvOmronEIPConfigPollerFuncDef = {"drvOmronEIPConfigPoller", 4, drvOmronEIPConfigPollerArgs};
 
   static void drvOmronEIPConfigPollerCallFunc(const iocshArgBuf *args)
   {
-    drvOmronEIPConfigPoller(args[0].sval, args[1].sval, args[2].dval);
+    drvOmronEIPConfigPoller(args[0].sval, args[1].sval, args[2].dval, args[3].ival);
   }
 
   /*
