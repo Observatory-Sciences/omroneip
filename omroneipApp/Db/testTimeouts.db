@@ -1,0 +1,7 @@
+#Set very quick timeout which should timeout every read and never get set
+record(longin, "$(P)readInt8") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP, "@asyn($(PORT), 0, 0.001)@$(POLLER) testSINT SINT 1 none none")
+}
+

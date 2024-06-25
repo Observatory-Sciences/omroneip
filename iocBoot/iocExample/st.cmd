@@ -12,16 +12,16 @@ dbLoadDatabase("dbd/omroneipApp.dbd")
 omroneipApp_registerRecordDeviceDriver(pdbbase)
 
 #drvOmronEIPConfigure(driverPortName, gateway, route_path, plc, libplctag_debug, timezone_offset) 
-drvOmronEIPConfigure("omronDriver", "10.2.2.57", "18,10.2.2.57","omron-njnx", "0", "0")
+drvOmronEIPConfigure("omronDriver", "10.2.2.57", "18,10.2.2.57","omron-njnx", 0, 0)
 
 #Warning and Error logging
 #asynSetTraceMask omronDriver 0 0x0021
 #Warning, error and flow logging
 asynSetTraceMask omronDriver 0 0x0031
 
-#drvOmronEIPConfigPoller(driverPortName, pollerName, updateRate)
-drvOmronEIPConfigPoller("omronDriver", "fastPoller", 1)
-drvOmronEIPConfigPoller("omronDriver", "slowPoller", 5)
+#drvOmronEIPConfigPoller(driverPortName, pollerName, updateRate, spreadRequests)
+drvOmronEIPConfigPoller("omronDriver", "fastPoller", 1, 1)
+drvOmronEIPConfigPoller("omronDriver", "slowPoller", 5, 1)
 
 dbLoadRecords("db/example.db", "P=${P}, R=example:, PORT=omronDriver, POLLER1=fastPoller, POLLER2=slowPoller")
 

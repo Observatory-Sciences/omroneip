@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--Saved on 2024-06-24 13:49:26 by epics-dev-->
+<display version="2.0.0">
+  <name>omroneip_dataTypes_arrays.bob</name>
+  <macros>
+    <P>omronEIP:</P>
+  </macros>
+  <widget type="label" version="2.0.0">
+    <name>Label_21</name>
+    <text>Bool</text>
+    <x>80</x>
+    <y>20</y>
+    <width>50</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_22</name>
+    <text>Int8</text>
+    <x>80</x>
+    <y>80</y>
+    <width>50</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_23</name>
+    <text>UInt8</text>
+    <x>80</x>
+    <y>260</y>
+    <width>50</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_24</name>
+    <text>Int16</text>
+    <x>80</x>
+    <y>140</y>
+    <width>50</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_25</name>
+    <text>UInt16</text>
+    <x>80</x>
+    <y>320</y>
+    <width>50</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_26</name>
+    <text>UInt32</text>
+    <x>80</x>
+    <y>380</y>
+    <width>50</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_27</name>
+    <text>Int32</text>
+    <x>80</x>
+    <y>200</y>
+    <width>50</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_28</name>
+    <text>Float32</text>
+    <x>80</x>
+    <y>440</y>
+    <width>60</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_29</name>
+    <text>Float64</text>
+    <x>80</x>
+    <y>500</y>
+    <width>60</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_30</name>
+    <text>Word</text>
+    <x>80</x>
+    <y>560</y>
+    <width>60</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_31</name>
+    <text>DWord</text>
+    <x>80</x>
+    <y>620</y>
+    <width>60</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_32</name>
+    <text>LWord</text>
+    <x>80</x>
+    <y>680</y>
+    <width>60</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_33</name>
+    <text>UDT</text>
+    <x>80</x>
+    <y>740</y>
+    <width>60</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_6</name>
+    <pv_name>$(P)readInt8Array</pv_name>
+    <x>160</x>
+    <y>80</y>
+    <width>610</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_14</name>
+    <pv_name>$(P)writeInt8Array</pv_name>
+    <x>160</x>
+    <y>110</y>
+    <width>610</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_8</name>
+    <pv_name>$(P)readInt16Array</pv_name>
+    <x>160</x>
+    <y>140</y>
+    <width>610</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_15</name>
+    <pv_name>$(P)writeInt16Array</pv_name>
+    <x>160</x>
+    <y>170</y>
+    <width>610</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_11</name>
+    <pv_name>$(P)readBoolArray</pv_name>
+    <x>160</x>
+    <y>20</y>
+    <width>610</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_17</name>
+    <pv_name>$(P)writeBoolArray</pv_name>
+    <x>160</x>
+    <y>50</y>
+    <width>610</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_12</name>
+    <pv_name>$(P)readInt32Array</pv_name>
+    <x>160</x>
+    <y>200</y>
+    <width>610</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_18</name>
+    <pv_name>$(P)writeInt32Array</pv_name>
+    <x>160</x>
+    <y>230</y>
+    <width>610</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_13</name>
+    <pv_name>$(P)readUInt8Array</pv_name>
+    <x>160</x>
+    <y>260</y>
+    <width>610</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_19</name>
+    <pv_name>$(P)writeUInt8Array</pv_name>
+    <x>160</x>
+    <y>290</y>
+    <width>610</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_14</name>
+    <pv_name>$(P)readUInt16Array</pv_name>
+    <x>160</x>
+    <y>320</y>
+    <width>610</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_20</name>
+    <pv_name>$(P)writeUInt16Array</pv_name>
+    <x>160</x>
+    <y>350</y>
+    <width>610</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_15</name>
+    <pv_name>$(P)readUInt32Array</pv_name>
+    <x>160</x>
+    <y>380</y>
+    <width>610</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_21</name>
+    <pv_name>$(P)writeUInt32Array</pv_name>
+    <x>160</x>
+    <y>410</y>
+    <width>610</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_16</name>
+    <pv_name>$(P)readFloat32Array</pv_name>
+    <x>160</x>
+    <y>440</y>
+    <width>610</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_22</name>
+    <pv_name>$(P)writeFloat32Array</pv_name>
+    <x>160</x>
+    <y>470</y>
+    <width>610</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_17</name>
+    <pv_name>$(P)readFloat64Array</pv_name>
+    <x>160</x>
+    <y>500</y>
+    <width>610</width>
+    <precision>8</precision>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_23</name>
+    <pv_name>$(P)writeFloat64Array</pv_name>
+    <x>160</x>
+    <y>530</y>
+    <width>610</width>
+    <precision>8</precision>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_18</name>
+    <pv_name>$(P)readWordArray</pv_name>
+    <x>160</x>
+    <y>560</y>
+    <width>1270</width>
+    <format>4</format>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_24</name>
+    <pv_name>$(P)writeWordArray</pv_name>
+    <x>160</x>
+    <y>590</y>
+    <width>1270</width>
+    <format>1</format>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_25</name>
+    <pv_name>$(P)writeDWordArray</pv_name>
+    <x>160</x>
+    <y>650</y>
+    <width>1270</width>
+    <format>1</format>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_19</name>
+    <pv_name>$(P)readDWordArray</pv_name>
+    <x>160</x>
+    <y>620</y>
+    <width>1270</width>
+    <format>4</format>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_26</name>
+    <pv_name>$(P)writeLWordArray</pv_name>
+    <x>160</x>
+    <y>710</y>
+    <width>1270</width>
+    <format>1</format>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_20</name>
+    <pv_name>$(P)readLWordArray</pv_name>
+    <x>160</x>
+    <y>680</y>
+    <width>1270</width>
+    <format>4</format>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_27</name>
+    <pv_name>$(P)writeUDTArray</pv_name>
+    <x>160</x>
+    <y>810</y>
+    <width>1270</width>
+    <height>70</height>
+    <format>1</format>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_21</name>
+    <pv_name>$(P)readUDTArray</pv_name>
+    <x>160</x>
+    <y>740</y>
+    <width>1270</width>
+    <height>60</height>
+    <format>4</format>
+  </widget>
+</display>

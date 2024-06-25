@@ -1,0 +1,22 @@
+#Some of these are fine, some work but give unintended results, others report errors and abort the import
+#struct1 INT,LINT,REAL
+#struct2 INT LINT REAL
+#struct3.INT.LINT.REAL
+#struct4,bad,123,?!!!
+#struct5,INT,LINT,STRING[22x],INT
+#struct6,INT,LINT,STRING[3333333333333333333333333333333333333333333333333333333333333333333]
+#struct7,INT,"ARRAY[1..10] OF DINT",LINT
+#struct8,INT,LINT,
+#struct9,"ARRAY[bad?] OF INT",LINT
+#struct10,"ARRAY[-1..10] OF INT",LINT
+#struct11,"ARRAY[10..3] OF INT"
+#struct12,"ARRAY[1..10] OF bad"
+#struct13, Array[1..10] OF INT
+#struct14,int,real,lint
+#struct15,struct7,BOOL
+#struct16,INT,LINT,STRING[x],INT
+#struct17,INT,LINT,STRING[222],INT
+#testArrayStruct,"ARRAY[1..1980] OF SINT"
+testTimeStruct2,BOOL,DINT,INT,TIME,LREAL
+testArrayStruct2,REAL,"ARRAY[1..100] OF LREAL",REAL,"ARRAY[1..80] OF BOOL","ARRAY[1..5] OF testTimeStruct2"
+

@@ -61,13 +61,13 @@ record(waveform, "$(P)readInt32Array") {
 record(ai, "$(P)readInt64") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[$(I)].ZTC.SampleTimeL LINT 1 none none")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[$(I)].ZTC.SampleTimeL LINT 1 UDT801_ZTC[13] &optimise=1")
 }
 
 record(longin, "$(P)readUInt8") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testUSINT USINT 1 none none")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testUSINT USINT 1 none &allow_packing=0")
 }
 
 record(waveform, "$(P)readUInt8Array") {
@@ -81,7 +81,7 @@ record(waveform, "$(P)readUInt8Array") {
 record(longin, "$(P)readUInt16") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels[$(I)].status UINT 1 none none")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) statusChannels[$(I)].status UINT 1 StatusChannel[0] &optimise=1")
 }
 
 record(waveform, "$(P)readUInt16Array") {
@@ -116,15 +116,7 @@ record(ai, "$(P)readUInt64") {
 record(ai, "$(P)readFloat32") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)].PVValue REAL 1 none none")
-}
-
-record(waveform, "$(P)readFloat32Array") {
-    field(SCAN, "I/O Intr")
-    field(FTVL, "FLOAT")
-    field(DTYP, "asynFloat32ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) floatArray[1] REAL 10 none none")
-    field(NELM, "10")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)].PVValue REAL 1 PVData[2] &optimise=1")
 }
 
 record(ai, "$(P)readFloat64") {
@@ -133,18 +125,10 @@ record(ai, "$(P)readFloat64") {
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testLREAL LREAL 1 none none")
 }
 
-record(waveform, "$(P)readFloat64Array") {
-    field(SCAN, "I/O Intr")
-    field(FTVL, "DOUBLE")
-    field(DTYP, "asynFloat64ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) doubleArray[1] LREAL 10 none none")
-    field(NELM, "10")
-}
-
 record(lsi, "$(P)readString") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)].PVName STRING 1 none none")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)].PVName STRING 1 PVData[0] &optimise=1")
     field(SIZV, "61")
 }
 
@@ -152,7 +136,7 @@ record(waveform, "$(P)readWord") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[$(I)].ZTC.ErrorID WORD 1 none none")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) Zones[$(I)].ZTC.ErrorID WORD 1 UDT801_ZTC[28] &optimise=1")
     field(NELM, "2")
 }
 
@@ -200,16 +184,8 @@ record(waveform, "$(P)readUDT") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] UDT 1 none none")
-    field(NELM, "204")
-}
-
-record(waveform, "$(P)readUDTArray") {
-    field(SCAN, "I/O Intr")
-    field(FTVL, "UCHAR")
-    field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] UDT 3 none none")
-    field(NELM, "612")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)] UDT 1 none none")
+    field(NELM, "1996")
 }
 
 #This essentially just reads pvName.PVDesc
@@ -217,19 +193,13 @@ record(waveform, "$(P)readUDT2") {
     field(SCAN, "I/O Intr")
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] UDT 1 60 &UDT_read_size=40")
-    field(NELM, "204")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[$(I)] UDT 1 60 &UDT_read_size=40")
+    field(NELM, "1996")
 }
 
-#Read string and print in nice format
+#Not currently working as the Omron PLC seems to be returning TIME data as TIME_NSEC data which libplctag doesnt understand
 record(stringin, "$(P)readTime"){
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime TIME 1 none &read_as_string=1")
-}
-
-record(ai, "$(P)readTime2"){
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynInt64")
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTime TIME 1 none none")
 }

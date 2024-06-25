@@ -27,7 +27,7 @@ record(waveform, "$(P)writeInt8Array") {
 
 record(longout, "$(P)writeInt16") {
     field(DTYP, "asynInt32")
-    field(OUT, "@asyn($(PORT), 0, 1)transportArray1[1] INT 1 none none")
+    field(OUT, "@asyn($(PORT), 0, 1)transportArray1[$(I)] INT 1 none none")
 }
 
 record(waveform, "$(P)writeInt16Array") {
@@ -102,7 +102,7 @@ record(ao, "$(P)writeFloat32") {
     field(OUT, "@asyn($(PORT), 0, 1)ISISTestMultiple[1].PVValue REAL 1 none none")
 }
 
-record(waveform, "$(P)writeFloat32Array") {
+record(waveform, "$(P)writeFloatArray") {
     field(FTVL, "FLOAT")
     field(DTYP, "asynFloat32ArrayOut")
     field(INP, "@asyn($(PORT), 0, 1)floatArray[1] REAL 10 none none")
@@ -114,7 +114,7 @@ record(ao, "$(P)writeFloat64") {
     field(OUT, "@asyn($(PORT), 0, 1)testLREAL LREAL 1 none none")
 }
 
-record(waveform, "$(P)writeFloat64Array") {
+record(waveform, "$(P)writeDoubleArray") {
     field(FTVL, "DOUBLE")
     field(DTYP, "asynFloat64ArrayOut")
     field(INP, "@asyn($(PORT), 0, 1)doubleArray[1] LREAL 10 none none")
@@ -131,7 +131,7 @@ record(lso, "$(P)writeString") {
 record(waveform, "$(P)writeWord") {
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayOut")
-    field(INP, "@asyn($(PORT), 0, 1)Zones[1].ZTC.ErrorID WORD 1 none none")
+    field(INP, "@asyn($(PORT), 0, 1)Zones[$(I)].ZTC.ErrorID WORD 1 none none")
     field(NELM, "2")
 }
 
@@ -174,24 +174,27 @@ record(waveform, "$(P)writeUDT") {
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayOut")
     field(INP, "@asyn($(PORT), 0, 1)ISISTestMultiple[1] UDT 1 none none")
-    field(NELM, "204")
+    field(NELM, "1996")
 }
 
 #This writes an array of 3 UDTs, each 204 bytes long.
 #The offset of 408 means that anything entered into the waveform, writes to the third UDT
-#Any values not written to the waveform will be filled in with zeroes. As we set an offset of 408, this means that the first
-#408 values will be written as zero, then 3 values will be written starting at 408 and then the rest of the data is written as zero
+#Any values not written to the waveform will be filled in with the values currently in the tag in libplctag
+#This means that if another libplctag tag has written to the PLC and overwritten the UDT, as this data
+#Is not reflected in this tag locally, we can potentially overwrite what was written to the UDT
+#With the old values remaining in this libplctag tag.
 record(waveform, "$(P)writeUDTArray") {
     field(FTVL, "UCHAR")
     field(DTYP, "asynInt8ArrayOut")
     field(INP, "@asyn($(PORT), 0, 1)ISISTestMultiple[1] UDT 3 408 none")
-    field(NELM, "3")
+    field(NELM, "612")
 }
 
-#Write Int64 timestamp value
-record(ao, "$(P)writeTime"){
-    field(DTYP, "asynInt64")
-    field(OUT, "@asyn($(PORT), 0, 1)testTime TIME 1 none none")
-}
+#Not currently working as the Omron PLC seems to be returning TIME data as TIME_NSEC data which libplctag doesnt understand
+#record(stringout, "$(P)writeTime"){
+#    field(DTYP, "asynOctetWrite")
+#    field(OUT, "@asyn($(PORT), 0, 1)testTime TIME 1 none none")
+#    info(asyn:INITIAL_READBACK, "1")
+#}
 
 

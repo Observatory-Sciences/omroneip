@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--Saved on 2024-06-13 16:20:45 by epics-dev-->
+<!--Saved on 2024-06-24 11:47:31 by epics-dev-->
 <display version="2.0.0">
   <name>omroneip_datatypes</name>
   <macros>
@@ -44,19 +44,19 @@
   <widget type="textupdate" version="2.0.0">
     <name>Text Update_3</name>
     <pv_name>$(P)readUInt16</pv_name>
-    <x>400</x>
+    <x>430</x>
     <y>130</y>
   </widget>
   <widget type="textupdate" version="2.0.0">
     <name>Text Update_4</name>
     <pv_name>$(P)readUInt32</pv_name>
-    <x>400</x>
+    <x>430</x>
     <y>160</y>
   </widget>
   <widget type="textupdate" version="2.0.0">
     <name>Text Update_5</name>
     <pv_name>$(P)readUInt64</pv_name>
-    <x>400</x>
+    <x>430</x>
     <y>190</y>
   </widget>
   <widget type="textupdate" version="2.0.0">
@@ -129,21 +129,21 @@
   <widget type="label" version="2.0.0">
     <name>Label_7</name>
     <text>UInt16</text>
-    <x>350</x>
+    <x>380</x>
     <y>130</y>
     <width>50</width>
   </widget>
   <widget type="label" version="2.0.0">
     <name>Label_8</name>
     <text>UInt32</text>
-    <x>350</x>
+    <x>380</x>
     <y>160</y>
     <width>50</width>
   </widget>
   <widget type="label" version="2.0.0">
     <name>Label_9</name>
     <text>UInt64</text>
-    <x>350</x>
+    <x>380</x>
     <y>190</y>
     <width>50</width>
   </widget>
@@ -224,19 +224,19 @@
   <widget type="textentry" version="3.0.0">
     <name>Text Entry_3</name>
     <pv_name>$(P)writeUInt16</pv_name>
-    <x>510</x>
+    <x>540</x>
     <y>130</y>
   </widget>
   <widget type="textentry" version="3.0.0">
     <name>Text Entry_4</name>
     <pv_name>$(P)writeUInt32</pv_name>
-    <x>510</x>
+    <x>540</x>
     <y>160</y>
   </widget>
   <widget type="textentry" version="3.0.0">
     <name>Text Entry_5</name>
     <pv_name>$(P)writeUInt64</pv_name>
-    <x>510</x>
+    <x>540</x>
     <y>190</y>
   </widget>
   <widget type="textentry" version="3.0.0">
@@ -271,10 +271,10 @@
   </widget>
   <widget type="label" version="2.0.0">
     <name>Label_20</name>
-    <text>Date/Time</text>
-    <x>70</x>
+    <text>Date/Time as string</text>
+    <x>20</x>
     <y>610</y>
-    <width>70</width>
+    <width>130</width>
   </widget>
   <widget type="textupdate" version="2.0.0">
     <name>Text Update_17</name>
@@ -338,7 +338,7 @@
   <widget type="textupdate" version="2.0.0">
     <name>Text Update_7</name>
     <pv_name>$(P)readUInt8</pv_name>
-    <x>400</x>
+    <x>430</x>
     <y>100</y>
   </widget>
   <widget type="label" version="2.0.0">
@@ -351,7 +351,7 @@
   <widget type="label" version="2.0.0">
     <name>Label_10</name>
     <text>UInt8</text>
-    <x>350</x>
+    <x>380</x>
     <y>100</y>
     <width>50</width>
   </widget>
@@ -364,15 +364,28 @@
   <widget type="textentry" version="3.0.0">
     <name>Text Entry_15</name>
     <pv_name>$(P)writeUInt8</pv_name>
-    <x>510</x>
+    <x>540</x>
     <y>100</y>
   </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_22</name>
+    <text>Date/Time as Int64</text>
+    <x>20</x>
+    <y>640</y>
+    <width>130</width>
+  </widget>
   <widget type="textupdate" version="2.0.0">
-    <name>Text Update_18</name>
-    <pv_name>$(P)readBoolArray</pv_name>
-    <x>380</x>
-    <y>70</y>
+    <name>Text Update_19</name>
+    <pv_name>$(P)readTime2</pv_name>
+    <x>150</x>
+    <y>640</y>
     <width>520</width>
-    <format>10</format>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_14</name>
+    <pv_name>$(P)writeTime</pv_name>
+    <x>680</x>
+    <y>640</y>
+    <width>300</width>
   </widget>
 </display>

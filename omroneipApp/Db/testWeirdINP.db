@@ -5,11 +5,11 @@ record(longin, "$(P)test1") {
     field(INP, "@asyn($(PORT), 0, 1)@testPoller /test name with gaps[2]/ DINT 5 0 0")
 }
 
-# Poller and tag name have spaces should work
+# Poller and tag name have spaces should work, but not recommended
 record(longin, "$(P)test2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)/@test poller/ /test name with gaps[1]/ DINT 0 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)/@test Poller/ /test name with gaps[1]/ DINT 0 0 0")
 }
 
 # Invalid datatype should report error
@@ -82,18 +82,18 @@ record(longin, "$(P)test12") {
     field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 0 allow_packing=2")
 }
 
-# No & is used in extras term, should report error
+# Invalid structure from structDefs file
 record(longin, "$(P)test13") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 0 allow_packing=2")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 badStruct[2] none")
 }
 
-# No poller defined for read record, should report error
+# No poller defined for read record, will create fine, but will not read from PLC
 record(longin, "$(P)test14") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)testName DINT 1 0 allow_packing=2")
+    field(INP, "@asyn($(PORT), 0, 1)testName DINT 1 0 &allow_packing=2")
 }
 
 # Poller defined for write record, should report error
@@ -108,4 +108,11 @@ record(longout, "$(P)test16") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
     field(OUT, "@asyn($(PORT), 0, 1)@testPoller testName DINT none none none")
+}
+
+# Extra parameter at the end, this is just ignored
+record(longout, "$(P)test17") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(OUT, "@asyn($(PORT), 0, 1)@testPoller testName DINT none none none none")
 }
