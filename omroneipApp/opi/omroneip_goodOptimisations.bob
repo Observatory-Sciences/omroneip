@@ -1,5 +1,133 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--Saved on 2024-06-26 13:04:31 by epics-dev-->
+<!--Saved on 2024-06-27 13:38:42 by epics-dev-->
 <display version="2.0.0">
   <name>omroneip_goodOptimisations</name>
+  <macros>
+    <P>omronEIP:</P>
+  </macros>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_9</name>
+    <pv_name>$(P)readFloat</pv_name>
+    <x>100</x>
+    <y>60</y>
+    <precision>5</precision>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_13</name>
+    <text>Float32</text>
+    <x>40</x>
+    <y>60</y>
+    <width>60</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_10</name>
+    <pv_name>$(P)readFloat2</pv_name>
+    <x>100</x>
+    <y>220</y>
+    <precision>5</precision>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_14</name>
+    <text>Float32</text>
+    <x>40</x>
+    <y>220</y>
+    <width>60</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_15</name>
+    <text>Optimised and Manual offsets</text>
+    <x>20</x>
+    <y>40</y>
+    <width>280</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_16</name>
+    <text>Optimised and Automatic offsets</text>
+    <x>20</x>
+    <y>200</y>
+    <width>220</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_17</name>
+    <text>String</text>
+    <x>40</x>
+    <y>90</y>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_11</name>
+    <pv_name>$(P)readString1</pv_name>
+    <x>100</x>
+    <y>90</y>
+    <width>520</width>
+    <format>6</format>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_12</name>
+    <pv_name>$(P)readString2</pv_name>
+    <x>100</x>
+    <y>120</y>
+    <width>520</width>
+    <format>6</format>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_18</name>
+    <text>String</text>
+    <x>40</x>
+    <y>250</y>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_13</name>
+    <pv_name>$(P)readString3</pv_name>
+    <x>100</x>
+    <y>250</y>
+    <width>520</width>
+    <format>6</format>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_14</name>
+    <pv_name>$(P)readString4</pv_name>
+    <x>100</x>
+    <y>280</y>
+    <width>520</width>
+    <format>6</format>
+  </widget>
+  <widget type="led" version="2.0.0">
+    <name>LED</name>
+    <pv_name>$(P)readBool</pv_name>
+    <x>100</x>
+    <y>150</y>
+  </widget>
+  <widget type="led" version="2.0.0">
+    <name>LED_1</name>
+    <pv_name>$(P)readBool2</pv_name>
+    <x>100</x>
+    <y>320</y>
+  </widget>
+  <widget type="led" version="2.0.0">
+    <name>LED_2</name>
+    <pv_name>$(P)readBool3</pv_name>
+    <x>100</x>
+    <y>390</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_19</name>
+    <text>Not optimised, no offset</text>
+    <x>20</x>
+    <y>360</y>
+    <width>220</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_15</name>
+    <x>850</x>
+    <y>580</y>
+    <width>0</width>
+    <height>0</height>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_20</name>
+    <text>All three sets should show the same value. They are looking at the same data, they just access it in different ways</text>
+    <x>20</x>
+    <y>10</y>
+    <width>1130</width>
+  </widget>
 </display>

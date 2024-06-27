@@ -1,5 +1,3 @@
-
-
 #Requesting optimisation and setting the offset beyond the end of the UDT, should give buffer overflow warning when read
 #This means that PVs readFloat6 and 7 will finish their read, but will read garbage. readFloat5 will then fail to read, as their shared
 #libplctag will have been left in an error state and this error will stop this PV from updating

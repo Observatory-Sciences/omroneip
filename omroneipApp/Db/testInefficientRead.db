@@ -1,4 +1,4 @@
-#Read three fields from struct without using offset (sends three CIP requests for the three items)
+#Read fields from struct without using offset (sends three CIP requests for the three items)
 
 record(lsi, "$(P)$(R)readString1") {
     field(SCAN, "I/O Intr")
@@ -53,7 +53,9 @@ record(longin, "$(P)$(R)readUInt1") {
 record(bi, "$(P)$(R)readBool1") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynUInt32Digital")
-    field(INP, "@asynMask($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVAlarmState BOOL 1 none none")
+    field(INP, "@asynMask($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].Hyst BOOL 1 none none")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
 }
 
 record(lsi, "$(P)$(R)readString3") {

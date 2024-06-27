@@ -2,84 +2,84 @@
 record(longin, "$(P)test1") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller /test name with gaps[2]/ DINT 5 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller /test name with gaps[2]/ DINT 5 none none")
 }
 
 # Poller and tag name have spaces should work, but not recommended
 record(longin, "$(P)test2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)/@test Poller/ /test name with gaps[1]/ DINT 0 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)/@test Poller/ /test name with gaps[1]/ DINT 0 none none")
 }
 
 # Invalid datatype should report error
 record(longin, "$(P)test3") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[1] bad_dtype 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[1] bad_dtype 1 none none")
 }
 
 # Invalid sliceSize should report error
 record(longin, "$(P)test4") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[1] INT one 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[1] INT one none none")
 }
 
 # Escape character never closed should report error
 record(longin, "$(P)test5") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)/@testPoller testName[1] DINT 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)/@testPoller testName[1] DINT 1 none none")
 }
 
 # Undefined start_index should work
 record(longin, "$(P)test6") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 none none")
 }
 
 # Tag name with spaces without escape character used should fail
 record(longin, "$(P)test7") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller test Name DINT 1 0 extras")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller test Name DINT 1 none none")
 }
 
 # Tag name including indexed parent and child should work
 record(longin, "$(P)test8") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[465].child[2] DINT 1 0 extras")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[465].child[2] DINT 1 none none")
 }
 
 # Test startIndex of 0 should report error
 record(longin, "$(P)test9") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[0] INT 0 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName[0] INT 0 none none")
 }
 
 # Attempting to index a non indexible tag should report error
 record(longin, "$(P)test10") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 0 0")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 none 0")
 }
 
-# Extras term contains invalid string, libplctag should report error when tag creation is attempted
+# Extras term contains invalid attribute name, libplctag should report error when tag creation is attempted
 record(longin, "$(P)test11") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 0 &unknown_param")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 none &unknown_param")
 }
 
 # No & is used in extras term, should report error
 record(longin, "$(P)test12") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 0 allow_packing=2")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 none allow_packing=2")
 }
 
 # Invalid structure from structDefs file
@@ -100,7 +100,7 @@ record(longin, "$(P)test14") {
 record(longout, "$(P)test15") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(OUT, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 0 0")
+    field(OUT, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 none 0")
 }
 
 # Using nones instead of zeroes, should work fine
@@ -110,8 +110,15 @@ record(longout, "$(P)test16") {
     field(OUT, "@asyn($(PORT), 0, 1)@testPoller testName DINT none none none")
 }
 
-# Extra parameter at the end, this is just ignored
+# Using zeroes instead of nones, should work fine, but will attempt to look at offset 0, which is fine here
 record(longout, "$(P)test17") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(OUT, "@asyn($(PORT), 0, 1)@testPoller testName DINT none 0 0")
+}
+
+# Extra parameter at the end, this is just ignored
+record(longout, "$(P)test18") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
     field(OUT, "@asyn($(PORT), 0, 1)@testPoller testName DINT none none none none")
