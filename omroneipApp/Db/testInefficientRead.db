@@ -3,69 +3,69 @@
 record(lsi, "$(P)$(R)readString1") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVName STRING 1 none 0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVName STRING 1 none none")
     field(SIZV, "61")
 }
 
 record(lsi, "$(P)$(R)readString2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVDesc STRING 1 none 0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVDesc STRING 1 none none")
     field(SIZV, "61")
 }
 
 record(ai, "$(P)$(R)readFloat1") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVValue REAL 1 none 0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVValue REAL 1 none none")
 }
 
 record(ai, "$(P)$(R)readFloat2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVHigh REAL 1 none 0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVHigh REAL 1 none none")
 }
 
 record(ai, "$(P)$(R)readFloat3") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVHiHi REAL 1 none 0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVHiHi REAL 1 none none")
 }
 
 record(ai, "$(P)$(R)readFloat4") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVLow REAL 1 none 0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVLow REAL 1 none none")
 }
 
 record(ai, "$(P)$(R)readFloat5") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVLoLo REAL 1 none 0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVLoLo REAL 1 none none")
 }
 
 record(longin, "$(P)$(R)readUInt1") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVAlarmState UINT 1 none 0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVAlarmState UINT 1 none none")
 }
 
 record(bi, "$(P)$(R)readBool1") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynUInt32Digital")
-    field(INP, "@asynMask($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVAlarmState BOOL 1 none 0")
+    field(INP, "@asynMask($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVAlarmState BOOL 1 none none")
 }
 
 record(lsi, "$(P)$(R)readString3") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVAlarmDesc STRING 1 none 0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVAlarmDesc STRING 1 none none")
     field(SIZV, "61")
 }
 
 record(lsi, "$(P)$(R)readString4") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVEGU STRING 1 none 0")
+    field(INP, "@asyn($(PORT), 0, 2)@$(POLLER) ISISTestMultiple[$(I)].PVEGU STRING 1 none none")
     field(SIZV, "61")
 }

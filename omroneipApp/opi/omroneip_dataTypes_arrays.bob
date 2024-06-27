@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--Saved on 2024-06-24 13:49:26 by epics-dev-->
+<!--Saved on 2024-06-27 13:18:54 by epics-dev-->
 <display version="2.0.0">
   <name>omroneip_dataTypes_arrays.bob</name>
   <macros>
     <P>omronEIP:</P>
   </macros>
+  <width>1510</width>
+  <height>900</height>
   <widget type="label" version="2.0.0">
     <name>Label_21</name>
     <text>Bool</text>
@@ -289,5 +291,19 @@
     <width>1270</width>
     <height>60</height>
     <format>4</format>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_25</name>
+    <pv_name>$(P)readInt32Mbbi</pv_name>
+    <x>963</x>
+    <y>200</y>
+    <width>130</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_34</name>
+    <text>Read 1st element as mbbi:</text>
+    <x>780</x>
+    <y>200</y>
+    <width>190</width>
   </widget>
 </display>

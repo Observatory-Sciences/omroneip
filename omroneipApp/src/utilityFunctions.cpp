@@ -249,8 +249,10 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
                 {
                   try
                   {
-                    //struct integer found
-                    structIndices.push_back(std::stoi(offsetSubstring.substr(0,m))); // try to convert the string between the brackets to an int
+                    // struct integer found
+                    // try to convert the string between the brackets to an int, we also -1 to convert from the user input which numbers from 1
+                    // to the the system used to get the offset which numbers from 0
+                    structIndices.push_back(std::stoi(offsetSubstring.substr(0,m))-1);
                     indexFound = true;
                     firstIndex = false;
                   }
@@ -544,7 +546,7 @@ int omronUtilities::findRequestedOffset(std::vector<size_t> indices, std::string
 {
   static const char *functionName = "findRequestedOffset";
   size_t j = 0; // The element within structDtypeMap (this map includes start: and end: tags)
-  size_t m = 0; // Element within structMap
+  size_t m = 0; // Element within structMap, stores the offset values and no start: or end: tags
   size_t i = 0; // User supplied element, essentially it keeps count within one "level" of the struct, each index within the indices vector is on a different "level"
   size_t n = 0; // Used to count through arrays to work out how big they are
   size_t k = 0; // Used to count through structs to work out how big they are
@@ -561,7 +563,7 @@ int omronUtilities::findRequestedOffset(std::vector<size_t> indices, std::string
   }
 
   std::copy(indices.begin(), indices.end(), std::ostream_iterator<int>(indicesPrintString, " "));
-  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Finding offset for struct: %s at the indices: %s\n", driverName, functionName, structName.c_str(), indicesPrintString.str().c_str());
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Finding offset for struct: %s at the indices (numbered from 0): %s\n", driverName, functionName, structName.c_str(), indicesPrintString.str().c_str());
 
   for (size_t index : indices){
     currentIndex++;
@@ -616,12 +618,13 @@ int omronUtilities::findRequestedOffset(std::vector<size_t> indices, std::string
             break;
           }
         }
-        j += n + 2;
-        m += n;
+        m += n-j-1; //we add just the number of array elements
+        j = n+1; //we add the number of array elements plus start: and end: tags
         n=0;
       }
       else if (dtype.substr(0,4)=="end:"){
         j++;
+        i--;
       }
       else {
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Failed to calculate offset due to invalid datatype: %s\n", driverName, functionName, dtype.c_str());
@@ -935,24 +938,27 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
   int paddingSize = 0; // size of padding
   int alignment = 0; // required alignment for thisOffset, can be 1,2,4,8
   int thisAlignment = 0; // temporarily stores the alignment returned from other functions which search for alignment
-  bool insideArray = false;
-  int arrayBools = 0;
+  bool insideBoolArray = false;
+  int arrayBools = 1;
+  int boolArrayOffset=0;
   int i = 0;
 
   for (std::string dtype : expandedRow){
     // If this item is end:structName, start:structName, end:array or start:array, then no offset is required so we skip to the next item
     if (dtype == "start:array"){
-      insideArray=true;
+      insideBoolArray=true;
       i++;
       continue;
     }
     else if (dtype == "end:array"){
-      insideArray=false;
+      arrayBools=1;
+      insideBoolArray=false;
       i++;
       continue;
     }
     else if (dtype.substr(0,4) == "end:" || dtype.substr(0,6) == "start:"){
       i++;
+      insideBoolArray=false;
       continue;
     }
 
@@ -976,7 +982,11 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
     }
     else {paddingSize=0;}
     thisOffset += paddingSize;
-    newRow.push_back(thisOffset); // This is the important bit which actually adds the start offset of the dtype currently being processed
+    if (dtype=="BOOL"){
+      newRow.push_back(thisOffset*8+boolArrayOffset); // We use the bit offset not byte offset for bools
+    }
+    else
+      newRow.push_back(thisOffset); // This is the important bit which actually adds the start offset of the dtype currently being processed
     alignment = 0; // Reset alignment ready for next item
 
     // Calculate size of this dtype
@@ -984,17 +994,20 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
           dtype =="UDINT" || dtype =="DINT" || dtype =="REAL" || dtype =="DWORD" || dtype =="ULINT" || dtype =="LINT" || 
             dtype == "LREAL" || dtype =="LWORD" || dtype =="TIME")
     {
-      if (dtype == "BOOL" && insideArray) {
+      if (dtype == "BOOL" && insideBoolArray) {
         // When a bool is inside an array instead of taking up 2 bytes, they actually take up 1 bit and are stored together inside bytes
         // If the number of bools inside the same array is divisible by 8, then we move to the next byte
         // We calculate the bit offset elsewhere
         size_t remainder = arrayBools % 8;
         if (remainder == 0) {
           dtypeSize = 1;
+          boolArrayOffset=0;
         }
         else {
           dtypeSize = 0;
+          boolArrayOffset++;
         }
+        arrayBools++;
       }
       else if (dtype =="SINT" || dtype =="USINT"){
         dtypeSize=1;
@@ -1047,7 +1060,7 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
 
     // Calculate the alignment rule of the next dtype, from this we can calculate the amount of padding required
     // nextItem should only be one of the raw dtypes at this point
-    if ((nextItem =="BOOL" && insideArray) || nextItem =="SINT" || nextItem =="USINT"){
+    if ((nextItem =="BOOL" && insideBoolArray) || nextItem =="SINT" || nextItem =="USINT"){
       if (alignment < 1){alignment=1;}
     }
     else if (nextItem =="UINT" || nextItem =="INT" || nextItem =="WORD" || nextItem =="BOOL"){

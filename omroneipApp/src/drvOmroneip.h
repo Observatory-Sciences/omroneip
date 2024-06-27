@@ -15,6 +15,7 @@
 #include <fstream>
 #include <iterator>
 #include <sstream>
+#include <bitset>
 
 /* EPICS includes */
 #include <dbAccess.h>

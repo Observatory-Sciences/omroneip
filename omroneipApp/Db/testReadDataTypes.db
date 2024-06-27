@@ -7,10 +7,11 @@
 #Test each datatype
 
 # I havent implementated the mask bit yet
+# Uses a bit offset not a byte offset
 record(bi, "$(P)readBool") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynUInt32Digital")
-    field(INP, "@asynMask($(PORT), 0, 1)@$(POLLER) testBOOL BOOL 1 none none")
+    field(INP, "@asynMask($(PORT), 0, 0x0001, 1)@$(POLLER) testBOOL BOOL 1 none none") 
     field(ZNAM, "Off")
     field(ONAM, "On")
 }
@@ -55,6 +56,20 @@ record(waveform, "$(P)readInt32Array") {
     field(DTYP, "asynInt32ArrayIn")
     field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) dintArray[1] DINT 10 none none")
     field(NELM, "10")
+}
+
+record(mbbi,"$(P)readInt32Mbbi") {
+    field(SCAN, "I/O Intr")
+    field(DTYP,"asynInt32")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) dintArray[1] DINT 1 none none")
+    field(ZRST,"zero")
+    field(ONST,"one")
+    field(TWST,"two")
+    field(THST,"three")
+    field(ZRVL,"0x0")
+    field(ONVL,"0x1")
+    field(TWVL,"0x2")
+    field(THVL,"0x3")
 }
 
 #Should be int64in but not supported in epics base 3.15

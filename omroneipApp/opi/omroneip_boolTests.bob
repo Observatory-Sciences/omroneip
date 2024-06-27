@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--Saved on 2024-06-27 13:17:23 by epics-dev-->
+<display version="2.0.0">
+  <name>omroneip_boolTests</name>
+  <macros>
+    <P>omronEIP:</P>
+  </macros>
+  <widget type="label" version="2.0.0">
+    <name>Label_21</name>
+    <text>Single bool</text>
+    <x>30</x>
+    <y>80</y>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_17</name>
+    <pv_name>$(P)readBool</pv_name>
+    <x>170</x>
+    <y>80</y>
+  </widget>
+  <widget type="bool_button" version="2.0.0">
+    <name>Boolean Button</name>
+    <pv_name>$(P)writeBool</pv_name>
+    <x>290</x>
+    <y>80</y>
+    <height>20</height>
+    <labels_from_pv>true</labels_from_pv>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_22</name>
+    <text>Regular bool array:</text>
+    <x>30</x>
+    <y>120</y>
+    <width>130</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_23</name>
+    <text>Embedded bool array</text>
+    <x>30</x>
+    <y>220</y>
+    <width>140</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_24</name>
+    <text>Element 1</text>
+    <x>70</x>
+    <y>140</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_25</name>
+    <text>Element 2</text>
+    <x>70</x>
+    <y>160</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_26</name>
+    <text>Element 20</text>
+    <x>70</x>
+    <y>180</y>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_18</name>
+    <pv_name>$(P)readBoolArray1</pv_name>
+    <x>190</x>
+    <y>140</y>
+  </widget>
+  <widget type="bool_button" version="2.0.0">
+    <name>Boolean Button_1</name>
+    <pv_name>$(P)writeBoolArray1</pv_name>
+    <x>310</x>
+    <y>140</y>
+    <height>20</height>
+    <labels_from_pv>true</labels_from_pv>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_19</name>
+    <pv_name>$(P)readBoolArray2</pv_name>
+    <x>190</x>
+    <y>160</y>
+  </widget>
+  <widget type="bool_button" version="2.0.0">
+    <name>Boolean Button_2</name>
+    <pv_name>$(P)writeBoolArray2</pv_name>
+    <x>310</x>
+    <y>160</y>
+    <height>20</height>
+    <labels_from_pv>true</labels_from_pv>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_20</name>
+    <pv_name>$(P)readBoolArray20</pv_name>
+    <x>190</x>
+    <y>180</y>
+  </widget>
+  <widget type="bool_button" version="2.0.0">
+    <name>Boolean Button_3</name>
+    <pv_name>$(P)writeBoolArray20</pv_name>
+    <x>310</x>
+    <y>180</y>
+    <height>20</height>
+    <labels_from_pv>true</labels_from_pv>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_27</name>
+    <text>Element 33</text>
+    <x>70</x>
+    <y>240</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_28</name>
+    <text>Element 34</text>
+    <x>70</x>
+    <y>260</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_29</name>
+    <text>Element 64</text>
+    <x>70</x>
+    <y>280</y>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_21</name>
+    <pv_name>$(P)readEmbeddedBoolArray33</pv_name>
+    <x>190</x>
+    <y>240</y>
+  </widget>
+  <widget type="bool_button" version="2.0.0">
+    <name>Boolean Button_4</name>
+    <pv_name>$(P)writeEmbeddedBoolArray33</pv_name>
+    <x>310</x>
+    <y>240</y>
+    <height>20</height>
+    <labels_from_pv>true</labels_from_pv>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_22</name>
+    <pv_name>$(P)readEmbeddedBoolArray34</pv_name>
+    <x>190</x>
+    <y>260</y>
+  </widget>
+  <widget type="bool_button" version="2.0.0">
+    <name>Boolean Button_5</name>
+    <pv_name>$(P)writeEmbeddedBoolArray34</pv_name>
+    <x>310</x>
+    <y>260</y>
+    <height>20</height>
+    <labels_from_pv>true</labels_from_pv>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_23</name>
+    <pv_name>$(P)readEmbeddedBoolArray64</pv_name>
+    <x>190</x>
+    <y>280</y>
+  </widget>
+  <widget type="bool_button" version="2.0.0">
+    <name>Boolean Button_6</name>
+    <pv_name>$(P)writeEmbeddedBoolArray64</pv_name>
+    <x>310</x>
+    <y>280</y>
+    <height>20</height>
+    <labels_from_pv>true</labels_from_pv>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_24</name>
+    <pv_name>$(P)readBoolArrayMbbiDirect</pv_name>
+    <x>450</x>
+    <y>140</y>
+  </widget>
+</display>

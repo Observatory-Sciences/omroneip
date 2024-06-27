@@ -86,7 +86,7 @@ record(longin, "$(P)test12") {
 record(longin, "$(P)test13") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 badStruct[2] none")
+    field(INP, "@asyn($(PORT), 0, 1)@testPoller testName DINT 1 badStruct[3] none")
 }
 
 # No poller defined for read record, will create fine, but will not read from PLC

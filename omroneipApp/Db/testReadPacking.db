@@ -1,4 +1,4 @@
-# Here we pack requests so that the data fetched is as close to the 1996 byte limit as possible
+# Here we pack requests so that the data fetched is as close to the 1994 byte limit as possible
 # We should send a single request message and recieve a single response message of 1994 bytes of packed data.
 
 record(waveform, "$(P)readUDTPackingElement1") {

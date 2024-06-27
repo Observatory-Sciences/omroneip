@@ -3,7 +3,7 @@
 record(lsi, "$(P)readString1") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVName STRING 1 PVData[0] &optimise=1&str_max_capacity=60")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVName STRING 1 PVData[1] &optimise=1&str_max_capacity=60")
     field(SIZV, "61")
 }
 
@@ -13,7 +13,7 @@ record(lsi, "$(P)readString1") {
 record(lsi, "$(P)readString2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVDesc STRING 1 PVData[1] &optimise=1&str_max_capacity=40")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVDesc STRING 1 PVData[2] &optimise=1&str_max_capacity=40")
     field(SIZV, "41")
 }
 
@@ -21,7 +21,7 @@ record(lsi, "$(P)readString2") {
 record(lsi, "$(P)readString3") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVDesc STRING 1 PVData[1] &optimise=1")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVDesc STRING 1 PVData[2] &optimise=1")
     field(SIZV, "41")
 }
 
