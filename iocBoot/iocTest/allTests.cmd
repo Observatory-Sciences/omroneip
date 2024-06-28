@@ -19,7 +19,7 @@ asynSetTraceMask omronDriver 0 0x0021 #Warning and Error
 #asynSetTraceMask omronDriver 0 0x0008 #TRACEIO_DRIVER
 
 #drvOmronEIPConfigPoller(driverPortName, pollerName, updateRate, spreadRequests)
-drvOmronEIPConfigPoller("omronDriver", "fastPoller", 0.1, 1) #This can be lowered to 0.1
+drvOmronEIPConfigPoller("omronDriver", "fastPoller", 0.1, 1)
 drvOmronEIPConfigPoller("omronDriver", "mediumPoller", 2, 1)
 drvOmronEIPConfigPoller("omronDriver", "slowPoller", 10, 1)
 
