@@ -1,6 +1,6 @@
 #include "drvOmroneip.h"
 
-bool iocStarted = false; // Set to 1 after IocInit() which starts pollers
+bool iocStarted = false; // Set to 1 after IocInit() which starts the optimiseTags() thread
 
 static void readPollerC(void *drvPvt)
 {
@@ -8,7 +8,7 @@ static void readPollerC(void *drvPvt)
   pPvt->readPoller();
 }
 
-// this thread runs once after iocInit to optimise the tag map before the thread poller begins
+// this thread runs once after iocInit to optimise the tag map before setting startPollers_=1 to begin the polling threads
 static int optimiseTagsC(void *drvPvt)
 {
   drvOmronEIP *pPvt = (drvOmronEIP *)drvPvt;
@@ -28,6 +28,7 @@ omronEIPPoller::omronEIPPoller(const char *portName, const char *pollerName, dou
 {
 }
 
+/* Gives the read pollers time to finish their processing loop and sets omronExiting_ to true to tell the pollers to destruct */
 static void omronExitCallback(void *pPvt)
 {
   drvOmronEIP *pDriver = (drvOmronEIP *)pPvt;
@@ -76,7 +77,6 @@ drvOmronEIP::drvOmronEIP(const char *portName,
   static const char *functionName = "drvOmronEIP";
   tagConnectionString_ = "protocol=ab-eip&gateway=" + (std::string)gateway + "&path=" + (std::string)path + "&plc=" + (std::string)plcType;
   std::cout << "Starting driver with connection string: " << tagConnectionString_ << std::endl;
-  ;
   epicsAtExit(omronExitCallback, this);
   plc_tag_set_debug_level(debugLevel);
   initHookRegister(myInitHookFunction);
@@ -89,7 +89,7 @@ drvOmronEIP::drvOmronEIP(const char *portName,
   {
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Driver initialisation failed.\n", driverName, functionName);
   }
-  utilities = new omronUtilities(this); // smart pointerify this
+  utilities = new omronUtilities(this);
   initialized_ = true;
 }
 
@@ -472,9 +472,22 @@ asynStatus drvOmronEIP::optimiseTags()
           asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Attempting to optimise asyn index: %d, a tag was created with ID: %d and tag string: %s\n", driverName, functionName, commonStruct.second[0], tagIndex, tag.c_str());
         }
 
-        // We arbitrarily designate the first asynIndex in the vector as the "master" index which has its libplctag tag read
-        tagMap_.find(commonStruct.second[0])->second->optimisationFlag = "master";
-        tagMap_.find(commonStruct.second[0])->second->readFlag = true;
+        // We must designate one of the asynIndexes in the vector as the "master" index which has its libplctag tag read
+        // To decide which one, we look at which has the fastest polling interval and use that one
+        double pollingInterval = 9999999;
+        std::string pollerName;
+        omronEIPPoller* pPoller;
+        int master = 0;
+        for (size_t i=0;i<commonStruct.second.size();i++){
+          pollerName = tagMap_.find(commonStruct.second[i])->second->pollerName;
+          pPoller = pollerList_.find(pollerName)->second;
+          if (pPoller->updateRate_<pollingInterval){
+            pollingInterval = pPoller->updateRate_;
+            master=i;
+          }
+        }
+        tagMap_.find(commonStruct.second[master])->second->optimisationFlag = "master";
+        tagMap_.find(commonStruct.second[master])->second->readFlag = true;
       }
     }
     else
@@ -1229,9 +1242,9 @@ void drvOmronEIP::readPoller()
   }
   omronEIPPoller *pPoller = pollerList_.at(threadName);
   double interval = pPoller->updateRate_;
-  for (auto tag : tagMap_)
+  for (auto x : tagMap_)
   {
-    if (tag.second->pollerName == threadName)
+    if (x.second->pollerName == threadName && x.second->readFlag == true)
       pPoller->myTagCount_ += 1;
   }
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Starting poller: %s with interval: %f\n", driverName, functionName, threadName.c_str(), interval);
@@ -1254,7 +1267,8 @@ void drvOmronEIP::readPoller()
     {
       if (x.second->pollerName == threadName && x.second->readFlag == true)
       {
-        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Reading tag: %d with polling interval: %f seconds\n", driverName, functionName, x.second->tagIndex, interval);
+        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Reading tag: %d with polling interval: %f seconds\n", 
+                    driverName, functionName, x.second->tagIndex, interval);
         plc_tag_read(x.second->tagIndex, 0); // read from plc, we will check status and timeouts later
         // We sleep to split up read requests within timing interval, otherwise we can get traffic jams and missed polling intervals
         if (pPoller->myTagCount_ > 1 && pPoller->spreadRequests_)
@@ -1853,7 +1867,7 @@ asynStatus drvOmronEIP::writeOctet(asynUser *pasynUser, const char *value, size_
   std::string datatype = drvUser->dataType.first;
   double timeout = pasynUser->timeout * 1000;
 
-  /* This is a bit ghetto because Omron does strings a bit different to what libplctag expects*/
+  /* This is a bit messy because Omron does strings a bit differently to what libplctag expects*/
   if (datatype == "STRING")
   {
     int string_capacity = plc_tag_get_string_capacity(tagIndex, 0);
