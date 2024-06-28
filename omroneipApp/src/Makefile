@@ -28,7 +28,7 @@ LIBRARY_IOC += omroneip
 USR_CFLAGS += -DUSE_TYPED_RSET
 USR_CPPFLAGS += -DUSE_TYPED_RSET
 
-LIB_SRCS += drvOmroneip.cpp
+LIB_SRCS += drvOmroneip.cpp utilityFunctions.cpp
 LIB_LIBS += asyn 
 LIB_LIBS += $(EPICS_BASE_IOC_LIBS)
 LIB_SYS_LIBS_WIN32 += ws2_32

@@ -1,0 +1,118 @@
+#Get bool without optimisations (its different)
+record(bi, "$(P)readBool") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynUInt32Digital")
+    field(INP, "@asynMask($(PORT), 0, 0x0001, 1)@$(POLLER) ISISTestMultiple[1].Hyst BOOL 1 none none")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+
+#Get bool without optimisations (its different)
+record(bi, "$(P)readBoolArray1") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynUInt32Digital")
+    field(INP, "@asynMask($(PORT), 0, 0x00000001, 1)@$(POLLER) boolArray[1] BOOL 20 none none")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+#get bool 2
+record(bi, "$(P)readBoolArray2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynUInt32Digital")
+    field(INP, "@asynMask($(PORT), 0, 0x00000002, 1)@$(POLLER) boolArray[1] BOOL 20 none none")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+# get bool 20 from the array
+record(bi, "$(P)readBoolArray20") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynUInt32Digital")
+    field(INP, "@asynMask($(PORT), 0, 0x00080000, 1)@$(POLLER) boolArray[1] BOOL 20 none none")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+
+#Write bools
+record(bo, "$(P)writeBool") {
+    field(DTYP, "asynUInt32Digital")
+    field(OUT, "@asynMask($(PORT), 0, 1)ISISTestMultiple[1].Hyst BOOL 1 none none")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+record(bo, "$(P)writeBoolArray1") {
+    field(DTYP, "asynUInt32Digital")
+    field(OUT, "@asynMask($(PORT), 0, 1)boolArray[1] BOOL 1 none none")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+record(bo, "$(P)writeBoolArray2") {
+    field(DTYP, "asynUInt32Digital")
+    field(OUT, "@asynMask($(PORT), 0, 1)boolArray[2] BOOL 1 none none")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+record(bo, "$(P)writeBoolArray20") {
+    field(DTYP, "asynUInt32Digital")
+    field(OUT, "@asynMask($(PORT), 0, 1)boolArray[20] BOOL 1 none none")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+
+###Test read/writing to an array of bools within an embedded struct
+#We read 32 bools from an array of bools and use the asynMask to get values from the 32bit digital int.
+#The bools from the array that we read, are values 33 to 64
+record(bi, "$(P)readEmbeddedBoolArray33") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynUInt32Digital")
+    field(INP, "@asynMask($(PORT), 0, 0x00000001,1)@$(POLLER) myArrayStruct.structArray2[33] BOOL 32 testArrayStruct2[4][33] &optimise=1")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+record(bi, "$(P)readEmbeddedBoolArray34") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynUInt32Digital")
+    field(INP, "@asynMask($(PORT), 0, 0x00000002, 1)@$(POLLER) myArrayStruct.structArray2[33] BOOL 32 testArrayStruct2[4][33] &optimise=1")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+record(bi, "$(P)readEmbeddedBoolArray64") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynUInt32Digital")
+    field(INP, "@asynMask($(PORT), 0, 0x80000000, 1)@$(POLLER) myArrayStruct.structArray2[33] BOOL 32 testArrayStruct2[4][33] &optimise=1")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+
+record(bo, "$(P)writeEmbeddedBoolArray33") {
+    field(DTYP, "asynUInt32Digital")
+    field(OUT, "@asynMask($(PORT), 0, 1)myArrayStruct.structArray2[33] BOOL 1 none none")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+record(bo, "$(P)writeEmbeddedBoolArray34") {
+    field(DTYP, "asynUInt32Digital")
+    field(OUT, "@asynMask($(PORT), 0, 1)myArrayStruct.structArray2[34] BOOL 1 none none")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+record(bo, "$(P)writeEmbeddedBoolArray64") {
+    field(DTYP, "asynUInt32Digital")
+    field(OUT, "@asynMask($(PORT), 0, 1)myArrayStruct.structArray2[64] BOOL 1 none none")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+
+#This record is just to enable the optimisations
+record(ai, "$(P)readFloat") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myArrayStruct.testReal2 REAL 1 testArrayStruct2[3] &optimise=1")
+}
+
+###Test mbbiDirect, you can convert an array of bools int a UInt32Digital
+#Look at the first two bits, set the state of the record based off the combination of these bits
+record(mbbiDirect,"$(P)readBoolArrayMbbiDirect") {
+    field(SCAN, "I/O Intr")
+    field(DTYP,"asynUInt32Digital")
+    field(INP, "@asynMask($(PORT), 0, 0x3, 1)@$(POLLER) boolArray[1] BOOL 20 none none")
+}

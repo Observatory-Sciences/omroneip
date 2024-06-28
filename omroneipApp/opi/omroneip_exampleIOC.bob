@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--Saved on 2024-06-22 16:06:10 by epics-dev-->
+<display version="2.0.0">
+  <name>exampleIOC</name>
+  <macros>
+    <P>omronEIP:</P>
+    <R>example:</R>
+  </macros>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_1</name>
+    <pv_name>$(P)readString</pv_name>
+    <x>150</x>
+    <y>160</y>
+    <width>570</width>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_7</name>
+    <pv_name>$(P)writeFloat64</pv_name>
+    <x>260</x>
+    <y>130</y>
+    <precision>8</precision>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_10</name>
+    <pv_name>$(P)readFloat64</pv_name>
+    <x>150</x>
+    <y>130</y>
+    <precision>8</precision>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_14</name>
+    <text>Float64</text>
+    <x>50</x>
+    <y>130</y>
+    <width>90</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_15</name>
+    <text>Int16</text>
+    <x>50</x>
+    <y>40</y>
+    <width>80</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_11</name>
+    <pv_name>$(P)readInt16</pv_name>
+    <x>150</x>
+    <y>40</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_16</name>
+    <text>Int16Array</text>
+    <x>50</x>
+    <y>70</y>
+    <width>80</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_12</name>
+    <pv_name>$(P)readInt16Array</pv_name>
+    <x>150</x>
+    <y>70</y>
+    <width>570</width>
+    <precision>0</precision>
+  </widget>
+  <widget type="textentry" version="3.0.0">
+    <name>Text Entry_8</name>
+    <pv_name>$(P)writeInt16Array</pv_name>
+    <x>150</x>
+    <y>100</y>
+    <width>570</width>
+    <precision>0</precision>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_17</name>
+    <text>String</text>
+    <x>50</x>
+    <y>160</y>
+    <width>90</width>
+  </widget>
+</display>
