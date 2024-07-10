@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--Saved on 2024-06-27 14:14:31 by epics-dev-->
+<display version="2.0.0">
+  <name>omroneip_efficientVsInefficient</name>
+  <macros>
+    <P>omronEIP:</P>
+  </macros>
+  <width>830</width>
+  <height>580</height>
+  <widget type="label" version="2.0.0">
+    <name>Label</name>
+    <text>PVName</text>
+    <x>20</x>
+    <y>70</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_1</name>
+    <text>PVDesc</text>
+    <x>20</x>
+    <y>114</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_2</name>
+    <text>PVValue</text>
+    <x>20</x>
+    <y>158</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_3</name>
+    <text>PVHigh</text>
+    <x>20</x>
+    <y>202</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_4</name>
+    <text>PVHiHi</text>
+    <x>20</x>
+    <y>246</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_5</name>
+    <text>PVLow</text>
+    <x>20</x>
+    <y>290</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_6</name>
+    <text>PVLoLo</text>
+    <x>20</x>
+    <y>334</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_7</name>
+    <text>PVHiHi</text>
+    <x>20</x>
+    <y>378</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_8</name>
+    <text>PVAlarmState</text>
+    <x>20</x>
+    <y>422</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_9</name>
+    <text>Hyst</text>
+    <x>20</x>
+    <y>466</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_10</name>
+    <text>PVAlarmDesc</text>
+    <x>20</x>
+    <y>510</y>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_11</name>
+    <text>PVEGU</text>
+    <x>20</x>
+    <y>560</y>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update</name>
+    <pv_name>$(P)1:readString1</pv_name>
+    <x>170</x>
+    <y>70</y>
+    <width>290</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_1</name>
+    <pv_name>$(P)1:readString2</pv_name>
+    <x>170</x>
+    <y>118</y>
+    <width>290</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_2</name>
+    <pv_name>$(P)1:readFloat1</pv_name>
+    <x>170</x>
+    <y>166</y>
+    <width>150</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_3</name>
+    <pv_name>$(P)1:readFloat2</pv_name>
+    <x>170</x>
+    <y>214</y>
+    <width>150</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_4</name>
+    <pv_name>$(P)1:readFloat3</pv_name>
+    <x>170</x>
+    <y>262</y>
+    <width>150</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_5</name>
+    <pv_name>$(P)1:readFloat4</pv_name>
+    <x>170</x>
+    <y>310</y>
+    <width>150</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_6</name>
+    <pv_name>$(P)1:readFloat5</pv_name>
+    <x>170</x>
+    <y>358</y>
+    <width>150</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_7</name>
+    <pv_name>$(P)1:readUInt1</pv_name>
+    <x>170</x>
+    <y>406</y>
+    <width>150</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_8</name>
+    <pv_name>$(P)1:readBool1</pv_name>
+    <x>170</x>
+    <y>454</y>
+    <width>150</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_10</name>
+    <pv_name>$(P)1:readString3</pv_name>
+    <x>170</x>
+    <y>510</y>
+    <width>290</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_11</name>
+    <pv_name>$(P)1:readString4</pv_name>
+    <x>170</x>
+    <y>558</y>
+    <width>290</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_12</name>
+    <pv_name>$(P)2:readString1</pv_name>
+    <x>520</x>
+    <y>70</y>
+    <width>290</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_13</name>
+    <pv_name>$(P)2:readString2</pv_name>
+    <x>520</x>
+    <y>118</y>
+    <width>290</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_14</name>
+    <pv_name>$(P)2:readFloat1</pv_name>
+    <x>520</x>
+    <y>166</y>
+    <width>150</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_15</name>
+    <pv_name>$(P)2:readFloat2</pv_name>
+    <x>520</x>
+    <y>214</y>
+    <width>150</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_16</name>
+    <pv_name>$(P)2:readFloat3</pv_name>
+    <x>520</x>
+    <y>262</y>
+    <width>150</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_17</name>
+    <pv_name>$(P)2:readFloat4</pv_name>
+    <x>520</x>
+    <y>310</y>
+    <width>150</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_18</name>
+    <pv_name>$(P)2:readFloat5</pv_name>
+    <x>520</x>
+    <y>358</y>
+    <width>150</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_19</name>
+    <pv_name>$(P)2:readUInt1</pv_name>
+    <x>520</x>
+    <y>406</y>
+    <width>150</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_20</name>
+    <pv_name>$(P)2:readBool1</pv_name>
+    <x>520</x>
+    <y>454</y>
+    <width>150</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_21</name>
+    <pv_name>$(P)2:readString3</pv_name>
+    <x>520</x>
+    <y>510</y>
+    <width>290</width>
+  </widget>
+  <widget type="textupdate" version="2.0.0">
+    <name>Text Update_22</name>
+    <pv_name>$(P)2:readString4</pv_name>
+    <x>520</x>
+    <y>558</y>
+    <width>290</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_12</name>
+    <text>Inefficient, seperate reads</text>
+    <x>170</x>
+    <y>40</y>
+    <width>250</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_13</name>
+    <text>Efficient, single read</text>
+    <x>530</x>
+    <y>40</y>
+    <width>250</width>
+  </widget>
+  <widget type="label" version="2.0.0">
+    <name>Label_14</name>
+    <text>Both sets of variables read from the same data and should have the same values, they just access it differently</text>
+    <x>20</x>
+    <y>10</y>
+    <width>1000</width>
+  </widget>
+</display>

@@ -1,0 +1,22 @@
+#Requesting optimisation and setting the offset beyond the end of the UDT, should give buffer overflow warning when read
+#This means that PVs readFloat6 and 7 will finish their read, but will read garbage. readFloat5 will then fail to read, as their shared
+#libplctag will have been left in an error state and this error will stop this PV from updating
+#This isnt ideal behaviour, but you are already making an error by reading outside of the buffer and this is reported, so it doesnt really matter
+
+record(ai, "$(P)$(R)readFloat5") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[4].PVValue REAL 1 PVData[3] &optimise=1")
+}
+
+record(ai, "$(P)$(R)readFloat6") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[4].PVValue REAL 1 500 &optimise=1")
+}
+
+record(ai, "$(P)$(R)readFloat7") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[4].PVValue REAL 1 500 &optimise=1")
+}

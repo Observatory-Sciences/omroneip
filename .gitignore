@@ -11,6 +11,7 @@ O.*
 .svn*
 .idea
 configure/*.local
+top.txt
 
 #Python compiled files
 __pycache__/

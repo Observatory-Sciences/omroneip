@@ -74,7 +74,7 @@ jobs:
     - name: Build end2end tests
       run: |
         sudo apt-get update
-        sudo pip3 install pytest pyepics
+        sudo pip3 install pytest pyepics==3.5.2
         sudo pip3 install run-iocsh -i https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple
     - name: Run end2end tests
       run: |
