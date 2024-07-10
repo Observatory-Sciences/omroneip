@@ -114,5 +114,5 @@ record(ai, "$(P)readFloat") {
 record(mbbiDirect,"$(P)readBoolArrayMbbiDirect") {
     field(SCAN, "I/O Intr")
     field(DTYP,"asynUInt32Digital")
-    field(INP, "@asynMask($(PORT), 0, 0x3, 1)@$(POLLER) boolArray[1] BOOL 20 none none")
+    field(INP, "@asynMask($(PORT), 0x3, 1)@$(POLLER) boolArray[1] BOOL 20 none none")
 }

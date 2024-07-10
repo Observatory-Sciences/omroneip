@@ -6,7 +6,6 @@
 ############################ Read Records #######################################
 #Test each datatype
 
-# I havent implementated the mask bit yet
 # Uses a bit offset not a byte offset
 record(bi, "$(P)readBool") {
     field(SCAN, "I/O Intr")

@@ -890,7 +890,7 @@ int omronUtilities::getEmbeddedAlignment(structDtypeMap const& expandedMap, std:
     else if (nextNextItem == "SINT" || nextNextItem == "USINT") {alignment = 1;}
     else if (nextNextItem.substr(0,6) == "STRING") {alignment = 1;}
     else if (nextNextItem == "start:array") {
-      alignment = getEmbeddedAlignment(expandedMap, structName, expandedRow[i+3], i+1);
+      alignment = getEmbeddedAlignment(expandedMap, structName, expandedRow[i+2], i+1);
     }
     else if (expandedMap.find(nextNextItem)!=expandedMap.end()){
       // Check to see if the array dtype is a start:structName. If it is then we must lookup the biggest dtype in this struct
@@ -946,12 +946,23 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
   for (std::string dtype : expandedRow){
     // If this item is end:structName, start:structName, end:array or start:array, then no offset is required so we skip to the next item
     if (dtype == "start:array"){
-      insideBoolArray=true;
+      nextItem = expandedRow[i+1];
+      if (nextItem == "BOOL")
+        insideBoolArray=true;
       i++;
       continue;
     }
     else if (dtype == "end:array"){
+      if (insideBoolArray){
+        //Fix to deal with back to back bool arrays
+        dtypeSize = ((arrayBools-1)/8);
+        if (dtypeSize < 2){dtypeSize=2;}
+        else {
+          dtypeSize = dtypeSize + dtypeSize%2;
+        }
+      }
       arrayBools=1;
+      boolArrayOffset=0;
       insideBoolArray=false;
       i++;
       continue;
