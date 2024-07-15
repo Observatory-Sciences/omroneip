@@ -495,7 +495,7 @@ asynStatus drvOmronEIP::optimiseTags()
       // Case where a child is found, but it is the only one, therefor no optimisation is possible and we print an error
       tagMap_.find(commonStruct.second[0])->second->optimisationFlag = "no optimisation possible";
       tagMap_.find(commonStruct.second[0])->second->readFlag = false;
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, attempt to optimise asyn index: %d failed. You need at least records accessing data from the same tag to optimise. Parameter will not be used.\n",
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, attempt to optimise asyn index: %d failed. You need at least two records accessing data from the same tag to optimise. Parameter will not be used.\n",
                 driverName, functionName, commonStruct.second[0]);
     }
   }
