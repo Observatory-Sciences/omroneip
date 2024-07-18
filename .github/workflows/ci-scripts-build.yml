@@ -63,6 +63,12 @@ jobs:
         python .ci-local/install-libplctag.py
         cat ./configure/CONFIG_SITE.local
       if: matrix.libplctag != ''
+    - name: Install boost and configure this in the driver
+      run: |
+          sudo apt-get install libboost-test-dev
+          sudo apt-get install libboost-system-dev
+          printf "\nUSE_BOOST = YES" >> ./configure/CONFIG_SITE.local
+      if: matrix.test == 'true'
     - name: Prepare and compile dependencies
       run: python .ci/cue.py prepare
     - name: Build main module
@@ -71,11 +77,6 @@ jobs:
       run: python .ci/cue.py test
     - name: Collect and show test results
       run: python .ci/cue.py test-results
-    - name: Configure boost
-      run: |
-        sudo apt-get install libboost-test-dev
-        sudo apt-get install libboost-system-dev
-        printf "\nUSE_BOOST = YES" >> ./configure/CONFIG_SITE.local
     - name: Build end2end tests
       run: |
         sudo apt-get update
