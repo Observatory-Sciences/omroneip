@@ -20,7 +20,7 @@ plctag_DIR = $(LIBPLCTAG_BUILD)
 
 boost_unit_test_framework_DIR = $(BOOST_LIB)
 PROD_IOC += test_omroneip
-test_omroneip_SRCS += test_omroneip.cpp test_omronUtilities.cpp drvOmroneipWrapper.cpp omronUtilitiesWrapper.cpp
+test_omroneip_SRCS += test_omroneip.cpp test_omronUtilities.cpp test_drvOmroneip.cpp drvOmroneipWrapper.cpp omronUtilitiesWrapper.cpp
 test_omroneip_LIBS += omroneip asyn $(EPICS_BASE_IOC_LIBS)
 
 ifdef BOOST_LIB

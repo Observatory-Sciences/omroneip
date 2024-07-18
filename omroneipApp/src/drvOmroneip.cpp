@@ -1245,6 +1245,7 @@ void drvOmronEIP::readPoller()
   {
     epicsThreadSleep(0.1);
   }
+  if (omronExiting) { return; }
   omronEIPPoller *pPoller = pollerList_.at(threadName);
   double interval = pPoller->updateRate_;
   for (auto x : tagMap_)

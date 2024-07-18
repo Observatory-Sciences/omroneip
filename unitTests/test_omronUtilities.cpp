@@ -32,6 +32,8 @@ class omronUtilitiesTestFixture
 
         void uniqueAsynPortName(std::string& name)
         {
+            // Asyn doesnt shut down properly when we destroy our driver, this means that the asyn port is still registered when we make the next
+            // instance of the driver. Therefor we must create a unique port name.
             static unsigned long counter = 0;
             std::stringstream ss;
             ss << name << "_" << counter;
