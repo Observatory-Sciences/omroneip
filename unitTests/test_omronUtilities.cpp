@@ -49,6 +49,7 @@ class omronUtilitiesTestFixture
                 "&elem_count=" + keyWords.at("sliceSize") + keyWords.at("tagExtras");
             testDriver->wrap_initialiseDrvUser(newDrvUser, keyWords, 0, tag, true, pasynUser);
             std::string stringValid = keyWords.at("stringValid");
+            free(pasynUser);
             return {stringValid,newDrvUser,keyWords};
         }
 };
@@ -60,6 +61,7 @@ BOOST_AUTO_TEST_CASE(test_negative_drvInfoEmpty)
     std::string drvInfo = "";
     const auto [stringValid, newDrvUser, keyWords] = parser(drvInfo);
     BOOST_CHECK_EQUAL(stringValid,"false");
+    free(newDrvUser);
 }
 
 //Specifying slice size when not accessing an array
@@ -68,6 +70,7 @@ BOOST_AUTO_TEST_CASE(test_negative_drvInfobadSlice)
     std::string drvInfo = "@testPoller lwordArray LWORD 10 none none";
     const auto [stringValid, newDrvUser, keyWords] = parser(drvInfo);
     BOOST_CHECK_EQUAL(stringValid,"false");
+    free(newDrvUser);
 }
 
 BOOST_AUTO_TEST_CASE(test_negative_drvInfoBadPoller)
@@ -76,6 +79,7 @@ BOOST_AUTO_TEST_CASE(test_negative_drvInfoBadPoller)
     const auto [stringValid, newDrvUser, keyWords] = parser(drvInfo);
     BOOST_CHECK_EQUAL(stringValid,"false");
     BOOST_CHECK_EQUAL(newDrvUser->pollerName,"none");
+    free(newDrvUser);
 }
 
 BOOST_AUTO_TEST_CASE(test_negative_drvInfoBadOffset)
@@ -84,6 +88,7 @@ BOOST_AUTO_TEST_CASE(test_negative_drvInfoBadOffset)
     const auto [stringValid, newDrvUser, keyWords] = parser(drvInfo);
     BOOST_CHECK_EQUAL(stringValid,"false");
     BOOST_CHECK_EQUAL(newDrvUser->tagOffset, 0);
+    free(newDrvUser);
 }
 
 BOOST_AUTO_TEST_CASE(test_drvInfoAllExtras)
@@ -104,6 +109,7 @@ BOOST_AUTO_TEST_CASE(test_drvInfoAllExtras)
     BOOST_CHECK_EQUAL(res.find("&str_max_capacity=100")!=res.npos, true);
     BOOST_CHECK_EQUAL(res.find("&optimise=1")!=res.npos, true);
     BOOST_CHECK_EQUAL(res.find("&offset_read_size=5")!=res.npos, true);
+    free(newDrvUser);
 }
 
 BOOST_AUTO_TEST_CASE(test_drvInfoDisablePacking)
@@ -112,6 +118,7 @@ BOOST_AUTO_TEST_CASE(test_drvInfoDisablePacking)
     const auto [stringValid, newDrvUser, keyWords] = parser(drvInfo);
     BOOST_CHECK_EQUAL(stringValid,"true");
     BOOST_CHECK_EQUAL(keyWords.at("tagExtras"), "&allow_packing=0");
+    free(newDrvUser);
 }
 
 BOOST_AUTO_TEST_CASE(test_drvInfoDefaultExtras)
@@ -120,6 +127,7 @@ BOOST_AUTO_TEST_CASE(test_drvInfoDefaultExtras)
     const auto [stringValid, newDrvUser, keyWords] = parser(drvInfo);
     BOOST_CHECK_EQUAL(stringValid,"true");
     BOOST_CHECK_EQUAL(keyWords.at("tagExtras"), "&allow_packing=1");
+    free(newDrvUser);
 }
 
 BOOST_AUTO_TEST_CASE(test_drvInfoDefaultExtrasString)
@@ -135,6 +143,7 @@ BOOST_AUTO_TEST_CASE(test_drvInfoDefaultExtrasString)
     BOOST_CHECK_EQUAL(res.find("&str_is_counted=1")!=res.npos, true);
     BOOST_CHECK_EQUAL(res.find("&str_count_word_bytes=2")!=res.npos, true);
     BOOST_CHECK_EQUAL(res.find("&str_pad_to_multiple_bytes=0")!=res.npos, true);
+    free(newDrvUser);
 }
 
 BOOST_AUTO_TEST_CASE(test_drvInfoArraySlice)
@@ -143,6 +152,7 @@ BOOST_AUTO_TEST_CASE(test_drvInfoArraySlice)
     const auto [stringValid, newDrvUser, keyWords] = parser(drvInfo);
     BOOST_CHECK_EQUAL(stringValid,"true");
     BOOST_CHECK_EQUAL(newDrvUser->sliceSize, 10);
+    free(newDrvUser);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
