@@ -80,10 +80,11 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
     keyWords.at("stringValid") = "false";
   }
 
-  if (words.size() < 1)
+  if (words.size() < 5)
   {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, No arguments supplied to driver\n", driverName, functionName);
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Record is missing parameters. Expected 5 space seperated terms (or 6 including poller) but recieved: %ld\n", driverName, functionName, words.size());
     keyWords.at("stringValid") = "false";
+    return keyWords;
   }
 
   if (words.front()[0] == '@')
@@ -102,12 +103,6 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
     }
   }
 
-  if (words.size() < 5)
-  {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Record is missing parameters. Expected 5 space seperated terms (or 6 including poller) but recieved: %ld\n", driverName, functionName, words.size());
-    keyWords.at("stringValid") = "false";
-    return keyWords;
-  }
 
   int params = words.size();
   bool indexable = false;
@@ -169,7 +164,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
       }
       if (!validDataType)
       {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Datatype invalid.\n", driverName, functionName);
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Datatype invalid.\n", driverName, functionName);
         keyWords.at("stringValid") = "false";
         return keyWords;
       }
@@ -190,7 +185,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
           {
             keyWords.at("sliceSize") = thisWord;
             if (keyWords.at("dataType")=="STRING" || keyWords.at("dataType")=="LINT" || keyWords.at("dataType")=="ULINT"){
-              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error! sliceSize must be 1 for this datatype.\n", driverName, functionName);
+              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, sliceSize must be 1 for this datatype.\n", driverName, functionName);
               keyWords.at("stringValid") = "false";
               return keyWords;
             }
@@ -201,14 +196,14 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
           }
           else if (thisWord != "1")
           {
-            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s You cannot get a slice of a whole tag. Try tag_name[startIndex] to specify elements for slice.\n", driverName, functionName);
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, You cannot get a slice of a whole tag. Try tag_name[startIndex] to specify elements for slice.\n", driverName, functionName);
             keyWords.at("stringValid") = "false";
             return keyWords;
           }
         }
         else
         {
-          asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid sliceSize, must be integer.\n", driverName, functionName);
+          asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid sliceSize, must be integer.\n", driverName, functionName);
           keyWords.at("stringValid") = "false";
           return keyWords;
         }
@@ -265,7 +260,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
             }
           }
           if (!indexFound){
-            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find a valid index for the requested structure: %s\n", driverName, functionName, words.front().c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Could not find a valid index for the requested structure: %s\n", driverName, functionName, words.front().c_str());
             keyWords.at("stringValid") = "false";
             return keyWords;
           }
@@ -284,7 +279,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
               if (offset >=0) {}
               else {
                 offset=0;
-                asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid index or structure name: %s\n", driverName, functionName, thisWord.c_str());
+                asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid index or structure name: %s\n", driverName, functionName, thisWord.c_str());
                 keyWords.at("stringValid") = "false";
                 return keyWords;
               }
@@ -293,11 +288,16 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
           }
           if (!structFound)
           {
-            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find structure requested: %s. Have you loaded a struct file?\n", driverName, functionName, thisWord.c_str());
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Could not find structure requested: %s. Have you loaded a struct file?\n", driverName, functionName, thisWord.c_str());
             keyWords.at("stringValid") = "false";
             return keyWords;
-            offset=0;
           }
+        }
+        if (offset<0){
+          asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Specified offset cannot be negative. %d < 0\n", 
+                      driverName, functionName, offset);
+          keyWords.at("stringValid") = "false";
+          return keyWords;
         }
         keyWords.at("offset") = std::to_string(offset);
       }
@@ -500,7 +500,7 @@ void omronUtilities::processExtrasExceptions(std::string thisWord, drvInfoMap &k
     }
     catch(...){
       keyWords.at("stringValid") = "false";
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid value for optimise=: %s\n", driverName, functionName, size.c_str());
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid value for optimise=: %s\n", driverName, functionName, size.c_str());
     }
   }
 
@@ -526,7 +526,7 @@ void omronUtilities::processExtrasExceptions(std::string thisWord, drvInfoMap &k
         keyWords.at("strCapacity") = size;  
       }
       catch(...){
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid integer for str_max_capacity: %s\n", driverName, functionName, size.c_str());
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid integer for str_max_capacity: %s\n", driverName, functionName, size.c_str());
         keyWords.at("stringValid") = "false";
       }
     }

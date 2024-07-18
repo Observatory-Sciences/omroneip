@@ -84,15 +84,12 @@ class epicsShareClass drvOmronEIP : public asynPortDriver {
 public:
    const char *driverName = "drvOmronEIP"; /* String for asynPrint */
    drvOmronEIP(const char *portName,
-               char *gateway,  //IP address that ethernet/IP packets are sent to initially
-               char *path,  //path to device from the initial gateway
-               char *plcType, //used to change the PLC type from omron-njnx to other PLC types supported by libplctag
+               const char *gateway,  //IP address that ethernet/IP packets are sent to initially
+               const char *path,  //path to device from the initial gateway
+               const char *plcType, //used to change the PLC type from omron-njnx to other PLC types supported by libplctag
                int debugLevel, //libplctag debug level
                double timezoneOffset); //time in hours that the PLC is ahead/behind of UTC
    ~drvOmronEIP();
-
-
-   bool omronExiting_;
 
    std::vector<omronDataType_t> omronDataTypeList = {
       {"BOOL", 2},
@@ -126,6 +123,8 @@ public:
       to create a libplctag tag and an asynParameter. It saves the handles to these key objects within the tagMap_. This tagMap_ is then used to
       process read and write requests to the driver.*/
    asynStatus drvUserCreate(asynUser *pasynUser, const char *drvInfo, const char **pptypeName, size_t *psize)override;
+   /* Copy and convert values from the keyWords map returned from drvInfoParser into newDrvUser*/
+   void initialiseDrvUser(omronDrvUser_t *newDrvUser, const drvInfoMap keyWords, int tagIndex, std::string tag, bool readFlag, const asynUser *pasynUser);
    /* Improves efficiency by looking for situations where multiple UDT field read requests can be replaced with a single UDT read */
    asynStatus optimiseTags();
    /* Takes a csv style file, where each line contains a structure name followed by a list of datatypes within the struct

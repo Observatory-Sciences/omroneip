@@ -3,7 +3,7 @@
 TOP = ../..
 include $(TOP)/configure/CONFIG
 
-# Point the build system to libplctags header and shared library files
+# Point the build system to libplctag's header and shared library files
 # The name "plctag" must be used instead of "libplctag" or there will be problems!
 #==================================================
 
@@ -17,42 +17,21 @@ plctag_DIR = $(LIBPLCTAG_BUILD)
 #==================================================
 # Build an IOC support library
 
-# <name>.dbd will be created from <name>Include.dbd
-DBD += omroneipApp.dbd
-DBD += omroneipSupport.dbd
-
-INC += drvOmroneip.h
-INC += omronUtilities.h
-
 LIBRARY_IOC += omroneip
-
-USR_CFLAGS += -DUSE_TYPED_RSET
-USR_CPPFLAGS += -DUSE_TYPED_RSET
-
+DBD += omroneipApp.dbd omroneip.dbd
+INC += drvOmroneip.h omronUtilities.h
 LIB_SRCS += drvOmroneip.cpp omronUtilities.cpp
-LIB_LIBS += asyn 
-LIB_LIBS += $(EPICS_BASE_IOC_LIBS)
-LIB_SYS_LIBS_WIN32 += ws2_32
+LIB_LIBS += asyn $(EPICS_BASE_IOC_LIBS)
 
 #=============================
-# build an ioc application
+# Build an IOC application which includes the omroneip library that we just defined
 
 PROD_IOC += omroneipApp
-omroneipApp_DBD += base.dbd
-omroneipApp_DBD += asyn.dbd drvAsynIPPort.dbd drvAsynSerialPort.dbd
-omroneipApp_DBD += omroneipSupport.dbd
-
-# <name>_registerRecordDeviceDriver.cpp will be created from <name>.dbd
+omroneipApp_DBD += base.dbd asyn.dbd omroneip.dbd
+# omroneipApp_registerRecordDeviceDriver.cpp will be created from omroneipApp.dbd
 omroneipApp_SRCS_DEFAULT += omroneipApp_registerRecordDeviceDriver.cpp omroneipMain.cpp
-omroneipApp_SRCS_vxWorks += omroneipApp_registerRecordDeviceDriver.cpp
+PROD_LIBS += omroneip asyn $(EPICS_BASE_IOC_LIBS)
 
-PROD_LIBS += omroneip
-PROD_LIBS += asyn
-PROD_LIBS += $(EPICS_BASE_IOC_LIBS)
-
-PROD_SYS_LIBS_solaris += socket
-
-#
 include $(TOP)/configure/RULES
 #----------------------------------------
 #  ADD RULES AFTER THIS LINE

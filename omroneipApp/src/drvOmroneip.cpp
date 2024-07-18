@@ -1,6 +1,7 @@
 #include "drvOmroneip.h"
 
 bool iocStarted = false; // Set to 1 after IocInit() which starts the optimiseTags() thread
+bool omronExiting = false;
 
 static void readPollerC(void *drvPvt)
 {
@@ -28,11 +29,10 @@ omronEIPPoller::omronEIPPoller(const char *portName, const char *pollerName, dou
 {
 }
 
-/* Gives the read pollers time to finish their processing loop and sets omronExiting_ to true to tell the pollers to destruct */
+/* Gives the read pollers time to finish their processing loop and sets omronExiting to true to tell the pollers to destruct */
 static void omronExitCallback(void *pPvt)
 {
-  drvOmronEIP *pDriver = (drvOmronEIP *)pPvt;
-  pDriver->omronExiting_ = true;
+  omronExiting = true;
   epicsThreadSleep(3);
 }
 
@@ -50,9 +50,9 @@ static void myInitHookFunction(initHookState state)
 }
 
 drvOmronEIP::drvOmronEIP(const char *portName,
-                         char *gateway,
-                         char *path,
-                         char *plcType,
+                         const char *gateway,
+                         const char *path,
+                         const char *plcType,
                          int debugLevel,
                          double timezoneOffset)
 
@@ -68,7 +68,6 @@ drvOmronEIP::drvOmronEIP(const char *portName,
                      1,                                /* Autoconnect */
                      0,                                /* Default priority */
                      0),                               /* Default stack size*/
-      omronExiting_(false),
       initialized_(false),
       startPollers_(false),
       timezoneOffset_(timezoneOffset)
@@ -192,22 +191,8 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
     omronDrvUser_t *newDrvUser = (omronDrvUser_t *)callocMustSucceed(1, sizeof(omronDrvUser_t), functionName);
     if (libplctagStatus == PLCTAG_STATUS_OK && keyWords.at("stringValid") == "true")
     {
-      for (auto type : omronDataTypeList)
-        if (type.first == keyWords.at("dataType"))
-          newDrvUser->dataType = type;
-      newDrvUser->tag = tag;
-      newDrvUser->tagIndex = tagIndex;
-      newDrvUser->pollerName = keyWords.at("pollerName");
-      newDrvUser->sliceSize = std::stoi(keyWords.at("sliceSize")); // dtype checked elsewhere
-      newDrvUser->startIndex = std::stoi(keyWords.at("startIndex"));
-      newDrvUser->timeout = pasynUser->timeout;
-      newDrvUser->tagOffset = std::stoi(keyWords.at("offset"));
-      newDrvUser->strCapacity = std::stoi(keyWords.at("strCapacity"));
-      newDrvUser->optimisationFlag = keyWords.at("optimisationFlag");
-      newDrvUser->readFlag = readFlag;
-      newDrvUser->offsetReadSize = std::stoi(keyWords.at("offsetReadSize"));
-      newDrvUser->readAsString = std::stoi(keyWords.at("readAsString"));
-      newDrvUser->optimise = std::stoi(keyWords.at("optimise"));
+      /* Copy values from keyWords map into newDrvUser*/
+      initialiseDrvUser(newDrvUser,keyWords,tagIndex,tag,readFlag,pasynUser);
     }
 
     { /* Create the asyn param with the interface that matches the datatype */
@@ -363,6 +348,26 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
     return asynSuccess; // Yes this is stupid but if i return asynError or asynDisabled, asyn seg faults when setting up the waveform interface
   }
   return asynSuccess;
+}
+
+void drvOmronEIP::initialiseDrvUser(omronDrvUser_t *newDrvUser, const drvInfoMap keyWords, int tagIndex, std::string tag, bool readFlag, const asynUser *pasynUser)
+{
+  for (auto type : omronDataTypeList)
+    if (type.first == keyWords.at("dataType"))
+      newDrvUser->dataType = type;
+  newDrvUser->tag = tag;
+  newDrvUser->tagIndex = tagIndex;
+  newDrvUser->pollerName = keyWords.at("pollerName");
+  newDrvUser->sliceSize = std::stoi(keyWords.at("sliceSize")); // dtype checked elsewhere
+  newDrvUser->startIndex = std::stoi(keyWords.at("startIndex"));
+  newDrvUser->timeout = pasynUser->timeout;
+  newDrvUser->tagOffset = std::stoi(keyWords.at("offset"));
+  newDrvUser->strCapacity = std::stoi(keyWords.at("strCapacity"));
+  newDrvUser->optimisationFlag = keyWords.at("optimisationFlag");
+  newDrvUser->readFlag = readFlag;
+  newDrvUser->offsetReadSize = std::stoi(keyWords.at("offsetReadSize"));
+  newDrvUser->readAsString = std::stoi(keyWords.at("readAsString"));
+  newDrvUser->optimise = std::stoi(keyWords.at("optimise"));
 }
 
 asynStatus drvOmronEIP::optimiseTags()
@@ -1236,7 +1241,7 @@ void drvOmronEIP::readPoller()
   int timeTaken = 0;
   double pollingDelay = 0; // To stop from overloading the PLC, we divide read requests throughout the polling interval
   // The poller may not be fully initialised until the startPollers_ flag is set to 1, do not attempt to get the pPoller yet
-  while (!this->startPollers_ && !omronExiting_)
+  while (!this->startPollers_ && !omronExiting)
   {
     epicsThreadSleep(0.1);
   }
@@ -1249,7 +1254,7 @@ void drvOmronEIP::readPoller()
   }
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Starting poller: %s with interval: %f\n", driverName, functionName, threadName.c_str(), interval);
   auto startTime = std::chrono::system_clock::now();
-  while (!omronExiting_)
+  while (!omronExiting)
   {
     startTime = std::chrono::system_clock::now();
     double waitTime = interval - ((double)timeTaken / 1E9);
@@ -1922,6 +1927,12 @@ asynStatus drvOmronEIP::writeOctet(asynUser *pasynUser, const char *value, size_
 drvOmronEIP::~drvOmronEIP()
 {
   std::cout << "drvOmronEIP shutting down" << std::endl;
+  if (!omronExiting){
+    //This should be set true by the epicsExit callback, but if this destructor is called independently, then we can do it here
+    //It tells the pollers to quit the polling loop and destruct.
+    omronExiting = true;  
+    epicsThreadSleep(2);
+  }
   int status = 0;
   delete utilities;
   for (auto mi : pollerList_)
