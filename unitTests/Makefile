@@ -35,7 +35,11 @@ ifdef BOOST_INCLUDE
 	USR_INCLUDES += $(addprefix -I, $(BOOST_INCLUDE))
 endif
 
-USR_CXXFLAGS_Linux += -O0
+USR_CXXFLAGS_Linux += -O0 -std=c++17
+
+all:
+	$(info Directory is ./$(T_A))
+	cp structDefs.csv ./$(T_A)
 
 endif
 

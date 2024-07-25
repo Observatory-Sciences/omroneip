@@ -181,6 +181,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
       libplctagStatus = plc_tag_status(tagIndex);
       if (libplctagStatus != PLCTAG_STATUS_OK)
       {
+        readFlag = false;
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, tag creation failed! Reported: %s. Asyn parameter is not valid. drvInfo: '%s', tag string: '%s'\n",
                   driverName, functionName, plc_tag_decode_error(libplctagStatus), drvInfo, tag.c_str());
       }
@@ -291,6 +292,10 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
       }
       else
       {
+        // If we get here then there is an error, but we create an asyn parameter anyway and put it in an alarm state
+        createParam(drvInfo, asynParamInt32, &asynIndex);
+        setIntegerParam(asynIndex, 0);
+        thisAsynStatus = asynError;
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid datatype: %s\n", driverName, functionName, keyWords.at("dataType").c_str());
       }
     }
@@ -327,24 +332,19 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
     }
     else
     {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Creation of asyn parameter failed for drvInfo: %s Asyn status:%d\n", driverName, functionName, drvInfo, thisAsynStatus);
       setParamStatus(asynIndex, asynError);
       setParamAlarmStatus(asynIndex, asynError);
       setParamAlarmSeverity(asynIndex, INVALID_ALARM);
     }
   }
-  else
-  {
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Asyn parameter already exists with this drvInfo, reusing asynIndex: %d\n",
-              driverName, functionName, asynIndex);
-  }
 
   pasynUser->reason = asynIndex;
   // Create the link from the record to the param
   thisAsynStatus = asynPortDriver::drvUserCreate(pasynUser, drvInfo, pptypeName, psize);
+
   if (thisAsynStatus != asynSuccess || libplctagStatus != PLCTAG_STATUS_OK)
   {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Creation of asyn parameter failed for drvInfo: %s Asyn status:%d\n", driverName, functionName, drvInfo, thisAsynStatus);
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Creation of asyn parameter failed for drvInfo: %s \n", driverName, functionName, drvInfo);
     return asynSuccess; // Yes this is stupid but if i return asynError or asynDisabled, asyn seg faults when setting up the waveform interface
   }
   return asynSuccess;
@@ -353,8 +353,10 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
 void drvOmronEIP::initialiseDrvUser(omronDrvUser_t *newDrvUser, const drvInfoMap keyWords, int tagIndex, std::string tag, bool readFlag, const asynUser *pasynUser)
 {
   for (auto type : omronDataTypeList)
-    if (type.first == keyWords.at("dataType"))
+    if (type.first == keyWords.at("dataType")) {
       newDrvUser->dataType = type;
+      break;
+    }
   newDrvUser->tag = tag;
   newDrvUser->tagIndex = tagIndex;
   newDrvUser->pollerName = keyWords.at("pollerName");

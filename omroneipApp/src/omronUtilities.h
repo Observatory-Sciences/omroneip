@@ -95,6 +95,17 @@ public:
    /* This is responsible for parsing drvInfo when records are created. It takes the drvInfo string and parses it for required data.
       It returns a map of all of the data required by the driver to setup the asyn parameter and a boolean which indicates the validity of the data. */
    drvInfoMap drvInfoParser(const char *drvInfo);
+
+   /* Takes the drvInfo string and attempts to split it up around the spaces, then returns the values as a list of strings
+      returns "true" or "false" to identify if drvInfo appears to be valid (additional checks are made later)*/
+   std::string seperateDrvInfoVals(std::string str, std::list<std::string> & words);
+
+   //Returns a tuple of <stringValid,startIndex,indexable> based on the tag name given
+   std::tuple<std::string,std::string,bool> checkValidName(const std::string str);
+   std::string checkValidDtype(std::string str);
+   std::tuple<std::string,std::string> checkValidSliceSize(std::string str, bool indexable, std::string dtype);
+   std::tuple<std::string,std::string> checkValidOffset(std::string str);
+   std::tuple<std::string,std::string> checkValidExtras(std::string str, drvInfoMap &keyWords);
 };
 
 #endif

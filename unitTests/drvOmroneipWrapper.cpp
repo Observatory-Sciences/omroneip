@@ -26,6 +26,16 @@ void drvOmronEIPWrapper::wrap_initialiseDrvUser(omronDrvUser_t *newDrvUser, cons
   return initialiseDrvUser(newDrvUser, keyWords, tagIndex, tag, readFlag, pasynUser);
 }
 
+asynStatus drvOmronEIPWrapper::wrap_loadStructFile(const char *portName, const char *filePath)
+{
+  return loadStructFile(portName, filePath);
+}
+
+void drvOmronEIPWrapper::wrap_setAsynTrace(int mask)
+{
+  pasynTrace->setTraceMask(pasynUserSelf,mask);
+}
+
 drvOmronEIPWrapper::~drvOmronEIPWrapper()
 {
 }
