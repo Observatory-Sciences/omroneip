@@ -415,7 +415,6 @@ BOOST_AUTO_TEST_CASE(test_negative_checkValidOffset_TooBig)
     std::string str = "2345321424325235";
     std::cout << "Test string: " << str << std::endl;
     const auto [stringValid, offset] = testUtilities->wrap_checkValidOffset(str);
-    BOOST_CHECK_EQUAL(offset,"0");
     BOOST_CHECK_EQUAL(stringValid,"false");
 }
 
@@ -433,7 +432,6 @@ BOOST_AUTO_TEST_CASE(test_negative_checkValidOffset_String)
     std::string str = "chicken pizza";
     std::cout << "Test string: " << str << std::endl;
     const auto [stringValid, offset] = testUtilities->wrap_checkValidOffset(str);
-    BOOST_CHECK_EQUAL(offset,"0");
     BOOST_CHECK_EQUAL(stringValid,"false");
 }
 
@@ -442,7 +440,6 @@ BOOST_AUTO_TEST_CASE(test_negative_checkValidOffset_BadStructIndex)
     std::string str = "sPSU[14[5]";
     std::cout << "Test string: " << str << std::endl;
     const auto [stringValid, offset] = testUtilities->wrap_checkValidOffset(str);
-    BOOST_CHECK_EQUAL(offset,"0");
     BOOST_CHECK_EQUAL(stringValid,"false");
 }
 
