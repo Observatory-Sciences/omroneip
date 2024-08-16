@@ -125,8 +125,17 @@ public:
    asynStatus drvUserCreate(asynUser *pasynUser, const char *drvInfo, const char **pptypeName, size_t *psize)override;
    /* Copy and convert values from the keyWords map returned from drvInfoParser into newDrvUser*/
    void initialiseDrvUser(omronDrvUser_t *newDrvUser, const drvInfoMap keyWords, int tagIndex, std::string tag, bool readFlag, const asynUser *pasynUser);
+   
    /* Improves efficiency by looking for situations where multiple UDT field read requests can be replaced with a single UDT read */
    asynStatus optimiseTags();
+   /* Fill commonStructMap with the names of the structures to be read and the asyn indexes which need to read from them*/
+   asynStatus findOptimisableTags(std::unordered_map<std::string, std::vector<int>> &commonStructMap);
+   /* Create a new libplctag tag to read each struct from commonStructMap. The index of the new tag is stored along with the struct name in
+      the structIDMap */
+   asynStatus createOptimisedTags(std::unordered_map<std::string, int> &structIDMap, std::unordered_map<std::string, std::vector<int>> const commonStructMap, std::unordered_map<int, std::string> &structTagMap);
+   /* Now that the new tags have been created, we must link them to the correct asynParamater within tagMap_ and update other details*/
+   asynStatus updateOptimisedParams(std::unordered_map<std::string, int> const structIDMap, std::unordered_map<std::string, std::vector<int>> const commonStructMap, std::unordered_map<int, std::string> const structTagMap);
+
    /* Takes a csv style file, where each line contains a structure name followed by a list of datatypes within the struct
    Stores the user input struct as a map containing Struct:field_list pairs. It then calls createStructMap and passes this map */   
    asynStatus loadStructFile(const char * portName, const char * filePath);
@@ -150,6 +159,8 @@ public:
 private:
    bool initialized_; // Tracks if the driver successfully initialized
    bool startPollers_; // Tells the pollers when to start polling
+   size_t libplctagTagCount = 0;
+   size_t asynParamCount = 0;
    double timezoneOffset_; // Used to convert TIME data from the PLCs timezone
    std::string tagConnectionString_; // Stores the basic PLC connection information common to all libplctag tags
    /* Maps the index of each registered asynParameter to essential communications data for the parameter */

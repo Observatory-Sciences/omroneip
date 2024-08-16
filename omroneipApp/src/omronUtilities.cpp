@@ -477,7 +477,7 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
     }
   }
 
-  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Creating libplctag tag with the following parameters:\n", driverName, functionName);
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Extracted the following parameters from drvInfo=%s :\n", driverName, functionName, drvInfo);
   for (auto i = keyWords.begin(); i != keyWords.end(); i++)
   {
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s = %s\n", i->first.c_str(), i->second.c_str());
@@ -982,9 +982,9 @@ int omronUtilities::getEmbeddedAlignment(structDtypeMap const& expandedMap, std:
     else if (nextNextItem == "start:array") {
       alignment = getEmbeddedAlignment(expandedMap, structName, expandedRow[i+2], i+1);
     }
-    else if (expandedMap.find(nextNextItem)!=expandedMap.end()){
+    else if (expandedMap.find(nextNextItem.substr(6))!=expandedMap.end()){
       // Check to see if the array dtype is a start:structName. If it is then we must lookup the biggest dtype in this struct
-      alignment = getBiggestDtype(expandedMap, nextNextItem);
+      alignment = getBiggestDtype(expandedMap, nextNextItem.substr(6));
     }
     else {
       asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Could not find the alignment rule for: %s\n", driverName, functionName, nextNextItem.c_str());

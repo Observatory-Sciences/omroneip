@@ -175,6 +175,7 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
       if (!dupeTag)
       {
         tagIndex = plc_tag_create(tag.c_str(), CREATE_TAG_TIMEOUT);
+        libplctagTagCount +=1;
       }
 
       /* Check and report failure codes. An Asyn param will be created even on failure but the record will be given error status */
@@ -299,14 +300,14 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid datatype: %s\n", driverName, functionName, keyWords.at("dataType").c_str());
       }
     }
-
+    asynParamCount +=1;
     if (thisAsynStatus == asynSuccess)
     {
       if (libplctagStatus == PLCTAG_STATUS_OK && newDrvUser->optimise)
       {
         tagMap_[asynIndex] = newDrvUser;
-        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Created asyn index: %d for drvInfo: %s. Optimisations requested, a libplctag tag will be made if this process is successfull.\n",
-                  driverName, functionName, asynIndex, drvInfo);
+        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Created asyn index: %d for drvInfo: %s.\n", driverName, functionName, asynIndex, drvInfo);
+        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Optimisations requested. A libplctag tag will only be made if this process is successfull. \n", driverName, functionName);
       }
       else if (libplctagStatus == PLCTAG_STATUS_OK)
       {
@@ -371,14 +372,8 @@ void drvOmronEIP::initialiseDrvUser(omronDrvUser_t *newDrvUser, const drvInfoMap
   newDrvUser->readAsString = std::stoi(keyWords.at("readAsString"));
   newDrvUser->optimise = std::stoi(keyWords.at("optimise"));
 }
-
-asynStatus drvOmronEIP::optimiseTags()
+asynStatus drvOmronEIP::findOptimisableTags(std::unordered_map<std::string, std::vector<int>> &commonStructMap)
 {
-  const char *functionName = "drvOptimiseTags";
-  std::unordered_map<std::string, int> structIDList;                 // Contains a map of struct paths along with the id of the asyn index which gets that struct
-  std::unordered_map<std::string, std::vector<int>> commonStructMap; // Contains the structName along with a vector of all the asyn Indexes which use this struct
-  std::vector<int> destroyList;                                      // Contains a list of libplctag indexes to be destroyed as they are no longer used
-  this->lock();                                                      // lock to ensure that the pollers do not attempt polling while tags are being created and destroyed
   // Look at the name used for each tag, if the name references a structure (contains a "."), add the structure name to map
   // Each tag which references the structure adds its asyn index to the map under the same structure name key
   for (auto thisTag : tagMap_)
@@ -392,96 +387,62 @@ asynStatus drvOmronEIP::optimiseTags()
         thisTag.second->readFlag = true;
         continue;
       }
-      size_t pos = 0;
-      std::string parent;
       std::string name = thisTag.second->tag;
       name = name.substr(name.find("name=") + 5);
-      if ((pos = name.find('&')) != std::string::npos)
+      name = name.substr(0, name.find('&'));
+    
+      // Set the name to the original name minus the child/field part
+      if (commonStructMap.find(name) == commonStructMap.end())
       {
-        name = name.substr(0, pos);
-      }
-      // if the tag is a UDT type, then we just immediately add it to the commonStructMap as the entire struct is already being fetched
-      if (thisTag.second->dataType.first == "UDT")
-      {
-        commonStructMap[name].insert(commonStructMap[name].begin(), thisTag.first);
-        continue;
-      }
-      std::string remaining = name;
-      while ((pos = remaining.find('.')) != std::string::npos)
-      {
-        parent = remaining.substr(0, pos);
-        remaining.erase(0, pos + 1);
-      }
-      // Check for a valid parent
-      if (parent != "")
-      {
-        // Set the name to the original name minus the child/field part
-        name = name.substr(0, name.size() - (remaining.size() + 1));
-        if (commonStructMap.find(name) == commonStructMap.end())
-        {
-          // If struct does not exist in the map, then we add it with this tags asyn index
-          commonStructMap[name] = (std::vector<int>){thisTag.first};
-        }
-        else
-        {
-          commonStructMap.at(name).push_back(thisTag.first);
-        }
+        // If struct does not exist in the map, then we add it with this tags asyn index
+        commonStructMap[name] = (std::vector<int>){thisTag.first};
       }
       else
       {
-        // This tag is not a UDT or a child, so it cant be optimised, therefor we set the optimisationFlag to "optimisation failed"
-        thisTag.second->optimisationFlag = "optimisation failed";
-        thisTag.second->readFlag = false;
-        thisTag.second->tagOffset = 0; // optimisation failed, so point to start of dtype
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s  Err, attempt to create optimised tag for asyn index: %d failed.\n", driverName, functionName, thisTag.first);
+        commonStructMap.at(name).push_back(thisTag.first);
       }
     }
   }
-  int optimiseCounter = 0;
-  for (auto tag : tagMap_)
-  {
-    if (tag.second->optimise)
-    {
-      optimiseCounter++;
-    }
-  }
-  if (optimiseCounter == 0)
-  { // No tags to optimise so start immediately
-    this->unlock();
-    this->startPollers_ = true;
-    return asynSuccess;
-  }
+  return asynSuccess;
+}
 
-  size_t countNeeded = 2; // The number of tags which need to reference a struct before we decide it is more efficient to fetch the entire struct
-  // For each struct which is being referenced at least countNeeded times and which is not already in structIDList, create tag and add to list
+asynStatus drvOmronEIP::createOptimisedTags(std::unordered_map<std::string, int> &structIDMap, std::unordered_map<std::string, std::vector<int>> const commonStructMap, std::unordered_map<int, std::string> &structTagMap)
+{
+  const char *functionName = "createOptimisedTags";
+  size_t countNeeded = 2; /* The number of tags which need to reference a struct for it to be worth optimising. If less than this 
+                             value reference a struct name, an error message is printed. */
+  size_t tagsCreated = 0;
   for (auto commonStruct : commonStructMap)
   {
     if (commonStruct.second.size() >= countNeeded)
     {
-      if (structIDList.find(commonStruct.first) == structIDList.end())
+      if (structIDMap.find(commonStruct.first) == structIDMap.end())
       {
-        // We must create a new libplctag tag and then add it to structIDList if valid
+        // We must create a new libplctag tag and then add it to structIDMap if valid
         // Uses UDT string attributes
         std::string tag = this->tagConnectionString_ +
                           "&name=" + commonStruct.first +
                           "&elem_count=1&allow_packing=1&str_is_counted=0&str_count_word_bytes=0&str_is_zero_terminated=1";
 
         int tagIndex = plc_tag_create(tag.c_str(), CREATE_TAG_TIMEOUT);
+        tagsCreated +=1;
 
         if (tagIndex < 0)
         {
           const char *error = plc_tag_decode_error(tagIndex);
           asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s  Err, attempt to create optimised tag for asyn index: %d failed. %s\n", driverName, functionName, commonStruct.second[0], error);
+          return asynError;
         }
         else
         {
-          structIDList[commonStruct.first] = tagIndex;
+          structIDMap[commonStruct.first] = tagIndex;
+          structTagMap[tagIndex] = tag;
           asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Attempting to optimise asyn index: %d, a tag was created with ID: %d and tag string: %s\n", driverName, functionName, commonStruct.second[0], tagIndex, tag.c_str());
         }
 
         // We must designate one of the asynIndexes in the vector as the "master" index which has its libplctag tag read
         // To decide which one, we look at which has the fastest polling interval and use that one
-        double pollingInterval = 9999999;
+        double pollingInterval = __DBL_MAX__;
         std::string pollerName;
         omronEIPPoller* pPoller;
         int master = 0;
@@ -499,36 +460,26 @@ asynStatus drvOmronEIP::optimiseTags()
     }
     else
     {
-      // Case where a child is found, but it is the only one, therefor no optimisation is possible and we print an error
+      // Case where there are not enough asyn parameters referencing a structure for optimisation to be worthwhile
       tagMap_.find(commonStruct.second[0])->second->optimisationFlag = "no optimisation possible";
       tagMap_.find(commonStruct.second[0])->second->readFlag = false;
       asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, attempt to optimise asyn index: %d failed. You need at least two records accessing data from the same tag to optimise. Parameter will not be used.\n",
                 driverName, functionName, commonStruct.second[0]);
+      return asynError;
     }
   }
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s %ld new optimised tags created\n", driverName, functionName, tagsCreated);
+  libplctagTagCount+=tagsCreated;
+  return asynSuccess;
+}
 
-  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s The structs which are accessed by multiple records are (struct: asyn index list):\n", driverName, functionName);
-  std::string flowString;
-  for (auto const &i : commonStructMap)
-  {
-    flowString += i.first + ": ";
-    for (auto const &j : i.second)
-      flowString += std::to_string(j) + " ";
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", flowString.c_str());
-    flowString.clear();
-  }
-
-  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s The structs alongside the libplctag index chosen to read them are:\n", driverName, functionName);
-  for (auto const &i : structIDList)
-  {
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s: %d \n", i.first.c_str(), i.second);
-  }
-
-  // Now that we have a map of structs and which index gets them as well as a map of structs and which indexes need to access them,
-  // we can optimise
+asynStatus drvOmronEIP::updateOptimisedParams(std::unordered_map<std::string, int> const structIDMap, std::unordered_map<std::string, std::vector<int>> const commonStructMap, std::unordered_map<int, std::string> const structTagMap)
+{
+  const char *functionName = "updateOptimisedParams";
   omronDrvUser_t *drvUser;
   for (auto commonStruct : commonStructMap)
   {
+    // For each asyn parameter which references this struct name
     for (int asynIndex : commonStruct.second)
     {
       bool matchFound = false;
@@ -542,27 +493,20 @@ asynStatus drvOmronEIP::optimiseTags()
         drvUser->optimisationFlag = "optimisation failed"; // Could not find an optimisation so this tag will be read/written directly
         drvUser->tagOffset = 0;                            // optimisation failed, so point to start of dtype
         drvUser->readFlag = false;
-        break;
+        return asynError;
       }
 
-      for (auto masterStruct : structIDList)
+      // look through the map which stores which libplctag should be used to read the struct name
+      for (auto masterStruct : structIDMap)
       {
+        // we have found the correct libplctag for the asyn index
         if (commonStruct.first == masterStruct.first)
         {
-          // we have found a tag that already exists which gets this struct, so we piggy back off this
-          // now we get the drvUser for the asyn parameter which is to be optimised and set its tagIndex to the tagIndex we piggy back off
           matchFound = true;
-        }
-      }
-
-      for (auto masterStruct : structIDList)
-      {
-        if (commonStruct.first == masterStruct.first)
-        {
-          // we must update the tagIndex of this drvUser and also any other drvUser
           for (auto tag : tagMap_)
           {
-            if (tag.second->tagIndex == drvUser->tagIndex)
+          // we must update the tagIndex of this drvUser (using its asyn Index) and also any other drvUser which uses the same (now redundant libplctag index)
+            if (tag.first == asynIndex || ((tag.second->tagIndex == drvUser->tagIndex) && (drvUser->tagIndex != 0)))
             {
               if (tag.second->optimisationFlag != "master")
               {
@@ -571,30 +515,89 @@ asynStatus drvOmronEIP::optimiseTags()
               }
               else
                 tag.second->readFlag = true;
+              tag.second->sliceSize=1;
+              tag.second->startIndex=1;
               tag.second->tagIndex = masterStruct.second;
+              tag.second->tag = structTagMap.at(masterStruct.second);
               asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Asyn index: %d Optimised to use libplctag tag with libplctag index: %d\n", driverName, functionName, tag.first, masterStruct.second);
             }
           }
         }
       }
 
-      if (!matchFound && commonStruct.second.size() >= countNeeded)
+      if (!matchFound)
       {
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s  Err, attempt to optimise asyn index: %d failed. The parameter will not be used.\n", driverName, functionName, asynIndex);
         drvUser->optimisationFlag = "optimisation failed";
         drvUser->readFlag = "false";
+        return asynError;
       }
     }
   }
+  return asynSuccess;
+}
+
+asynStatus drvOmronEIP::optimiseTags()
+{
+  const char *functionName = "drvOptimiseTags";
+  asynStatus status = asynSuccess;
+  std::unordered_map<std::string, int> structIDMap;                 // Contains a map of struct paths along with the id of the asyn index which gets that struct
+  std::unordered_map<int, std::string> structTagMap;                // Contains a map of new libplctag tag indexes paired with the tag string
+  std::unordered_map<std::string, std::vector<int>> commonStructMap; // Contains the structName along with a vector of all the asyn Indexes which use this struct
+  this->lock();                                                      // lock to ensure that the pollers do not attempt polling while tags are being created and destroyed
+  int optimiseCounter = 0;
+  for (auto tag : tagMap_)
+  {
+    if (tag.second->optimise)
+    {
+      optimiseCounter++;
+    }
+  }
+  if (optimiseCounter == 0)
+  { // No tags to optimise so start immediately
+    this->unlock();
+    this->startPollers_ = true;
+    return asynSuccess;
+  }
+
+  // looks through the tags for those which have requested to use optimisations, adds these to lists for further processing
+  status = findOptimisableTags(commonStructMap);
+  if (status != asynSuccess) {return status;}
+  // For each struct which is being referenced at least countNeeded times and which is not already in structIDMap, create a libplctag tag 
+  // and add it to structIDMap
+  status = createOptimisedTags(structIDMap, commonStructMap, structTagMap);
+  if (status != asynSuccess) {return status;}
+
+  std::string flowString;
+  for (auto const &i : commonStructMap)
+  {
+    flowString += "Optimising to read struct: " + i.first + " Into asyn indexes:";
+    for (auto const &j : i.second)
+      flowString += std::to_string(j) + " ";
+    for (auto const &k : structIDMap)
+    {
+      if (k.first == i.first){
+        flowString += "Using new libplctag with ID:" + std::to_string(k.second);
+      }
+    }
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", flowString.c_str());
+    flowString.clear();
+  }
+
+  // Now that we have a map of structs and which index gets them as well as a map of structs and which indexes need to access them,
+  // we can optimise
+  status = updateOptimisedParams(structIDMap, commonStructMap, structTagMap);
+  if (status != asynSuccess) {return status;}
 
   for (auto tag : tagMap_)
   {
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Asyn param: %d optimisationFlag: '%s' readFlag: %s\n", driverName, functionName, tag.first, tag.second->optimisationFlag.c_str(), tag.second->readFlag ? "true" : "false");
   }
 
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Driver initialisation complete. Created %ld asyn parameters and %ld libplctag tags.\n", driverName, functionName, this->asynParamCount, this->libplctagTagCount);
   this->unlock();
   this->startPollers_ = true;
-  return asynSuccess; // always return success as any failures to optimise should leave the driver in its pre omtimised state which should have no erros
+  return asynSuccess;
 }
 
 asynStatus drvOmronEIP::loadStructFile(const char *portName, const char *filePath)
