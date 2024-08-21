@@ -50,6 +50,8 @@
 #include "asynParamType.h"
 
 #define CREATE_TAG_TIMEOUT 1000 //ms
+#define MAX_CIP_MESSAGE_SIZE 1996 //includes a 2 bytes "CIP Sequencer Count" header
+#define MAX_CIP_MESSAGE_DATA_SIZE 1994
 
 typedef std::pair<std::string, uint16_t> omronDataType_t;
 typedef std::unordered_map<std::string, std::vector<std::string>> structDtypeMap;
@@ -130,6 +132,11 @@ public:
    asynStatus optimiseTags();
    /* Fill commonStructMap with the names of the structures to be read and the asyn indexes which need to read from them*/
    asynStatus findOptimisableTags(std::unordered_map<std::string, std::vector<int>> &commonStructMap);
+   /* Look within the commonStructMap for structs that are part of an array of structs and see if it is possible to download a slice
+      of the array rather than each element seperately */
+   asynStatus findArrayOptimisations(std::unordered_map<std::string, std::vector<int>> &commonStructMap, std::unordered_map<std::string, std::vector<int>> &commonArrayMap);
+   /* Create tags which read a slice of an array of structs. Update drvUser structs with appropriate tag index and offsets. */
+   asynStatus createOptimisedArrayTags(std::unordered_map<std::string, int> &structIDMap, std::unordered_map<std::string, std::vector<int>> const commonStructMap, std::unordered_map<std::string, std::vector<int>> &commonArrayMap, std::unordered_map<int, std::string> &structTagMap);
    /* Create a new libplctag tag to read each struct from commonStructMap. The index of the new tag is stored along with the struct name in
       the structIDMap */
    asynStatus createOptimisedTags(std::unordered_map<std::string, int> &structIDMap, std::unordered_map<std::string, std::vector<int>> const commonStructMap, std::unordered_map<int, std::string> &structTagMap);

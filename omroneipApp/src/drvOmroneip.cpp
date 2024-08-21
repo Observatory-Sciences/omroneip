@@ -372,6 +372,7 @@ void drvOmronEIP::initialiseDrvUser(omronDrvUser_t *newDrvUser, const drvInfoMap
   newDrvUser->readAsString = std::stoi(keyWords.at("readAsString"));
   newDrvUser->optimise = std::stoi(keyWords.at("optimise"));
 }
+
 asynStatus drvOmronEIP::findOptimisableTags(std::unordered_map<std::string, std::vector<int>> &commonStructMap)
 {
   // Look at the name used for each tag, if the name references a structure (contains a "."), add the structure name to map
@@ -404,6 +405,160 @@ asynStatus drvOmronEIP::findOptimisableTags(std::unordered_map<std::string, std:
     }
   }
   return asynSuccess;
+}
+
+asynStatus drvOmronEIP::findArrayOptimisations(std::unordered_map<std::string, std::vector<int>> &commonStructMap, std::unordered_map<std::string, std::vector<int>> &commonArrayMap)
+{
+  const char *functionName = "findArrayOptimisations";
+  asynStatus status = asynSuccess;
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Looking for array slicing optimisations... \n", 
+              driverName, functionName);
+  for (auto commonStruct : commonStructMap)
+  {
+    std::string arrayName;
+    std::string structName = commonStruct.first;
+    size_t indexPos = structName.find("[");
+    int arrayIndex = 0;
+    int maxSlice = 0;
+    if (indexPos != structName.npos)
+    { 
+      try
+      {
+        arrayName = structName.substr(0,indexPos);
+        arrayIndex =  std::stoi(structName.substr(indexPos+1,structName.npos-indexPos-2));
+        if (commonArrayMap.find(arrayName) == commonArrayMap.end())
+        {
+          //We may have found an array of structs, we attempt to read the element to get its size
+          std::string tag = this->tagConnectionString_ +
+                  "&name=" + structName +
+                  "&elem_count=1&allow_packing=1&str_is_counted=0&str_count_word_bytes=0&str_is_zero_terminated=1";
+
+          int tagIndex = plc_tag_create(tag.c_str(), CREATE_TAG_TIMEOUT);
+          maxSlice = MAX_CIP_MESSAGE_DATA_SIZE / plc_tag_get_size(tagIndex);
+          plc_tag_destroy(tagIndex); //clean up
+          //If arrayName is not already in the map, we need to add it
+          commonArrayMap[arrayName] = {maxSlice,arrayIndex};
+        }
+        else
+        {
+          commonArrayMap.at(arrayName).push_back(arrayIndex);
+        }
+      }
+      catch(...)
+      {
+        status = asynError;
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid index found while optimising structure named: %s\n", 
+                    driverName, functionName, structName.c_str());
+      }
+    }
+  }
+
+  // Sort indexes into ascending order
+  for (auto &arrayItem : commonArrayMap){
+    std::sort(arrayItem.second.begin()+1,arrayItem.second.end());
+  }
+
+  // Print debugging info
+  if (!commonArrayMap.empty()){
+    std::string flowString;
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Found the following array slicing optimisations: \n", 
+                driverName, functionName);
+    for (auto arrayItem : commonArrayMap){
+      flowString = "Slicing array: "+arrayItem.first+" into slices of size: "+std::to_string(arrayItem.second[0])+" for indexes: ";
+      for (size_t i = 1; i<(arrayItem.second.size()-1); i++)
+      {
+        flowString += std::to_string(arrayItem.second[i]) + " ";
+      }
+      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s %s \n", driverName, functionName, flowString.c_str());
+    }
+  }
+  else {
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Found no possible array slicing optimisations. \n", 
+                driverName, functionName);
+  }
+  return status;
+}
+
+asynStatus drvOmronEIP::createOptimisedArrayTags(std::unordered_map<std::string, int> &structIDMap,
+                                                  std::unordered_map<std::string, std::vector<int>> const commonStructMap, 
+                                                    std::unordered_map<std::string, std::vector<int>> &commonArrayMap, 
+                                                        std::unordered_map<int, std::string> &structTagMap)
+{
+  const char *functionName = "createOptimisedArrayTags";
+  asynStatus status = asynSuccess;
+  int maxSlice;
+  int sliceStart = 1; // The first index of the previous slice
+  bool newSlice = true; // Indicates that we need to make a new tag for a new slice
+  int tagIndex;
+  int masterAsynIndex;
+  std::string arrayName;
+  std::string tag;
+  size_t tagsCreated = 0;
+  for (auto &arrayItem : commonArrayMap)
+  {
+    // The first element of the vector is the max number of elements which can fit in a single CIP message, we save and then erase this
+    maxSlice = arrayItem.second[0];
+    arrayItem.second.erase(arrayItem.second.begin());
+    for (int index : arrayItem.second)
+    {
+      arrayName = arrayItem.first + "[" + std::to_string(index) + "]";
+      if (index-sliceStart >= maxSlice){
+        newSlice = true;
+      }
+      if (newSlice)
+      {
+        //Create tag which gets array slice starting from the first index
+        newSlice = false;
+        sliceStart = index;
+        tag = this->tagConnectionString_ + "&name=" + arrayName +
+                    "&elem_count="+std::to_string(maxSlice)+"&allow_packing=1&str_is_counted=0&str_count_word_bytes=0&str_is_zero_terminated=1";
+
+        tagIndex = plc_tag_create(tag.c_str(), CREATE_TAG_TIMEOUT);
+        // if tagIndex = -7 then we are trying to read a slice beyond the end of the array
+        if (tagIndex>=1)
+        {
+          tagsCreated ++;
+          // The master drvUser which reads the slice is the drvUser designated by the first asynIndex in the vector for the structName
+          // which gets the first element from the array slice.
+          masterAsynIndex = commonStructMap.at(arrayName)[0];
+          tagMap_.find(masterAsynIndex)->second->optimisationFlag = "master";
+          tagMap_.find(masterAsynIndex)->second->readFlag = true;
+        }
+      }
+      if (tagIndex>=1){
+        // If tagIndex is valid, then we update the details for any asynParameter which will use it
+        structTagMap[tagIndex] = tag;
+        structIDMap[arrayName] = tagIndex; //Now that arrayName has been added, it wont be readded later in createOptimisedTags()
+        for (auto asynIndex : commonStructMap.at(arrayName))
+        {
+          // Original offset was offset within an element, as we have a slice of elements, we must add the offset to the element within
+          // the slice
+          int elementSize = (plc_tag_get_size(tagIndex)/8);
+          int oldOffset = tagMap_.find(asynIndex)->second->tagOffset;
+          int newOffset;
+          if (tagMap_.find(asynIndex)->second->dataType.first == "BOOL"){
+            newOffset = oldOffset + 8*(elementSize * (index-sliceStart));
+          }
+          else {
+            newOffset = oldOffset + elementSize * (index-sliceStart);
+          }
+          tagMap_.find(asynIndex)->second->tagOffset = newOffset;
+          asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Attempting to optimise asyn index: %d, a tag was created with ID: %d and tag string: %s and offset: %d\n", 
+                      driverName, functionName, asynIndex, tagIndex, tag.c_str(), newOffset);
+        }  
+      }
+      else
+      {
+        for (auto asynIndex : commonStructMap.at(arrayName))
+        {
+          asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Array optimisations failed for asyn index: %d, an individual element optimisations will be attempted instead.\n", 
+                      driverName, functionName, asynIndex);
+        }
+      }
+    }
+  }
+  libplctagTagCount+=tagsCreated;
+  return status;
 }
 
 asynStatus drvOmronEIP::createOptimisedTags(std::unordered_map<std::string, int> &structIDMap, std::unordered_map<std::string, std::vector<int>> const commonStructMap, std::unordered_map<int, std::string> &structTagMap)
@@ -498,7 +653,7 @@ asynStatus drvOmronEIP::updateOptimisedParams(std::unordered_map<std::string, in
         status = asynError;
       }
 
-      // look through the map which stores which libplctag should be used to read the struct name
+      // look through the map which stores which libplctag that should be used to read the struct name
       for (auto masterStruct : structIDMap)
       {
         // we have found the correct libplctag for the asyn index
@@ -508,7 +663,9 @@ asynStatus drvOmronEIP::updateOptimisedParams(std::unordered_map<std::string, in
           for (auto tag : tagMap_)
           {
           // we must update the tagIndex of this drvUser (using its asyn Index) and also any other drvUser which uses the same (now redundant libplctag index)
-            if (tag.first == asynIndex || ((tag.second->tagIndex == drvUser->tagIndex) && (drvUser->tagIndex != 0)))
+          // we dont update if the tagIndexes already match as they are up to date, or if they have not been intialised yet (equal to 0) as this will
+          // be done later in this loop
+            if (tag.first == asynIndex || ((tag.second->tagIndex == drvUser->tagIndex) && (drvUser->tagIndex != 0) && (tag.second->tagIndex != masterStruct.second)))
             {
               if (tag.second->optimisationFlag != "master")
               {
@@ -541,9 +698,10 @@ asynStatus drvOmronEIP::optimiseTags()
 {
   const char *functionName = "drvOptimiseTags";
   asynStatus status = asynSuccess;
-  std::unordered_map<std::string, int> structIDMap;                 // Contains a map of struct paths along with the id of the asyn index which gets that struct
-  std::unordered_map<int, std::string> structTagMap;                // Contains a map of new libplctag tag indexes paired with the tag string
+  std::unordered_map<std::string, int> structIDMap;                  // Contains a map of struct paths along with the id of the asyn index which gets that struct
+  std::unordered_map<int, std::string> structTagMap;                 // Contains a map of new libplctag tag indexes paired with the tag string
   std::unordered_map<std::string, std::vector<int>> commonStructMap; // Contains the structName along with a vector of all the asyn Indexes which use this struct
+  std::unordered_map<std::string, std::vector<int>> commonArrayMap;  // Contains arrayName:maxSlice,index1,index2...
   this->lock();                                                      // lock to ensure that the pollers do not attempt polling while tags are being created and destroyed
   int optimiseCounter = 0;
   for (auto tag : tagMap_)
@@ -557,6 +715,13 @@ asynStatus drvOmronEIP::optimiseTags()
   { // We have tags to optimise
     // looks through the tags for those which have requested to use optimisations, adds these to lists for further processing
     status = findOptimisableTags(commonStructMap);
+
+    // Looks for multiple asynParameters which are reading from the same array of structs
+    status = findArrayOptimisations(commonStructMap, commonArrayMap);
+
+    // Attempts to create tags which read slices of arrays, updates drvUsers to match the new tag and offsets required
+    status = createOptimisedArrayTags(structIDMap, commonStructMap, commonArrayMap, structTagMap);
+
     // For each struct which is being referenced at least countNeeded times and which is not already in structIDMap, create a libplctag tag 
     // and add it to structIDMap
     status = createOptimisedTags(structIDMap, commonStructMap, structTagMap);
@@ -583,10 +748,11 @@ asynStatus drvOmronEIP::optimiseTags()
 
     for (auto tag : tagMap_)
     {
-      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Asyn param: %d optimisationFlag: '%s' readFlag: %s\n", driverName, functionName, tag.first, tag.second->optimisationFlag.c_str(), tag.second->readFlag ? "true" : "false");
+      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Asyn param: %d optimisationFlag: '%s' readFlag: %s\n", 
+                  driverName, functionName, tag.first, tag.second->optimisationFlag.c_str(), tag.second->readFlag ? "true" : "false");
     }
     if (status != asynSuccess) 
-      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Err, Errors detected during optimisation! You should fix these.\n", driverName);
+      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Err, Errors detected during optimisation! You should fix these.\n", driverName, functionName);
 
   }
   
@@ -595,7 +761,7 @@ asynStatus drvOmronEIP::optimiseTags()
   this->startPollers_ = true;
   return asynSuccess;
 }
-
+ 
 asynStatus drvOmronEIP::loadStructFile(const char *portName, const char *filePath)
 {
   const char *functionName = "loadStructFile";
@@ -1276,8 +1442,9 @@ void drvOmronEIP::readPoller()
       {
         asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Reading tag: %d with polling interval: %f seconds\n", 
                     driverName, functionName, x.second->tagIndex, interval);
-        plc_tag_read(x.second->tagIndex, 0); // read from plc, we will check status and timeouts later
-        // We sleep to split up read requests within timing interval, otherwise we can get traffic jams and missed polling intervals
+        plc_tag_read(x.second->tagIndex, 0); // Send read request to plc, we will check status and timeouts later
+        /* If spreadRequests is true, we sleep to split up read requests within timing interval, otherwise we can get traffic jams and missed 
+           polling intervals */
         if (pPoller->myTagCount_ > 1 && pPoller->spreadRequests_)
         {
           pollingDelay = (interval - 0.2 * interval) / pPoller->myTagCount_;
