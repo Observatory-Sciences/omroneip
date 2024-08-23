@@ -36,6 +36,18 @@ void drvOmronEIPWrapper::wrap_setAsynTrace(int mask)
   pasynTrace->setTraceMask(pasynUserSelf,mask);
 }
 
+asynStatus drvOmronEIPWrapper::wrap_optimiseTags()
+{
+  return optimiseTags();
+}
+
+asynStatus drvOmronEIPWrapper::wrap_drvUserCreate(asynUser* pAsynUser, const char* drvInfo)
+{
+  const char ** pptypeName;
+  size_t* psize;
+  return drvUserCreate(pAsynUser,drvInfo,pptypeName,psize);
+}
+
 drvOmronEIPWrapper::~drvOmronEIPWrapper()
 {
 }

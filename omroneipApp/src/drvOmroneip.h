@@ -163,6 +163,9 @@ public:
    asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value)override;
    asynStatus writeOctet(asynUser *pasynUser, const char * value, size_t nChars, size_t* nActual)override;
 
+   // Helper function used by some tests to get a drvUser
+   omronDrvUser_t* getDrvUser(int asynIndex);
+
 private:
    bool initialized_; // Tracks if the driver successfully initialized
    bool startPollers_; // Tells the pollers when to start polling

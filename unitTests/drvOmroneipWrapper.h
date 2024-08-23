@@ -16,6 +16,8 @@ public:
    void wrap_initialiseDrvUser(omronDrvUser_t *newDrvUser, const drvInfoMap keyWords, int tagIndex, std::string tag, bool readFlag, const asynUser *pasynUser);
    asynStatus wrap_loadStructFile(const char *portName, const char *filePath);
    void wrap_setAsynTrace(int mask);
+   asynStatus wrap_optimiseTags();
+   asynStatus wrap_drvUserCreate(asynUser *pAsynUser, const char *drvInfo);
 };
 
 class omronEIPPollerWrapper : public omronEIPPoller {

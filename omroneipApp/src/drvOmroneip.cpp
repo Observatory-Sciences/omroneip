@@ -84,10 +84,10 @@ drvOmronEIP::drvOmronEIP(const char *portName,
                                                      epicsThreadGetStackSize(epicsThreadStackMedium),
                                                      (EPICSTHREADFUNC)optimiseTagsC,
                                                      this) == NULL);
-  if (status != 0)
-  {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Driver initialisation failed.\n", driverName, functionName);
-  }
+  // if (status != 0)
+  // {
+  //   asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Driver initialisation failed.\n", driverName, functionName);
+  // }
   utilities = new omronUtilities(this);
   initialized_ = true;
 }
@@ -465,7 +465,7 @@ asynStatus drvOmronEIP::findArrayOptimisations(std::unordered_map<std::string, s
                 driverName, functionName);
     for (auto arrayItem : commonArrayMap){
       flowString = "Slicing array: "+arrayItem.first+" into slices of size: "+std::to_string(arrayItem.second[0])+" for indexes: ";
-      for (size_t i = 1; i<(arrayItem.second.size()-1); i++)
+      for (size_t i = 1; i<(arrayItem.second.size()+1); i++)
       {
         flowString += std::to_string(arrayItem.second[i]) + " ";
       }
@@ -499,11 +499,22 @@ asynStatus drvOmronEIP::createOptimisedArrayTags(std::unordered_map<std::string,
     // The first element of the vector is the max number of elements which can fit in a single CIP message, we save and then erase this
     maxSlice = arrayItem.second[0];
     arrayItem.second.erase(arrayItem.second.begin());
+    int i = 0;
+    int nextIndex = 0;
     for (int index : arrayItem.second)
     {
       arrayName = arrayItem.first + "[" + std::to_string(index) + "]";
+      if ((i+1)<=arrayItem.second.size()){
+        nextIndex = arrayItem.second[i+1];
+      }
+      
       if (index-sliceStart >= maxSlice){
+        //Check to see if this index needs a new slice
         newSlice = true;
+      }
+      if (nextIndex-index>maxSlice) {
+        //Check to make sure that there are two elements being accessed within this slice so that the optimisation is useful
+        newSlice = false;
       }
       if (newSlice)
       {
@@ -555,9 +566,11 @@ asynStatus drvOmronEIP::createOptimisedArrayTags(std::unordered_map<std::string,
                       driverName, functionName, asynIndex);
         }
       }
+      i++;
     }
   }
   libplctagTagCount+=tagsCreated;
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s %ld new optimised array slice tags created\n", driverName, functionName, tagsCreated);
   return status;
 }
 
@@ -717,49 +730,58 @@ asynStatus drvOmronEIP::optimiseTags()
     status = findOptimisableTags(commonStructMap);
 
     // Looks for multiple asynParameters which are reading from the same array of structs
-    status = findArrayOptimisations(commonStructMap, commonArrayMap);
+    if (status==asynSuccess)
+      status = findArrayOptimisations(commonStructMap, commonArrayMap);
+
 
     // Attempts to create tags which read slices of arrays, updates drvUsers to match the new tag and offsets required
-    status = createOptimisedArrayTags(structIDMap, commonStructMap, commonArrayMap, structTagMap);
+    if (status==asynSuccess)
+      status = createOptimisedArrayTags(structIDMap, commonStructMap, commonArrayMap, structTagMap);
 
     // For each struct which is being referenced at least countNeeded times and which is not already in structIDMap, create a libplctag tag 
     // and add it to structIDMap
-    status = createOptimisedTags(structIDMap, commonStructMap, structTagMap);
+    if (status==asynSuccess)
+      status = createOptimisedTags(structIDMap, commonStructMap, structTagMap);
 
-    std::string flowString;
-    for (auto const &i : commonStructMap)
-    {
-      flowString += "Optimising to read struct: " + i.first + " Into asyn indexes:";
-      for (auto const &j : i.second)
-        flowString += std::to_string(j) + " ";
-      for (auto const &k : structIDMap)
+    if (status==asynSuccess) {
+      std::string flowString;
+      for (auto const &i : commonStructMap)
       {
-        if (k.first == i.first){
-          flowString += "Using new libplctag with ID:" + std::to_string(k.second);
+        flowString += "Optimising to read struct: " + i.first + " Into asyn indexes:";
+        for (auto const &j : i.second)
+          flowString += std::to_string(j) + " ";
+        for (auto const &k : structIDMap)
+        {
+          if (k.first == i.first){
+            flowString += "Using new libplctag with ID:" + std::to_string(k.second);
+          }
         }
+        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", flowString.c_str());
+        flowString.clear();
       }
-      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", flowString.c_str());
-      flowString.clear();
     }
-
     // Now that we have a map of structs and which index gets them as well as a map of structs and which indexes need to access them,
     // we can optimise
-    status = updateOptimisedParams(structIDMap, commonStructMap, structTagMap);
+    if (status==asynSuccess)
+      status = updateOptimisedParams(structIDMap, commonStructMap, structTagMap);
 
-    for (auto tag : tagMap_)
-    {
-      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Asyn param: %d optimisationFlag: '%s' readFlag: %s\n", 
-                  driverName, functionName, tag.first, tag.second->optimisationFlag.c_str(), tag.second->readFlag ? "true" : "false");
+    if (status==asynSuccess){
+      for (auto tag : tagMap_)
+      {
+        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Asyn param: %d optimisationFlag: '%s' readFlag: %s\n", 
+                    driverName, functionName, tag.first, tag.second->optimisationFlag.c_str(), tag.second->readFlag ? "true" : "false");
+      }
     }
-    if (status != asynSuccess) 
-      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Err, Errors detected during optimisation! You should fix these.\n", driverName, functionName);
-
   }
+
+  if (status != asynSuccess) 
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Err, Errors detected during optimisation! You should fix these.\n", driverName, functionName);
+  else
+    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Driver initialisation complete. Created %ld asyn parameters and %ld libplctag tags.\n", driverName, functionName, this->asynParamCount, this->libplctagTagCount);
   
-  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Driver initialisation complete. Created %ld asyn parameters and %ld libplctag tags.\n", driverName, functionName, this->asynParamCount, this->libplctagTagCount);
   this->unlock();
   this->startPollers_ = true;
-  return asynSuccess;
+  return status;
 }
  
 asynStatus drvOmronEIP::loadStructFile(const char *portName, const char *filePath)
@@ -2091,6 +2113,11 @@ asynStatus drvOmronEIP::writeOctet(asynUser *pasynUser, const char *value, size_
     return asynError;
   }
   return asynSuccess;
+}
+
+omronDrvUser_t* drvOmronEIP::getDrvUser(int asynIndex)
+{
+  return (this->tagMap_.at(asynIndex));
 }
 
 drvOmronEIP::~drvOmronEIP()
