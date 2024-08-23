@@ -84,10 +84,10 @@ drvOmronEIP::drvOmronEIP(const char *portName,
                                                      epicsThreadGetStackSize(epicsThreadStackMedium),
                                                      (EPICSTHREADFUNC)optimiseTagsC,
                                                      this) == NULL);
-  // if (status != 0)
-  // {
-  //   asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Driver initialisation failed.\n", driverName, functionName);
-  // }
+  if (status != 0)
+  {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Driver initialisation failed.\n", driverName, functionName);
+  }
   utilities = new omronUtilities(this);
   initialized_ = true;
 }
@@ -504,7 +504,7 @@ asynStatus drvOmronEIP::createOptimisedArrayTags(std::unordered_map<std::string,
     for (int index : arrayItem.second)
     {
       arrayName = arrayItem.first + "[" + std::to_string(index) + "]";
-      if ((i+1)<=arrayItem.second.size()){
+      if ((i+1)<=(int)arrayItem.second.size()){
         nextIndex = arrayItem.second[i+1];
       }
       

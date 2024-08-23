@@ -48,6 +48,9 @@ SHARED_LIBRARIES = YES
 #BOOST_LIB = /usr/lib64
 #BOOST_INCLUDE = /usr/include
 
+# Set PLC_CONNECTED to YES to enable unit tests which require a correctly configured PLC
+#PLC_CONNECTED = YES
+
 # These allow developers to override the CONFIG_SITE variable
 # settings without having to modify the configure/CONFIG_SITE
 # file itself.
