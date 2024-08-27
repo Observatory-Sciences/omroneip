@@ -76,6 +76,15 @@ drvOmronEIP::drvOmronEIP(const char *portName,
   static const char *functionName = "drvOmronEIP";
   tagConnectionString_ = "protocol=ab-eip&gateway=" + (std::string)gateway + "&path=" + (std::string)path + "&plc=" + (std::string)plcType;
   std::cout << "Starting driver with connection string: " << tagConnectionString_ << std::endl;
+  //Defaults to 1994
+  if (strcmp(plcType,"plc5") == 0 || strcmp(plcType,"slc500") == 0 || strcmp(plcType,"logixpccc") == 0 || strcmp(plcType,"micrologix") == 0){
+    MAX_CIP_MESSAGE_DATA_SIZE_ = 244;
+  }
+  else if (strcmp(plcType,"micrologix800") == 0 || strcmp(plcType,"compactlogix") == 0){
+    MAX_CIP_MESSAGE_DATA_SIZE_ = 504;
+  } 
+  // Some of these max message sizes may be higher?
+
   epicsAtExit(omronExitCallback, this);
   plc_tag_set_debug_level(debugLevel);
   initHookRegister(myInitHookFunction);
@@ -434,7 +443,7 @@ asynStatus drvOmronEIP::findArrayOptimisations(std::unordered_map<std::string, s
                   "&elem_count=1&allow_packing=1&str_is_counted=0&str_count_word_bytes=0&str_is_zero_terminated=1";
 
           int tagIndex = plc_tag_create(tag.c_str(), CREATE_TAG_TIMEOUT);
-          maxSlice = MAX_CIP_MESSAGE_DATA_SIZE / plc_tag_get_size(tagIndex);
+          maxSlice = MAX_CIP_MESSAGE_DATA_SIZE_ / plc_tag_get_size(tagIndex);
           plc_tag_destroy(tagIndex); //clean up
           //If arrayName is not already in the map, we need to add it
           commonArrayMap[arrayName] = {maxSlice,arrayIndex};
@@ -464,7 +473,7 @@ asynStatus drvOmronEIP::findArrayOptimisations(std::unordered_map<std::string, s
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Found the following array slicing optimisations: \n", 
                 driverName, functionName);
     for (auto arrayItem : commonArrayMap){
-      flowString = "Slicing array: "+arrayItem.first+" into slices of size: "+std::to_string(arrayItem.second[0])+" for indexes: ";
+      flowString = "Attempting to slice array: "+arrayItem.first+" into slices of size: "+std::to_string(arrayItem.second[0])+" for indexes: ";
       for (size_t i = 1; i<(arrayItem.second.size()+1); i++)
       {
         flowString += std::to_string(arrayItem.second[i]) + " ";

@@ -50,8 +50,6 @@
 #include "asynParamType.h"
 
 #define CREATE_TAG_TIMEOUT 1000 //ms
-#define MAX_CIP_MESSAGE_SIZE 1996 //includes a 2 bytes "CIP Sequencer Count" header
-#define MAX_CIP_MESSAGE_DATA_SIZE 1994
 
 typedef std::pair<std::string, uint16_t> omronDataType_t;
 typedef std::unordered_map<std::string, std::vector<std::string>> structDtypeMap;
@@ -169,6 +167,8 @@ public:
 private:
    bool initialized_; // Tracks if the driver successfully initialized
    bool startPollers_; // Tells the pollers when to start polling
+   size_t MAX_CIP_MESSAGE_SIZE_ = 1996; //includes a 2 bytes "CIP Sequencer Count" header
+   size_t MAX_CIP_MESSAGE_DATA_SIZE_ = 1994;
    size_t libplctagTagCount = 0;
    size_t asynParamCount = 0;
    double timezoneOffset_; // Used to convert TIME data from the PLCs timezone

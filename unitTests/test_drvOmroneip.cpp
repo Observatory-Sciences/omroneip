@@ -49,6 +49,7 @@ class drvOmroneipTestFixture
 BOOST_FIXTURE_TEST_SUITE(optimisationTests, drvOmroneipTestFixture)
 // These tests require a PLC programmed with an array of structures called aPSU which contains 140 structures
 // Each structure should be 232 bytes big
+// These tests sometimes seg fault as I dont properly create the asynUser.
 
 BOOST_AUTO_TEST_CASE(test_optimiseTags_arrayOptSimple)
 {
@@ -150,6 +151,32 @@ BOOST_AUTO_TEST_CASE(test_optimiseTags_unoptomisableArray)
     }
     asynStatus status = testDriver->wrap_optimiseTags();
 
+    BOOST_CHECK_EQUAL(status, asynSuccess);
+}
+
+BOOST_AUTO_TEST_CASE(test_negative_optimiseTags_oneTagOnly)
+{
+    // We need two tags to read from the structure for it to be worthwhile, so this optimisation will fail
+    testDriver->wrap_setAsynTrace(0x0031);
+    asynUser *pAsynUser = (asynUser *)calloc(1, sizeof(asynUser));
+    std::string drvInfo;
+    drvInfo = "@testPoller aPSU[1] REAL 10 none &optimise=1";
+    testDriver->wrap_drvUserCreate(pAsynUser, drvInfo.c_str());
+    asynStatus status = testDriver->wrap_optimiseTags();
+    BOOST_CHECK_EQUAL(status, asynError);
+}
+
+BOOST_AUTO_TEST_CASE(test_optimiseTags_noOptimisations)
+{
+    // We have two optimisable tags, but the user has not requisted optimisation
+    testDriver->wrap_setAsynTrace(0x0031);
+    asynUser *pAsynUser = (asynUser *)calloc(1, sizeof(asynUser));
+    std::string drvInfo;
+    drvInfo = "@testPoller aPSU[1] REAL 1 1 &optimise=0";
+    testDriver->wrap_drvUserCreate(pAsynUser, drvInfo.c_str());
+    drvInfo = "@testPoller aPSU[1] REAL 1 2 &optimise=0";
+    testDriver->wrap_drvUserCreate(pAsynUser, drvInfo.c_str());
+    asynStatus status = testDriver->wrap_optimiseTags();
     BOOST_CHECK_EQUAL(status, asynSuccess);
 }
 
