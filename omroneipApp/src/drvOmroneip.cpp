@@ -1,6 +1,8 @@
 #include "drvOmroneip.h"
 
-bool iocStarted = false; // Set to 1 after IocInit() which starts the optimiseTags() thread
+/** Set to 1 after IocInit() which means all records are loaded, we then start the optimiseTags() thread */
+bool iocStarted = false; 
+/** Set to 1 when the driver has recieved a call to exit, tells the pollers to break out of their polling loops*/
 bool omronExiting = false;
 
 static void readPollerC(void *drvPvt)
@@ -9,7 +11,7 @@ static void readPollerC(void *drvPvt)
   pPvt->readPoller();
 }
 
-// this thread runs once after iocInit to optimise the tag map before setting startPollers_=1 to begin the polling threads
+/** This thread runs once after iocInit to optimise the tag map before setting startPollers_=1 to begin the polling threads*/
 static int optimiseTagsC(void *drvPvt)
 {
   drvOmronEIP *pPvt = (drvOmronEIP *)drvPvt;
@@ -29,14 +31,14 @@ omronEIPPoller::omronEIPPoller(const char *portName, const char *pollerName, dou
 {
 }
 
-/* Gives the read pollers time to finish their processing loop and sets omronExiting to true to tell the pollers to destruct */
+/** Gives the read pollers time to finish their processing loop and sets omronExiting to true to tell the pollers to destruct */
 static void omronExitCallback(void *pPvt)
 {
   omronExiting = true;
   epicsThreadSleep(3);
 }
 
-/* This function is called by the IOC load system after iocInit() or iocRun() have completed */
+/** This function is called by the IOC load system after iocInit() or iocRun() have completed */
 static void myInitHookFunction(initHookState state)
 {
   switch (state)
@@ -2165,7 +2167,10 @@ omronEIPPoller::~omronEIPPoller()
 
 extern "C"
 {
-  /* drvOmronEIPStructDefine - Loads structure definitions from file */
+  /** drvOmronEIPStructDefine - Loads structure definitions from file.
+  * \param[in] portName The name of the asynPort connected to the omron driver which will use this structure definition.
+  * \param[in] filePath Full path to the structure definition file, including the file name.
+  */
   asynStatus drvOmronEIPStructDefine(const char *portName, const char *filePath)
   {
     drvOmronEIP *pDriver = (drvOmronEIP *)findAsynPortDriver(portName);
@@ -2201,7 +2206,13 @@ extern "C"
     drvOmronEIPStructDefine(args[0].sval, args[1].sval);
   }
 
-  /* drvOmronEIPConfigPoller() - Creates a new poller with user provided settings and adds it to the driver */
+  /** drvOmronEIPConfigPoller() - Creates a new poller with user provided settings and adds it to the driver.
+  * \param[in] portName The name of the asynPort connected to the omron driver which will create this poller.
+  * \param[in] pollerName The name of this poller, this needs to be referenced by records that need to use this poller.
+  * \param[in] updateRate The time in seconds between polls.
+  * \param[in] spreadRequests Rather than sending requests as fast as possible (default=0), we spread requests over the polling interval 
+   to create a smoother load on the plc and network.
+  */
   asynStatus drvOmronEIPConfigPoller(const char *portName,
                                      const char *pollerName,
                                      double updateRate,
@@ -2239,11 +2250,14 @@ extern "C"
     drvOmronEIPConfigPoller(args[0].sval, args[1].sval, args[2].dval, args[3].ival);
   }
 
-  /*
-  ** drvOmronEIPConfigure() - create and init an asyn port driver for a PLC
+  /** EPICS iocsh callable function to call constructor for the drvOmroneip class. 
+  * \param[in] portName The name of this port.
+  * \param[in] gateway IP address that ethernet/IP packets are sent to initially.
+  * \param[in] path Path to device from the initial gateway.
+  * \param[in] plcType Used to change the PLC type from omron-njnx to other PLC types supported by libplctag.
+  * \param[in] debugLevel libplctag debug level.
+  * \param[in] timezoneOffset Time in hours that the PLC is ahead/behind of UTC.
   */
-
-  /** EPICS iocsh callable function to call constructor for the drvModbusAsyn class. */
   asynStatus drvOmronEIPConfigure(const char *portName,
                                   char *gateway,
                                   char *path,
