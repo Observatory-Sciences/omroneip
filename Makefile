@@ -10,6 +10,9 @@ DIRS := $(DIRS) $(filter-out $(DIRS), $(wildcard *[Aa]pp))
 DIRS := $(DIRS) $(filter-out $(DIRS), $(wildcard *[Ss]up))
 DIRS := $(DIRS) $(filter-out $(DIRS), $(wildcard ioc[Bb]oot))
 DIRS := $(DIRS) $(filter-out $(DIRS), unitTests)
+ifeq ($(MAKE_DOCS),YES)
+DIRS := $(DIRS) $(filter-out $(DIRS), docs)
+endif
 omroneipApp_DEPEND_DIRS = configure
 iocBoot_DEPEND_DIRS = omroneipApp
 unitTests_DEPEND_DIRS = omroneipApp
