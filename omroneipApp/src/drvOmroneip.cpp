@@ -921,20 +921,18 @@ void drvOmronEIP::readData(omronDrvUser_t *drvUser, int asynIndex)
   {
     if (datatype == "BOOL")
     {
-      epicsUInt32 data = 0;
+      uint8_t dataIn [4];
+      epicsUInt32 dataOut = 0;
       std::string printData;
-      uint8_t* dataArray;
       if (sliceSize == 1){
-        data = plc_tag_get_bit(drvUser->tagIndex, offset); // takes a bit offset
+        dataOut = plc_tag_get_bit(drvUser->tagIndex, offset); // takes a bit offset
       }
       else if (drvUser->optimise && sliceSize <= 32)
       {
         // If optimising and slice size is not 1, we are getting bools from an embedded array where they are packed at the bit level (1byte=8bools)
-        dataArray = (uint8_t*)calloc(4, sizeof(uint8_t));
-        status = plc_tag_get_raw_bytes(drvUser->tagIndex, offset/8, dataArray, ((sliceSize-1)/8)+1);
+        status = plc_tag_get_raw_bytes(drvUser->tagIndex, offset/8, dataIn, ((sliceSize-1)/8)+1);
         //combine 4 uint8 into a epicsUInt32
-        data = dataArray[0] | (dataArray[1] << 8) | (dataArray[2] << 16) | (dataArray[3] << 24);
-        free(dataArray);
+        dataOut = dataIn[0] | (dataIn[1] << 8) | (dataIn[2] << 16) | (dataIn[3] << 24);
       }
       else if (sliceSize <= 32)
       {
@@ -942,7 +940,7 @@ void drvOmronEIP::readData(omronDrvUser_t *drvUser, int asynIndex)
         // We read up to 32 bits from the bit array, passing a byte offset to the array and specifying the number of bytes to read
         for (int i =0;i<sliceSize;i++){
           uint8_t thisBool = plc_tag_get_bit(drvUser->tagIndex, offset+i*8);
-          data = data | thisBool<<i;
+          dataOut = dataOut | thisBool<<i;
         }
       }
       else{
@@ -956,8 +954,8 @@ void drvOmronEIP::readData(omronDrvUser_t *drvUser, int asynIndex)
                   driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
         return;
       }
-      status = setUIntDigitalParam(asynIndex, data, 0xFFFFFFFF, 0xFFFFFFFF);
-      printData = std::bitset<32>(data).to_string();
+      status = setUIntDigitalParam(asynIndex, dataOut, 0xFFFFFFFF, 0xFFFFFFFF);
+      printData = std::bitset<32>(dataOut).to_string();
       asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, "%s:%s My asyn parameter ID: %d My tagIndex: %d My data: %s My type %s\n",
                 driverName, functionName, asynIndex, drvUser->tagIndex, printData.c_str(), datatype.c_str());
     }
