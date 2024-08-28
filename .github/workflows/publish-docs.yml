@@ -34,6 +34,7 @@ jobs:
         # Doxygen output is put in _build/html/doxygenHTML by the Doxyfile
         # So it will be published by Publish Jobs below
         run: |
+          mkdir docs
           doxygen
   
       - name: Publish Docs
