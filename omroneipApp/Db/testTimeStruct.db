@@ -5,13 +5,13 @@
 record(ai, "$(P)readDT3") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myTimeStruct.testDT TIME 1 testTimeStruct2[4] &allow_packing=0")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myTimeStruct TIME 1 testTimeStruct2[4] &optimise=1&allow_packing=0")
 }
 
 record(lsi, "$(P)readDT4") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myTimeStruct.testDT TIME 1 testTimeStruct2[4] &allow_packing=0&read_as_string=1")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myTimeStruct TIME 1 testTimeStruct2[4] &optimise=1&allow_packing=0&read_as_string=1")
     field(SIZV, "128")
 }
 
@@ -26,5 +26,5 @@ record(waveform, "$(P)readUDT") {
 record(ai, "$(P)readFloat64") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myTimeStruct.testDouble LREAL 1 testTimeStruct2[5] none")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myTimeStruct LREAL 1 testTimeStruct2[5] &optimise=1")
 }

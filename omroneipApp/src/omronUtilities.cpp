@@ -274,9 +274,9 @@ std::tuple<std::string,std::string> omronUtilities::checkValidSliceSize(const st
       }
       else if (str != "1")
       {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, You cannot get a slice of a whole tag. Try tag_name[startIndex] to specify elements for slice.\n", driverName, functionName);
-        stringValid = "false";
-        sliceSize = "1";
+        //This may or may not be ok depending on whether you are trying to index something that is sliceable
+        sliceSize = str;
+        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, You may be attempting an invalid slice?. If you are slicing a structure embedded array then ignore this! Try tag_name[startIndex] to specify elements for slice.\n", driverName, functionName);
       }
     }
     else
@@ -1007,6 +1007,19 @@ int omronUtilities::getEmbeddedAlignment(structDtypeMap const& expandedMap, std:
   return alignment;
 }
 
+int omronUtilities::getDtypeAlignment(std::string dtype)
+{
+  // If dtype is a basic dtype, we return the alignment
+  int alignment;
+  if (dtype == "LREAL" || dtype == "ULINT" || dtype == "LINT" || dtype == "TIME") {alignment = 8;}
+  else if (dtype == "DWORD" || dtype == "UDINT" || dtype == "DINT" || dtype == "REAL") {alignment = 4;}
+  else if (dtype == "BOOL" || dtype == "WORD" || dtype == "UINT" || dtype == "INT") {alignment = 2;}
+  else if (dtype == "SINT" || dtype == "USINT") {alignment = 1;}
+  else if (dtype.substr(0,6) == "STRING") {alignment = 1;}
+  else {alignment=0;}
+  return alignment;
+}
+
 int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string structName, std::unordered_map<std::string, std::vector<int>>& structMap)
 {
   // We must calculate the size of each datatype
@@ -1044,7 +1057,6 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
     }
     else if (dtype == "end:array"){
       if (insideBoolArray){
-        //Fix to deal with back to back bool arrays
         dtypeSize = ((arrayBools-1)/8);
         if (dtypeSize < 2){dtypeSize=2;}
         else {
@@ -1058,6 +1070,14 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
       continue;
     }
     else if (dtype.substr(0,4) == "end:" || dtype.substr(0,6) == "start:"){
+      /*If we have a start:struct, then we may be in the situation where we have back to back structures. In this case
+       * we have not yet checked the alignment of the next basic dtype, we have only checked the alignment of the previous 
+       * structure. So we do that now */
+      if (dtype.substr(0,6) == "start:"){
+        nextItem = expandedRow[i+1];
+        thisAlignment = getDtypeAlignment(nextItem);
+        if (thisAlignment>alignment){alignment=thisAlignment;}
+      }
       i++;
       insideBoolArray=false;
       continue;
@@ -1184,7 +1204,7 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
       // based on the next dtype. While searching we also update the alignment if we come across a struct start or end with a larger internal
       // dtype than the current alignment.
       thisAlignment = getEmbeddedAlignment(expandedMap, structName, nextItem, i);
-      if (alignment < thisAlignment){alignment=thisAlignment;} // Alignment should be 0 at this point, but we check just in case
+      if (alignment < thisAlignment){alignment=thisAlignment;}
     }
     else {
       asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Failed to calculate the alignment of: %s. Definition for struct: %s is invalid.\n", driverName, functionName, nextItem.c_str(), structName.c_str());

@@ -97,7 +97,7 @@ drvOmronEIP::drvOmronEIP(const char *portName,
                                                      this) == NULL);
   if (status != 0)
   {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Driver initialisation failed.\n", driverName, functionName);
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Problems encountered during driver initialisation.\n", driverName, functionName);
   }
   utilities = new omronUtilities(this);
   initialized_ = true;
@@ -175,11 +175,15 @@ asynStatus drvOmronEIP::drvUserCreate(asynUser *pasynUser, const char *drvInfo, 
       {
         if (tag == previousTag.second->tag && keyWords.at("pollerName") == previousTag.second->pollerName)
         {
-          /* Potential extension here to allow tags with different pollers to be combined, but must check the polling duration so that the shortest polling duration is used as the master tag */
-          asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, duplicate tag exists, reusing tag %d for this parameter.\n", driverName, functionName, previousTag.second->tagIndex);
-          tagIndex = previousTag.second->tagIndex;
-          dupeTag = true;
-          break;
+          /* Check that the potential dupe tag is valid, if it is being used for optimisations then it wont be */
+          if (plc_tag_status(previousTag.second->tagIndex) >=1)
+          {
+            /* Potential extension here to allow tags with different pollers to be combined, but must check the polling duration so that the shortest polling duration is used as the master tag */
+            asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warning, duplicate tag exists, reusing tag %d for this parameter.\n", driverName, functionName, previousTag.second->tagIndex);
+            tagIndex = previousTag.second->tagIndex;
+            dupeTag = true;
+            break;
+          }
         }
       }
 
@@ -372,7 +376,7 @@ void drvOmronEIP::initialiseDrvUser(omronDrvUser_t *newDrvUser, const drvInfoMap
   newDrvUser->tag = tag;
   newDrvUser->tagIndex = tagIndex;
   newDrvUser->pollerName = keyWords.at("pollerName");
-  newDrvUser->sliceSize = std::stoi(keyWords.at("sliceSize")); // dtype checked elsewhere
+  newDrvUser->sliceSize = std::stoi(keyWords.at("sliceSize"));
   newDrvUser->startIndex = std::stoi(keyWords.at("startIndex"));
   newDrvUser->timeout = pasynUser->timeout;
   newDrvUser->tagOffset = std::stoi(keyWords.at("offset"));
@@ -428,6 +432,10 @@ asynStatus drvOmronEIP::findArrayOptimisations(std::unordered_map<std::string, s
   {
     std::string arrayName;
     std::string structName = commonStruct.first;
+    //sanity check to make sure we have an actual array with a closing bracket
+    if (structName[structName.length()-1]!=']'){
+      continue;
+    }
     size_t indexPos = structName.find("[");
     int arrayIndex = 0;
     int maxSlice = 0;
@@ -445,6 +453,11 @@ asynStatus drvOmronEIP::findArrayOptimisations(std::unordered_map<std::string, s
                   "&elem_count=1&allow_packing=1&str_is_counted=0&str_count_word_bytes=0&str_is_zero_terminated=1";
 
           int tagIndex = plc_tag_create(tag.c_str(), CREATE_TAG_TIMEOUT);
+          if (tagIndex<0){
+            status = asynError;
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Failed to create tag while optimising structure named: %s Is this actually a stuct? Is it bigger than 1992 bytes?\n", 
+                    driverName, functionName, structName.c_str());
+          }
           maxSlice = MAX_CIP_MESSAGE_DATA_SIZE_ / plc_tag_get_size(tagIndex);
           plc_tag_destroy(tagIndex); //clean up
           //If arrayName is not already in the map, we need to add it
@@ -476,7 +489,7 @@ asynStatus drvOmronEIP::findArrayOptimisations(std::unordered_map<std::string, s
                 driverName, functionName);
     for (auto arrayItem : commonArrayMap){
       flowString = "Attempting to slice array: "+arrayItem.first+" into slices of size: "+std::to_string(arrayItem.second[0])+" for indexes: ";
-      for (size_t i = 1; i<(arrayItem.second.size()+1); i++)
+      for (size_t i = 1; i<(arrayItem.second.size()); i++)
       {
         flowString += std::to_string(arrayItem.second[i]) + " ";
       }
@@ -555,7 +568,7 @@ asynStatus drvOmronEIP::createOptimisedArrayTags(std::unordered_map<std::string,
         {
           // Original offset was offset within an element, as we have a slice of elements, we must add the offset to the element within
           // the slice
-          int elementSize = (plc_tag_get_size(tagIndex)/8);
+          int elementSize = (plc_tag_get_size(tagIndex)/maxSlice);
           int oldOffset = tagMap_.find(asynIndex)->second->tagOffset;
           int newOffset;
           if (tagMap_.find(asynIndex)->second->dataType.first == "BOOL"){
@@ -571,10 +584,16 @@ asynStatus drvOmronEIP::createOptimisedArrayTags(std::unordered_map<std::string,
       }
       else
       {
-        for (auto asynIndex : commonStructMap.at(arrayName))
-        {
-          asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Array optimisations failed for asyn index: %d, an individual element optimisations will be attempted instead.\n", 
-                      driverName, functionName, asynIndex);
+        if (commonStructMap.find(arrayName) != commonStructMap.end())
+          for (auto asynIndex : commonStructMap.at(arrayName))
+          {
+            asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Array optimisations failed for asyn index: %d, an individual element optimisations will be attempted instead.\n", 
+                        driverName, functionName, asynIndex);
+          }
+        else{
+          asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Array optimisations failed, have you named a valid structure?\n", 
+                      driverName, functionName);
+          return asynError;
         }
       }
       i++;
@@ -743,7 +762,6 @@ asynStatus drvOmronEIP::optimiseTags()
     // Looks for multiple asynParameters which are reading from the same array of structs
     if (status==asynSuccess)
       status = findArrayOptimisations(commonStructMap, commonArrayMap);
-
 
     // Attempts to create tags which read slices of arrays, updates drvUsers to match the new tag and offsets required
     if (status==asynSuccess)

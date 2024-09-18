@@ -92,13 +92,13 @@ BOOST_AUTO_TEST_CASE(test_negative_drvInfoParser_Empty)
     free(newDrvUser);
 }
 
-//Specifying slice size when not accessing an array
+//Specifying slice size when not accessing an array, should give a warning
 BOOST_AUTO_TEST_CASE(test_negative_drvInfoParser_BadSlice)
 {
     std::string drvInfo = "@testPoller lwordArray LWORD 10 none none";
     std::cout << "Test string: " << drvInfo << std::endl;
     const auto [stringValid, newDrvUser, keyWords] = parser(drvInfo);
-    BOOST_CHECK_EQUAL(stringValid,"false");
+    BOOST_CHECK_EQUAL(stringValid,"true");
     free(newDrvUser);
 }
 
@@ -302,6 +302,8 @@ BOOST_AUTO_TEST_CASE(test_checkValidSliceSize_ValidSize)
     BOOST_CHECK_EQUAL(stringValid,"true");
 }
 
+//It has been designated as non-indexable (no square brackets in name for example)
+//but the user may be trying to slice an array within a struct which is valid, we just give a warning
 BOOST_AUTO_TEST_CASE(test_negative_checkValidSliceSize_NotIndexable)
 {
     std::string str = "123";
@@ -309,8 +311,8 @@ BOOST_AUTO_TEST_CASE(test_negative_checkValidSliceSize_NotIndexable)
     std::string dtype = "REAL";
     std::cout << "Test string: " << str << " Test indexable: " << indexable << " Test dtype: " << dtype << std::endl;
     const auto [stringValid, sliceSize] = testUtilities->wrap_checkValidSliceSize(str,indexable,dtype);
-    BOOST_CHECK_EQUAL(sliceSize,"1");
-    BOOST_CHECK_EQUAL(stringValid,"false");
+    BOOST_CHECK_EQUAL(sliceSize,"123");
+    BOOST_CHECK_EQUAL(stringValid,"true");
 }
 
 BOOST_AUTO_TEST_CASE(test_negative_checkValidSliceSize_NonIndexableDtype)

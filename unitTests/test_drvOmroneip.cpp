@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(test_optimiseTags_arrayOptBig)
     for (size_t i = 1; i<=8; i++)
     {
         omronDrvUser_t* drvUser = testDriver->getDrvUser(2*(i-1));
-        size_t expectedOffset = i+232*(i-1);
+        size_t expectedOffset = i+224*(i-1);
         BOOST_CHECK_EQUAL(drvUser->tagOffset, expectedOffset);
         if (i==1){
             BOOST_CHECK_EQUAL(drvUser->optimisationFlag, "master");
@@ -126,7 +126,7 @@ BOOST_AUTO_TEST_CASE(test_optimiseTags_arrayOptIrregular)
     BOOST_CHECK_EQUAL(drvUser->optimisationFlag, "master");
     BOOST_CHECK_EQUAL(drvUser->readFlag, true);
     drvUser = testDriver->getDrvUser(2);
-    expectedOffset = 933;
+    expectedOffset = 901;
     BOOST_CHECK_EQUAL(drvUser->tagOffset, expectedOffset);
     BOOST_CHECK_EQUAL(drvUser->optimisationFlag, "optimised");
     BOOST_CHECK_EQUAL(drvUser->readFlag, false);

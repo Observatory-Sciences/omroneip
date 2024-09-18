@@ -60,25 +60,43 @@ record(bo, "$(P)writeBoolArray20") {
 
 ###Test read/writing to an array of bools within an embedded struct
 #We read 32 bools from an array of bools and use the asynMask to get values from the 32bit digital int.
-#The bools from the array that we read, are values 33 to 64
-record(bi, "$(P)readEmbeddedBoolArray33") {
+#The bools from the array that we read, are values 0 to 32
+#As we are optimising, the slice size is used only to slice the fetched data, not to get a slice of myArrayStruct, this 
+#will be sliced automatically as part of optimisations.
+record(bi, "$(P)readEmbeddedBoolArray1") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynUInt32Digital")
-    field(INP, "@asynMask($(PORT), 0, 0x00000001,1)@$(POLLER) myArrayStruct.structArray2[33] BOOL 32 testArrayStruct2[4][33] &optimise=1")
+    field(INP, "@asynMask($(PORT), 0, 0x00000001,1)@$(POLLER) myArrayStruct[2] BOOL 32 0 &optimise=1")
     field(ZNAM, "Off")
     field(ONAM, "On")
 }
 record(bi, "$(P)readEmbeddedBoolArray34") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynUInt32Digital")
-    field(INP, "@asynMask($(PORT), 0, 0x00000002, 1)@$(POLLER) myArrayStruct.structArray2[33] BOOL 32 testArrayStruct2[4][33] &optimise=1")
+    field(INP, "@asynMask($(PORT), 0, 0x00000003, 1)@$(POLLER) myArrayStruct[2] BOOL 32 33 &optimise=1")
     field(ZNAM, "Off")
     field(ONAM, "On")
 }
 record(bi, "$(P)readEmbeddedBoolArray64") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynUInt32Digital")
-    field(INP, "@asynMask($(PORT), 0, 0x80000000, 1)@$(POLLER) myArrayStruct.structArray2[33] BOOL 32 testArrayStruct2[4][33] &optimise=1")
+    field(INP, "@asynMask($(PORT), 0, 0x80000000, 1)@$(POLLER) myArrayStruct[2] BOOL 32 32 &optimise=1")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+
+record(bi, "$(P)readEmbeddedBoolArray264") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynUInt32Digital")
+    field(INP, "@asynMask($(PORT), 0, 0x80000000, 1)@$(POLLER) myArrayStruct[3] BOOL 32 32 &optimise=1")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+}
+
+record(bi, "$(P)readEmbeddedBoolArray265") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynUInt32Digital")
+    field(INP, "@asynMask($(PORT), 0, 0x01000000, 1)@$(POLLER) myArrayStruct[3] BOOL 32 40 &optimise=1")
     field(ZNAM, "Off")
     field(ONAM, "On")
 }
@@ -102,12 +120,6 @@ record(bo, "$(P)writeEmbeddedBoolArray64") {
     field(ONAM, "On")
 }
 
-#This record is just to enable the optimisations
-record(ai, "$(P)readFloat") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myArrayStruct.testReal2 REAL 1 testArrayStruct2[3] &optimise=1")
-}
 
 ###Test mbbiDirect, you can convert an array of bools int a UInt32Digital
 #Look at the first two bits, set the state of the record based off the combination of these bits

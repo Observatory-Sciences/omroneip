@@ -72,6 +72,8 @@ public:
       If nextItem is an array, then follow the alignment rule of the item after nextItem, if this item is a struct, then look up the largest
       item in this struct */
    int getEmbeddedAlignment(structDtypeMap const& expandedMap, std::string structName, std::string nextItem, size_t i);
+   /** If the passed dtype is a basic dtype, return the alignment size */
+   int getDtypeAlignment(std::string dtype);
    /** This is the main function responsible for calculating offsets. It looks a the expanded map and calculates the offset to
       each datatype by taking into account the size of the datatype and many alignment rules. It must take into account alignment
       rules from embedded arrays and structs as well as regular datatypes. It must keep track of both the current datatype and the next

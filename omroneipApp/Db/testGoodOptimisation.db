@@ -4,33 +4,33 @@
 record(ai, "$(P)$(R)readFloat") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVValue REAL 1 100 &optimise=1")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] REAL 1 100 &optimise=1")
 }
 
 record(lsi, "$(P)$(R)readString1") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVName STRING 1 0 &optimise=1&str_max_capacity=60")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] STRING 1 0 &optimise=1&str_max_capacity=60")
     field(SIZV, "61")
 }
 
 record(lsi, "$(P)$(R)readString2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVDesc STRING 1 60 &optimise=1&str_max_capacity=40")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] STRING 1 60 &optimise=1&str_max_capacity=40")
     field(SIZV, "61")
 }
 
 record(longin, "$(P)$(R)readUInt") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVAlarmState UINT 1 120 &optimise=1")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] UINT 1 120 &optimise=1")
 }
 
 record(bi, "$(P)readBool") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynUInt32Digital")
-    field(INP, "@asynMask($(PORT), 0, 0x0001, 1)@$(POLLER) ISISTestMultiple[1].Hyst BOOL 1 976 &optimise=1")
+    field(INP, "@asynMask($(PORT), 0, 0x0001, 1)@$(POLLER) ISISTestMultiple[1] BOOL 1 976 &optimise=1")
     field(ZNAM, "Off")
     field(ONAM, "On")
 }
@@ -40,35 +40,42 @@ record(bi, "$(P)readBool") {
 record(ai, "$(P)$(R)readFloat2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVValue REAL 1 PVData[3] &optimise=1")
-}
-
-record(lsi, "$(P)$(R)readString3") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVName STRING 1 PVData[1] &optimise=1&str_max_capacity=60")
-    field(SIZV, "61")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] REAL 1 PVData[3] &optimise=1")
 }
 
 record(lsi, "$(P)$(R)readString4") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynOctetRead")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVDesc STRING 1 PVData[2] &optimise=1&str_max_capacity=40")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] STRING 1 PVData[1] &optimise=1&str_max_capacity=60")
+    field(SIZV, "61")
+}
+
+record(lsi, "$(P)$(R)readString5") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] STRING 1 PVData[2] &optimise=1&str_max_capacity=40")
     field(SIZV, "61")
 }
 
 record(longin, "$(P)$(R)readUInt2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1].PVAlarmState UINT 1 PVData[8] &optimise=1")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] UINT 1 PVData[8] &optimise=1")
 }
 
 record(bi, "$(P)readBool2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynUInt32Digital")
-    field(INP, "@asynMask($(PORT), 0, 0x0001, 1)@$(POLLER) ISISTestMultiple[1].Hyst BOOL 1 PVData[9] &optimise=1")
+    field(INP, "@asynMask($(PORT), 0, 0x0001, 1)@$(POLLER) ISISTestMultiple[1] BOOL 1 PVData[9] &optimise=1")
     field(ZNAM, "Off")
     field(ONAM, "On")
+}
+
+record(lsi, "$(P)$(R)readString6") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynOctetRead")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) ISISTestMultiple[1] STRING 1 PVData[11] &optimise=1&str_max_capacity=40")
+    field(SIZV, "61")
 }
 
 #Get bool without optimisations (its different)
