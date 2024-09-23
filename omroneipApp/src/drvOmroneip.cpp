@@ -511,8 +511,8 @@ asynStatus drvOmronEIP::createOptimisedArrayTags(std::unordered_map<std::string,
   const char *functionName = "createOptimisedArrayTags";
   asynStatus status = asynSuccess;
   int maxSlice;
-  int sliceStart = 1; // The first index of the previous slice
-  bool newSlice = true; // Indicates that we need to make a new tag for a new slice
+  int sliceStart;
+  bool newSlice;
   int tagIndex;
   int masterAsynIndex;
   std::string arrayName;
@@ -525,6 +525,8 @@ asynStatus drvOmronEIP::createOptimisedArrayTags(std::unordered_map<std::string,
     arrayItem.second.erase(arrayItem.second.begin());
     int i = 0;
     int nextIndex = 0;
+    sliceStart=arrayItem.second[0]; // The first index of the previous slice
+    newSlice = true; // Indicates that we need to make a new tag for a new slice
     for (int index : arrayItem.second)
     {
       arrayName = arrayItem.first + "[" + std::to_string(index) + "]";
