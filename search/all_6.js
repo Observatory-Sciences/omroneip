@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['guide_20strong_0',['&lt;a name=&quot;_toc1237512826&quot;&gt;&lt;/a&gt;&lt;strong&gt;Installation guide&lt;/strong&gt;',['../index.html#autotoc_md3',1,'']]]
+  ['software_20manual_0',['Software manual',['../index.html#autotoc_md2',1,'']]],
+  ['supported_20platforms_1',['Supported platforms',['../index.html#autotoc_md1',1,'']]]
 ];
