@@ -1,12 +1,11 @@
 var searchData=
 [
-  ['readarrayslice_20example_20strong_0',['&lt;a name=&quot;_toc915451208&quot;&gt;&lt;/a&gt;&lt;strong&gt;ReadArraySlice example&lt;/strong&gt;',['../index.html#autotoc_md23',1,'']]],
-  ['readbool_20example_20strong_1',['&lt;a name=&quot;_toc1845333202&quot;&gt;&lt;/a&gt;&lt;strong&gt;ReadBool example&lt;/strong&gt;',['../index.html#autotoc_md25',1,'']]],
-  ['readfloat32_20example_20strong_2',['&lt;a name=&quot;_toc2042263546&quot;&gt;&lt;/a&gt;&lt;strong&gt;ReadFloat32 example&lt;/strong&gt;',['../index.html#autotoc_md19',1,'']]],
-  ['reading_20udt_20data_20efficiently_20offsets_20and_20optimisations_20strong_3',['&lt;a name=&quot;_toc1681910069&quot;&gt;&lt;/a&gt;&lt;strong&gt;Reading UDT data efficiently (offsets and optimisations)&lt;/strong&gt;',['../index.html#autotoc_md14',1,'']]],
-  ['readudt_20example_20strong_4',['&lt;a name=&quot;_toc1780812375&quot;&gt;&lt;/a&gt;&lt;strong&gt;ReadUDT example&lt;/strong&gt;',['../index.html#autotoc_md21',1,'']]],
-  ['record_20interface_20strong_5',['&lt;a name=&quot;_toc247901984&quot;&gt;&lt;/a&gt;&lt;strong&gt;Record interface&lt;/strong&gt;',['../index.html#autotoc_md9',1,'']]],
-  ['records_20strong_6',['&lt;a name=&quot;_toc558233786&quot;&gt;&lt;/a&gt;&lt;strong&gt;Example records&lt;/strong&gt;',['../index.html#autotoc_md18',1,'']]],
-  ['release_20strong_7',['&lt;a name=&quot;_toc1825803900&quot;&gt;&lt;/a&gt;&lt;strong&gt;Omroneip Software Manual v3 - release&lt;/strong&gt;',['../index.html',1,'']]],
-  ['routine_20strong_8',['&lt;a name=&quot;_toc1286753063&quot;&gt;&lt;/a&gt;&lt;strong&gt;Driver initialisation routine&lt;/strong&gt;',['../index.html#autotoc_md32',1,'']]]
+  ['seperatedrvinfovals_0',['seperateDrvInfoVals',['../classomron_utilities.html#a85d7a3f4f65a8ddda1ec2386935289b5',1,'omronUtilities']]],
+  ['slicesize_1',['sliceSize',['../structomron_drv_user__t.html#a1fad3704fea9ff09d3af9bbe1ce90832',1,'omronDrvUser_t']]],
+  ['software_20manual_2',['Software manual',['../index.html#autotoc_md2',1,'']]],
+  ['spreadrequests_5f_3',['spreadRequests_',['../classomron_e_i_p_poller.html#ac1464c5a10a9946ea18b0b336495bd22',1,'omronEIPPoller']]],
+  ['startindex_4',['startIndex',['../structomron_drv_user__t.html#a5a6ef11cd1f1d19009d36fd436166289',1,'omronDrvUser_t']]],
+  ['strcapacity_5',['strCapacity',['../structomron_drv_user__t.html#a65b7f2828643f663d7a558e822f86d64',1,'omronDrvUser_t']]],
+  ['structdtypemap_6',['structdtypemap',['../drv_omroneip_8h.html#af4746cf9e32a31c72b35d5a55bf39e98',1,'structDtypeMap:&#160;drvOmroneip.h'],['../omron_utilities_8h.html#af4746cf9e32a31c72b35d5a55bf39e98',1,'structDtypeMap:&#160;omronUtilities.h']]],
+  ['supported_20platforms_7',['Supported platforms',['../index.html#autotoc_md1',1,'']]]
 ];

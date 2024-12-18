@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['software_20manual_0',['Software manual',['../index.html#autotoc_md2',1,'']]],
-  ['supported_20platforms_1',['Supported platforms',['../index.html#autotoc_md1',1,'']]]
+  ['initialisedrvuser_0',['initialiseDrvUser',['../classdrv_omron_e_i_p.html#a79881849c77921275fb99d413a526a91',1,'drvOmronEIP']]],
+  ['iocstarted_1',['iocStarted',['../drv_omroneip_8cpp.html#a8084c8a076d8a71a1538390c6f6ee5ca',1,'drvOmroneip.cpp']]]
 ];

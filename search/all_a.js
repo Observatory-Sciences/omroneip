@@ -1,8 +1,9 @@
 var searchData=
 [
-  ['offset_20and_20the_20structure_20definition_20file_20strong_0',['&lt;a name=&quot;_toc676875934&quot;&gt;&lt;/a&gt;&lt;strong&gt;Offset and the structure definition file&lt;/strong&gt;',['../index.html#autotoc_md16',1,'']]],
-  ['offsets_20and_20optimisations_20strong_1',['&lt;a name=&quot;_toc1681910069&quot;&gt;&lt;/a&gt;&lt;strong&gt;Reading UDT data efficiently (offsets and optimisations)&lt;/strong&gt;',['../index.html#autotoc_md14',1,'']]],
-  ['omroneip_20software_20manual_20v3_20release_20strong_2',['&lt;a name=&quot;_toc1825803900&quot;&gt;&lt;/a&gt;&lt;strong&gt;Omroneip Software Manual v3 - release&lt;/strong&gt;',['../index.html',1,'']]],
-  ['omroneip_5fsoftware_5fmanual_5fv3_2emd_3',['Omroneip_Software_Manual_v3.md',['../_omroneip___software___manual__v3_8md.html',1,'']]],
-  ['optimisations_20strong_4',['optimisations strong',['../index.html#autotoc_md14',1,'&lt;a name=&quot;_toc1681910069&quot;&gt;&lt;/a&gt;&lt;strong&gt;Reading UDT data efficiently (offsets and optimisations)&lt;/strong&gt;'],['../index.html#autotoc_md15',1,'&lt;a name=&quot;_toc451730171&quot;&gt;&lt;/a&gt;&lt;strong&gt;Array optimisations&lt;/strong&gt;']]]
+  ['pasynuserself_0',['pasynUserSelf',['../classomron_utilities.html#a74b451095d9f8a31a33e42c3327f46e5',1,'omronUtilities']]],
+  ['pdriver_1',['pDriver',['../classomron_utilities.html#a4704ea03c03ae7c9b4e7017e157ab212',1,'omronUtilities']]],
+  ['platforms_2',['Supported platforms',['../index.html#autotoc_md1',1,'']]],
+  ['pollername_3',['pollerName',['../structomron_drv_user__t.html#aa8d973a826e9ffdd6488021be675783b',1,'omronDrvUser_t']]],
+  ['pollername_5f_4',['pollerName_',['../classomron_e_i_p_poller.html#aa3045aee2c368caed1213156a410dbbe',1,'omronEIPPoller']]],
+  ['processextrasexceptions_5',['processExtrasExceptions',['../classomron_utilities.html#a1ebf2f148c6e02fa7828b9080574cf41',1,'omronUtilities']]]
 ];
