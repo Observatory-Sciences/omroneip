@@ -87,7 +87,7 @@ The driver has three available commands which can be called from the IOC. The fi
 ### <a name="_toc1198336346"></a>**drvOmronEIPConfigure**
 
 ```bash
-    drvOmronEIPConfigure(driverPortName, gateway, route\_path, plc, debug\_level, timezone\_offset)
+    drvOmronEIPConfigure(driverPortName, gateway, route_path, plc, debug_level, timezone_offset)
     drvOmronEIPConfigure("omronDriver", "10.2.2.57", "18,10.2.2.57","omron-njnx",0,0)
 ```
 
@@ -95,7 +95,7 @@ The driver has three available commands which can be called from the IOC. The fi
 
 **gateway**: The ip address of the PLC gateway, the gateway may be the ethernet port of the PLC, or it may be different depending on your setup. For simple setups where you connect directly to the PLC’s ethernet port, use gateway=IP\_address and route\_path=18,IP\_address.
 
-**route\_path**: The route\_path is used to path packets from the gateway to the ethernet/IP port you are communicating with. For help understanding this for Omron, see section 8-2-4 in the Omron NJ/NX ether/IP manual. Where the route path is defined as **Network\_type\_number\Destination\_address***.*
+**route\_path**: The route\_path is used to path packets from the gateway to the ethernet/IP port you are communicating with. For help understanding this for Omron, see section 8-2-4 in the Omron NJ/NX ether/IP manual. Where the route path is defined as **Network\_type\_number\Destination\_address**.
 
 **plc**: This parameter is passed to libplctag, for the Omron NJ and NX PLC’s, use **plc=omron-njnx**. Other PLC’s supported by libplctag, but which may not be fully compatible with this driver are: plc5, slc500, logixpccc, micrologix800, micrologix, compactlogix
 
@@ -298,11 +298,11 @@ Record fields required for driver operation (either @asyn or @asynMask should be
 ###
 
 ```bash
-record(ai, "$(P)readFloat32") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynFloat64")
-    field(INP, "@asyn(myPort, 0, 0.5)@myPoller testArray[1].PVValue REAL 1 none none")
-}
+    record(ai, "$(P)readFloat32") {
+        field(SCAN, "I/O Intr")
+        field(DTYP, "asynFloat64")
+        field(INP, "@asyn(myPort, 0, 0.5)@myPoller testArray[1].PVValue REAL 1 none none")
+    }
 ```
 
 This record is connected to myPoller with a 0.5s timeout. It reads from element 1 of the array, testArray. This is an array of structs, these structs have a member called PVValue which is a REAL datatype. This record will be updated every time the poller processes. The sliceSize must be 1 as we are accessing a single datatype (PVValue).
@@ -311,13 +311,13 @@ This record is connected to myPoller with a 0.5s timeout. It reads from element 
 ###
 
 ```bash
-record(waveform, "$(P)readUDT") {
-    field(SCAN, "I/O Intr")
-    field(FTVL, "UCHAR")
-    field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn(myPort, 0, 1)@myPoller testArray[1] UDT 1 none none")
-    field(NELM, "1996")
-}
+    record(waveform, "$(P)readUDT") {
+        field(SCAN, "I/O Intr")
+        field(FTVL, "UCHAR")
+        field(DTYP, "asynInt8ArrayIn")
+        field(INP, "@asyn(myPort, 0, 1)@myPoller testArray[1] UDT 1 none none")
+        field(NELM, "1996")
+    }
 ```
 
 This record reads a UDT/structure from the PLC. The structure is stored at element 1 of the array. The asynInt8ArrayIn interface is used and the data is stored as an array of bytes within the waveform record.
@@ -326,13 +326,13 @@ This record reads a UDT/structure from the PLC. The structure is stored at eleme
 ###
 
 ```bash
-record(waveform, "$(P)readArraySlice") {
-    field(SCAN, "I/O Intr")
-    field(FTVL, "UCHAR")
-    field(DTYP, "asynInt8ArrayIn")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testArray[3] UDT 3 none none")
-    field(NELM, "1996")
-}
+    record(waveform, "$(P)readArraySlice") {
+        field(SCAN, "I/O Intr")
+        field(FTVL, "UCHAR")
+        field(DTYP, "asynInt8ArrayIn")
+        field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testArray[3] UDT 3 none none")
+        field(NELM, "1996")
+    }
 ```
 
 This record reads a slice of three elements of an array, starting at element 3. Each element of the array is a UDT and asynInt8ArrayIn is used in combination with the UDT datatype. All three elements will be read into the waveform.
@@ -341,13 +341,13 @@ This record reads a slice of three elements of an array, starting at element 3. 
 ###
 
 ```bash
-record(bi, "$(P)readBool") {
-    field(SCAN, "I/O Intr")
-    field(DTYP, "asynUInt32Digital")
-    field(INP, "@asynMask(myPort, 0, 0x0001, 1)@myPoller testBOOL BOOL 1 none none")
-    field(ZNAM, "Off")
-    field(ONAM, "On")
-}
+    record(bi, "$(P)readBool") {
+        field(SCAN, "I/O Intr")
+        field(DTYP, "asynUInt32Digital")
+        field(INP, "@asynMask(myPort, 0, 0x0001, 1)@myPoller testBOOL BOOL 1 none none")
+        field(ZNAM, "Off")
+        field(ONAM, "On")
+    }
 ```
 
 This bi record reads in a boolean value from the PLC for which it must use the asynUInt32Digital interface.
@@ -358,11 +358,11 @@ The mask part of the asynMask call can be used to only get certain bits from wit
 ###
 
 ```bash
-record(lso, "$(P)writeString") {
-    field(DTYP, "asynOctetWrite")
-    field(OUT, "@asyn(myPort, 0, 1)testString STRING 1 none &str_max_capacity=60")
-    field(SIZV, "61")
-}
+    record(lso, "$(P)writeString") {
+        field(DTYP, "asynOctetWrite")
+        field(OUT, "@asyn(myPort, 0, 1)testString STRING 1 none &str_max_capacity=60")
+        field(SIZV, "61")
+    }
 ```
 
 This record writes to a STRING[60]. SIZV should be 61 chars as in this case the PLC does not return a null byte terminated string, so room is required for this. Whenever the user specifies a STRING, the str\_max\_capacity must be set to the size of the string in the PLC. No readPoller is specified as this record writes to the PLC
@@ -415,7 +415,7 @@ Of these 721 tags, only 21 were reading data from the driver, the other 700 were
 The following code is responsible for sending read requests to the PLC:
 
 ```cpp
-for (auto x : tagMap\_)
+for (auto x : tagMap_)
     {
         if (x.second->pollerName == threadName && x.second->readFlag == true)
         {
@@ -474,7 +474,7 @@ Within the *readData()* function is the following code:
                 // this means that the first read requests will have slightly longer than their timeout period for their data to return.
                 setParamStatus(asynIndex, asynTimeout);
                 setParamAlarmStatus(asynIndex, asynTimeout);
-                setParamAlarmSeverity(asynIndex, MAJOR\_ALARM);
+                setParamAlarmSeverity(asynIndex, MAJOR_ALARM);
                 readFailed = true;
                 asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, Timeout finishing read tag %d: %s. Decrease the polling rate or increase the timeout.\n",
                     driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
