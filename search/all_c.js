@@ -5,5 +5,6 @@ var searchData=
   ['spreadrequests_5f_2',['spreadRequests_',['../classomron_e_i_p_poller.html#ac1464c5a10a9946ea18b0b336495bd22',1,'omronEIPPoller']]],
   ['startindex_3',['startIndex',['../structomron_drv_user__t.html#a5a6ef11cd1f1d19009d36fd436166289',1,'omronDrvUser_t']]],
   ['strcapacity_4',['strCapacity',['../structomron_drv_user__t.html#a65b7f2828643f663d7a558e822f86d64',1,'omronDrvUser_t']]],
-  ['structdtypemap_5',['structdtypemap',['../drv_omroneip_8h.html#af4746cf9e32a31c72b35d5a55bf39e98',1,'structDtypeMap:&#160;drvOmroneip.h'],['../omron_utilities_8h.html#af4746cf9e32a31c72b35d5a55bf39e98',1,'structDtypeMap:&#160;omronUtilities.h']]]
+  ['structdtypemap_5',['structdtypemap',['../drv_omroneip_8h.html#af4746cf9e32a31c72b35d5a55bf39e98',1,'structDtypeMap:&#160;drvOmroneip.h'],['../omron_utilities_8h.html#af4746cf9e32a31c72b35d5a55bf39e98',1,'structDtypeMap:&#160;omronUtilities.h']]],
+  ['supported_20platforms_6',['Supported platforms',['../index.html#autotoc_md1',1,'']]]
 ];
