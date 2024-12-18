@@ -86,10 +86,9 @@ The driver has three available commands which can be called from the IOC. The fi
 
 ### <a name="_toc1198336346"></a>**drvOmronEIPConfigure**
 
-```
-drvOmronEIPConfigure(driverPortName, gateway, route\_path, plc, debug\_level, timezone\_offset)
-
-drvOmronEIPConfigure("omronDriver", "10.2.2.57", "18,10.2.2.57","omron-njnx",0,0)
+```bash
+    drvOmronEIPConfigure(driverPortName, gateway, route\_path, plc, debug\_level, timezone\_offset)
+    drvOmronEIPConfigure("omronDriver", "10.2.2.57", "18,10.2.2.57","omron-njnx",0,0)
 ```
 
 **driverPortName**: The name given to the driver object, this is referenced when creating pollers.
@@ -108,12 +107,10 @@ drvOmronEIPConfigure("omronDriver", "10.2.2.57", "18,10.2.2.57","omron-njnx",0,0
 ### <a name="_toc118884400"></a>**DrvOmronEIPConfigPoller**
 #drvOmronEIPConfigPoller(driverPortName, pollerName, updateRate, spreadRequests)
 
-```
-drvOmronEIPConfigPoller("omronDriver", "fastPoller", 0.1, 0)
-
-drvOmronEIPConfigPoller("omronDriver", "mediumPoller", 2, 0)
-
-drvOmronEIPConfigPoller("omronDriver", "slowPoller", 10, 1)
+```bash
+    drvOmronEIPConfigPoller("omronDriver", "fastPoller", 0.1, 0)
+    drvOmronEIPConfigPoller("omronDriver", "mediumPoller", 2, 0)
+    drvOmronEIPConfigPoller("omronDriver", "slowPoller", 10, 1)
 ```
 
 **driverPortName**: The name given to the driver object
@@ -126,9 +123,9 @@ drvOmronEIPConfigPoller("omronDriver", "slowPoller", 10, 1)
 
 ### <a name="_toc46036730"></a>**drvOmronEIPStructDefine**
 
-```
-#drvOmronEIPStructDefine(driverPortName, pathToFile)
-drvOmronEIPStructDefine("omronDriver", "../structFile.csv")
+```bash
+    #drvOmronEIPStructDefine(driverPortName, pathToFile)
+    drvOmronEIPStructDefine("omronDriver", "../structFile.csv")
 ```
 
 **driverPortName**: The name given to the driver object
@@ -147,11 +144,11 @@ The mask 0x00FF enables logging of all message types, see <https://epics.anl.gov
 ## <a name="_toc247901984"></a>**Record interface**
 Records which connect to the driver are configured in the same way as any other <https://epics-modules.github.io/master/asyn/R4-7/asynDriver.html>. Specifically, they require a DTYP which matches one of the asyn interfaces supported by the driver and a valid INP field:
 
-```
-field(DTYP,"asynXXX")
-field(INP,"@asyn(portName,addr,timeout)drvInfo")
- `or
-field(INP,"@asynMask(portName,addr,mask,timeout)drvInfo")
+```bash
+    field(DTYP,"asynXXX")
+    field(INP,"@asyn(portName,addr,timeout)drvInfo")
+       or
+    field(INP,"@asynMask(portName,addr,mask,timeout)drvInfo")
 ```
 
 The **portName** should match the **portName** used when configuring the driver. The **addr** should always be 0. The asyn **timeout** is used to set the timeout for reading and writing data from/to the PLC. It defaults to 1 second. Note that if timeouts expire, then data will not be read and the driver will start the next poll. **asynMask** is used when accessing data through the asynUInt32Digital interface.
@@ -161,10 +158,10 @@ For the driver to create a valid tag and connect it to the PLC, a valid drvInfo 
 
 The drvInfo string for a read and a write record should look like:
 
-```
-@poller name[startIndex] datatype sliceSize offset extras 
- `and
-name[startIndex] datatype sliceSize offset extras
+```bash
+    @poller name[startIndex] datatype sliceSize offset extras 
+       and
+    name[startIndex] datatype sliceSize offset extras
 ```
 
 **@poller**: This term specifies the name of a poller which is created with the drvOmronEIPConfigPoller command. The @ is required and is used to identify the following name as a poller. The record will be processed by the named poller.
@@ -249,17 +246,17 @@ When setting an **offset**, you can either set it equal to “none”, a byte of
 
 The structure definition file should contain comma separated lists with a new list on each line. The first item in each list should be the name used to identify the structure, this name is then referenced in the INP field of a record. The other items in the list should either be valid datatypes from the datatype table above, the name of another structure in this file or an array of one of these. For example:
 
-```
-myStruct,REAL,STRING[30],INT,INT,UINT
-anotherStruct,LREAL,LINT,STRING[10]
-nestedStruct,myStruct,INT
-arrayStruct,INT,"ARRAY[1..10] OF myStruct",BOOL,BOOL
+```bash
+    myStruct,REAL,STRING[30],INT,INT,UINT
+    anotherStruct,LREAL,LINT,STRING[10]
+    nestedStruct,myStruct,INT
+    arrayStruct,INT,"ARRAY[1..10] OF myStruct",BOOL,BOOL
 ```
 
 If a user requested to read an INT from within the UDT from the PLC and specified the drvInfo string:
 
-```
-@poller myUDT INT 1 nestedStruct[6] &optimise=1
+```bash
+    @poller myUDT INT 1 nestedStruct[6] &optimise=1
 ```
 
 Assuming the optimisation works (at least two reads from the same struct are needed), the driver would first read myUDT from the PLC. Then it would calculate the integer byte offset of the sixth member of the nestedStruct UDT. It would then use this offset to return an INT from that location within the UDT.
@@ -291,20 +288,20 @@ This section explains a few different examples. A full list of example records c
 
 Record fields required for driver operation (either @asyn or @asynMask should be used):
 
-```
-field(DTYP, "asynXXX")
-field(INP, "@asyn(portName,addr,timeout)@poller name[startIndex] datatype sliceSize offset extras")
-field(INP, "@asynMask(portName,addr,mask,timeout)@poller name[startIndex] datatype sliceSize offset extras")
+```bash
+    field(DTYP, "asynXXX")
+    field(INP, "@asyn(portName,addr,timeout)@poller name[startIndex] datatype sliceSize offset extras")
+    field(INP, "@asynMask(portName,addr,mask,timeout)@poller name[startIndex] datatype sliceSize offset extras")
 ```
 
 ### <a name="_toc2042263546"></a>**ReadFloat32 example**
 ###
 
-```
+```bash
 record(ai, "$(P)readFloat32") {
-`    `field(SCAN, "I/O Intr")
-`    `field(DTYP, "asynFloat64")
-`    `field(INP, "@asyn(myPort, 0, 0.5)@myPoller testArray[1].PVValue REAL 1 none none")
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn(myPort, 0, 0.5)@myPoller testArray[1].PVValue REAL 1 none none")
 }
 ```
 
@@ -313,13 +310,13 @@ This record is connected to myPoller with a 0.5s timeout. It reads from element 
 ### <a name="_toc1780812375"></a>**ReadUDT example**
 ###
 
-```
+```bash
 record(waveform, "$(P)readUDT") {
-`    `field(SCAN, "I/O Intr")
-`    `field(FTVL, "UCHAR")
-`    `field(DTYP, "asynInt8ArrayIn")
-`    `field(INP, "@asyn(myPort, 0, 1)@myPoller testArray[1] UDT 1 none none")
-`    `field(NELM, "1996")
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn(myPort, 0, 1)@myPoller testArray[1] UDT 1 none none")
+    field(NELM, "1996")
 }
 ```
 
@@ -328,13 +325,13 @@ This record reads a UDT/structure from the PLC. The structure is stored at eleme
 ### <a name="_toc915451208"></a>**ReadArraySlice example**
 ###
 
-```
+```bash
 record(waveform, "$(P)readArraySlice") {
-`    `field(SCAN, "I/O Intr")
-`    `field(FTVL, "UCHAR")
-`    `field(DTYP, "asynInt8ArrayIn")
-`    `field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testArray[3] UDT 3 none none")
-`    `field(NELM, "1996")
+    field(SCAN, "I/O Intr")
+    field(FTVL, "UCHAR")
+    field(DTYP, "asynInt8ArrayIn")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testArray[3] UDT 3 none none")
+    field(NELM, "1996")
 }
 ```
 
@@ -343,13 +340,13 @@ This record reads a slice of three elements of an array, starting at element 3. 
 ### <a name="_toc1845333202"></a>**ReadBool example**
 ###
 
-```
+```bash
 record(bi, "$(P)readBool") {
-`    `field(SCAN, "I/O Intr")
-`    `field(DTYP, "asynUInt32Digital")
-`    `field(INP, "@asynMask(myPort, 0, 0x0001, 1)@myPoller testBOOL BOOL 1 none none")
-`    `field(ZNAM, "Off")
-`    `field(ONAM, "On")
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynUInt32Digital")
+    field(INP, "@asynMask(myPort, 0, 0x0001, 1)@myPoller testBOOL BOOL 1 none none")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
 }
 ```
 
@@ -360,11 +357,11 @@ The mask part of the asynMask call can be used to only get certain bits from wit
 ### <a name="_toc552867313"></a>**WriteString example**
 ###
 
-```
+```bash
 record(lso, "$(P)writeString") {
-`    `field(DTYP, "asynOctetWrite")
-`    `field(OUT, "@asyn(myPort, 0, 1)testString STRING 1 none &str\_max\_capacity=60")
-`    `field(SIZV, "61")
+    field(DTYP, "asynOctetWrite")
+    field(OUT, "@asyn(myPort, 0, 1)testString STRING 1 none &str_max_capacity=60")
+    field(SIZV, "61")
 }
 ```
 
@@ -419,19 +416,19 @@ The following code is responsible for sending read requests to the PLC:
 
 ```cpp
 for (auto x : tagMap\_)
-`    `{
-`      `if (x.second->pollerName == threadName && x.second->readFlag == true)
-`      `{
-`        `asynPrint(pasynUserSelf, ASYN\_TRACE\_FLOW, "%s:%s Reading tag: %d with polling interval: %f seconds\n", driverName, functionName, x.second->tagIndex, interval);
-`        `plc\_tag\_read(x.second->tagIndex, 0); // read from plc, we will check status and timeouts later
-`        `// We sleep to split up read requests within timing interval, otherwise we can get traffic jams and missed polling intervals
-`        `if (pPoller->myTagCount\_ > 1 && pPoller->spreadRequests\_)
-`        `{
-`          `pollingDelay = (interval - 0.2 \* interval) / pPoller->myTagCount\_;
-`          `epicsThreadSleep(pollingDelay);
-`        `}
-`      `}
-`    `}
+    {
+        if (x.second->pollerName == threadName && x.second->readFlag == true)
+        {
+            asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Reading tag: %d with polling interval: %f seconds\n", driverName, functionName, x.second->tagIndex, interval);
+            plc_tag_read(x.second->tagIndex, 0); // read from plc, we will check status and timeouts later
+            // We sleep to split up read requests within timing interval, otherwise we can get traffic jams and missed polling intervals
+            if (pPoller->myTagCount_ > 1 && pPoller->spreadRequests_)
+            {
+                pollingDelay = (interval - 0.2 * interval) / pPoller->myTagCount_;
+                epicsThreadSleep(pollingDelay);
+            }
+        }
+    }
 ```
 
 The code above does the following for each **tag index** which is registered with this poller and configured to read (during optimisation, asyn parameters which share a **tag index** are all set to not read except for one “master” parameter):
@@ -445,13 +442,13 @@ libplctag manages the connection to the plc, it will immediately send an etherne
 Once all of the read requests have been sent, the following code is executed:
 
 ```cpp
-`    `for (auto x : tagMap\_)
-`    `{
-`      `if (x.second->pollerName == threadName)
-`      `{
-`        `readData(x.second, x.first);
-`      `}
-`    `}
+    for (auto x : tagMap_)
+    {
+        if (x.second->pollerName == threadName)
+        {
+            readData(x.second, x.first);
+        }
+    }
 ```
 
 The code above calls the *readData()* function which uses data configured in the asyn parameters tag to work out how to read the data read from the PLC. We call this for each **asyn index** and pass both the **asyn index** (x.first) and the **drvUser** (x.second).
@@ -459,48 +456,48 @@ The code above calls the *readData()* function which uses data configured in the
 Within the *readData()* function is the following code:
 
 ```cpp
-` `while (still\_pending)
-`  `{
-`    `status = plc\_tag\_status(drvUser->tagIndex);
-`    `// It should be rare that data for the first tag has not arrived before the last tag is read
-`    `// Therefore this if statement will normally be skipped, or called once by the first few tags as we
-`    `// are asynchronously waiting for all tags in this poller to be read.
-`    `if (status == PLCTAG\_STATUS\_PENDING)
-`    `{
-`      `epicsThreadSleep(0.01);
-`      `timeoutTimeTaken = (std::chrono::duration\_cast<std::chrono::milliseconds>(std::chrono::system\_clock::now() - timeoutStartTime).count()) \* 0.001; // seconds
-`      `// We wait so that we dont spam libplctag with status requests which can cause 100ms freezes
-`      `if (timeoutTimeTaken >= drvUser->timeout)
-`      `{
-`        `// If the timeout specified in the records INP/OUT field is hit, we set the status to asynTimeout
-`        `// To be precise, this is the timeout to enter this loop is the time between the last read request for this poller being sent and the current time,
-`        `// this means that the first read requests will have slightly longer than their timeout period for their data to return.
-`        `setParamStatus(asynIndex, asynTimeout);
-`        `setParamAlarmStatus(asynIndex, asynTimeout);
-`        `setParamAlarmSeverity(asynIndex, MAJOR\_ALARM);
-`        `readFailed = true;
-`        `asynPrint(pasynUserSelf, ASYN\_TRACE\_WARNING, "%s:%s Warn, Timeout finishing read tag %d: %s. Decrease the polling rate or increase the timeout.\n",
-`                  `driverName, functionName, drvUser->tagIndex, plc\_tag\_decode\_error(status));
-`        `still\_pending = 0;
-`      `}
-`    `}
+    while (still_pending)
+    {
+        status = plc_tag_status(drvUser->tagIndex);
+        // It should be rare that data for the first tag has not arrived before the last tag is read
+        // Therefore this if statement will normally be skipped, or called once by the first few tags as we
+        // are asynchronously waiting for all tags in this poller to be read.
+        if (status == PLCTAG_STATUS_PENDING)
+        {
+            epicsThreadSleep(0.01);
+            timeoutTimeTaken = (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - timeoutStartTime).count()) \* 0.001; // seconds
+            // We wait so that we dont spam libplctag with status requests which can cause 100ms freezes
+            if (timeoutTimeTaken >= drvUser->timeout)
+            {
+                // If the timeout specified in the records INP/OUT field is hit, we set the status to asynTimeout
+                // To be precise, this is the timeout to enter this loop is the time between the last read request for this poller being sent and the current time,
+                // this means that the first read requests will have slightly longer than their timeout period for their data to return.
+                setParamStatus(asynIndex, asynTimeout);
+                setParamAlarmStatus(asynIndex, asynTimeout);
+                setParamAlarmSeverity(asynIndex, MAJOR\_ALARM);
+                readFailed = true;
+                asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, Timeout finishing read tag %d: %s. Decrease the polling rate or increase the timeout.\n",
+                    driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
+                still\_pending = 0;
+            }
+        }
 
-`    `else if (status < 0)
-`    `{
-`      `setParamStatus(asynIndex, asynError);
-`      `setParamAlarmStatus(asynIndex, asynError);
-`      `setParamAlarmSeverity(asynIndex, MAJOR\_ALARM);
-`      `readFailed = true;
-`      `asynPrint(pasynUserSelf, ASYN\_TRACE\_ERROR, "%s:%s Err, finishing read of tag %d: %s\n",
-`                `driverName, functionName, drvUser->tagIndex, plc\_tag\_decode\_error(status));
-`      `still\_pending = 0;
-`    `}
-
-`    `else
-`    `{
-`      `still\_pending = 0;
-`    `}
-`  `}
+        else if (status < 0)
+        {
+            setParamStatus(asynIndex, asynError);
+            setParamAlarmStatus(asynIndex, asynError);
+            setParamAlarmSeverity(asynIndex, MAJOR_ALARM);
+            readFailed = true;
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, finishing read of tag %d: %s\n",
+                driverName, functionName, drvUser->tagIndex, plc_tag_decode_error(status));
+            still_pending = 0;
+        }
+    
+        else
+        {
+            still_pending = 0;
+        }
+    }
 ```
 
 *still\_pending* starts true, so we do an initial check of the status of the **tag index** to see if our read request has finished.
@@ -513,4 +510,5 @@ else, the status must be good, so we quit this while loop and continue to read t
 
 When reading data from tags in libplctag (done in the *readData()* function), we lock the tag so that the tags data doesn't change while we are reading it.
 
-![](omroneip_sequencing_diagram.png)Simplified sequencing diagram showing the read pollers behaviour. readData() calls one of many different plc\_tag\_get…() functions which get data cached in libplctag and send it to any records which use the asyn parameter which requested the readData().
+![](omroneip_sequencing_diagram.png)
+Simplified sequencing diagram showing the read pollers behaviour. readData() calls one of many different plc\_tag\_get…() functions which get data cached in libplctag and send it to any records which use the asyn parameter which requested the readData().
