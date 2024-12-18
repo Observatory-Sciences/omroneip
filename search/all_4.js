@@ -1,8 +1,7 @@
 var searchData=
 [
-  ['findarraydtype_0',['findArrayDtype',['../classomron_utilities.html#a7bb6422a83deb2e9e7a51c9661509f79',1,'omronUtilities']]],
-  ['findarrayoptimisations_1',['findArrayOptimisations',['../classdrv_omron_e_i_p.html#a0ada477f304252d972640059e51f9bfc',1,'drvOmronEIP']]],
-  ['findoffsets_2',['findOffsets',['../classomron_utilities.html#ac74aa60a9b60a0e7b397868ddaf604ea',1,'omronUtilities']]],
-  ['findoptimisabletags_3',['findOptimisableTags',['../classdrv_omron_e_i_p.html#a56b2de0c53ae936be523ef7b1f87ae41',1,'drvOmronEIP']]],
-  ['findrequestedoffset_4',['findRequestedOffset',['../classomron_utilities.html#a9051c9882f037fef52cfc9129a0e6394',1,'omronUtilities']]]
+  ['efficiently_20offsets_20and_20optimisations_20strong_0',['&lt;a name=&quot;_toc1681910069&quot;&gt;&lt;/a&gt;&lt;strong&gt;Reading UDT data efficiently (offsets and optimisations)&lt;/strong&gt;',['../index.html#autotoc_md14',1,'']]],
+  ['example_20records_20strong_1',['&lt;a name=&quot;_toc558233786&quot;&gt;&lt;/a&gt;&lt;strong&gt;Example records&lt;/strong&gt;',['../index.html#autotoc_md18',1,'']]],
+  ['example_20strong_2',['example strong',['../index.html#autotoc_md21',1,'&lt;a name=&quot;_toc1780812375&quot;&gt;&lt;/a&gt;&lt;strong&gt;ReadUDT example&lt;/strong&gt;'],['../index.html#autotoc_md25',1,'&lt;a name=&quot;_toc1845333202&quot;&gt;&lt;/a&gt;&lt;strong&gt;ReadBool example&lt;/strong&gt;'],['../index.html#autotoc_md19',1,'&lt;a name=&quot;_toc2042263546&quot;&gt;&lt;/a&gt;&lt;strong&gt;ReadFloat32 example&lt;/strong&gt;'],['../index.html#autotoc_md27',1,'&lt;a name=&quot;_toc552867313&quot;&gt;&lt;/a&gt;&lt;strong&gt;WriteString example&lt;/strong&gt;'],['../index.html#autotoc_md23',1,'&lt;a name=&quot;_toc915451208&quot;&gt;&lt;/a&gt;&lt;strong&gt;ReadArraySlice example&lt;/strong&gt;']]],
+  ['extras_20strong_3',['&lt;a name=&quot;_toc1860123778&quot;&gt;&lt;/a&gt;&lt;strong&gt;Extras&lt;/strong&gt;',['../index.html#autotoc_md17',1,'']]]
 ];

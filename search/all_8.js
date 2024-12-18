@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['main_0',['main',['../omroneip_main_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97',1,'omroneipMain.cpp']]],
-  ['mytagcount_5f_1',['myTagCount_',['../classomron_e_i_p_poller.html#a9bc6ffdbce1753a5a3ef4440a0a019f6',1,'omronEIPPoller']]]
+  ['manual_20v3_20release_20strong_0',['&lt;a name=&quot;_toc1825803900&quot;&gt;&lt;/a&gt;&lt;strong&gt;Omroneip Software Manual v3 - release&lt;/strong&gt;',['../index.html',1,'']]],
+  ['matrix_20strong_1',['&lt;a name=&quot;_toc1595089635&quot;&gt;&lt;/a&gt;&lt;strong&gt;Supported behaviour matrix&lt;/strong&gt;',['../index.html#autotoc_md13',1,'']]]
 ];
