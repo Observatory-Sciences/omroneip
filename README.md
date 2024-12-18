@@ -13,6 +13,10 @@ Supported platforms
 
 This driver is being built and tested on Centos 9, using EPICS base 3.15.9 and asyn R4-44-2. It is being tested with an OmronNJ 101-9000 PLC.
 
-Doxygen documenatation
+Software manual
+-------------------
+See /docs/Omroneip_Software_Manual.md for the latest documentation
+
+Doxygen documentation
 -------------------
 https://observatory-sciences.github.io/omroneip/index.html
