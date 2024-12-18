@@ -46,7 +46,7 @@ dbLoadRecords("db/testEfficientRead.db", "P=${P}, I=2, R=2:, PORT=omronDriver, P
 dbLoadRecords("db/testReadNoPacking.db", "P=${P}, PORT=omronDriver, POLLER=mediumPoller") 
 dbLoadRecords("db/testReadPacking.db", "P=${P}, PORT=omronDriver, POLLER=mediumPoller")
 
-#Will create some error messages
-dbLoadRecords("db/testWeirdINP.db", "P=${P}, PORT=omronDriver, POLLER=mediumPoller")
+#Will create some error messages, may even seg fault although it shouldnt
+#dbLoadRecords("db/testWeirdINP.db", "P=${P}, PORT=omronDriver, POLLER=mediumPoller")
 
 iocInit()

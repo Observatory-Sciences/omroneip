@@ -6,6 +6,8 @@ O.*
 /db/
 /data/
 /documentation/
+/docs/html/
+/docs/latex/
 /lib/
 /include/
 .svn*

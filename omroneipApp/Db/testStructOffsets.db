@@ -2,18 +2,18 @@
 record(longin, "$(P)readDInt1") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myTimeStruct.testDint DINT 1 testTimeStruct2[2] &optimise=1")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTimeStruct DINT 1 testTimeStruct2[2] &optimise=1")
 }
 #Get offset from within Time struct
 record(ai, "$(P)readDouble") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myTimeStruct.testDouble LREAL 1 testTimeStruct2[5] &optimise=1")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) testTimeStruct LREAL 1 testTimeStruct2[5] &optimise=1")
 }
 record(ai, "$(P)readDouble2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myArrayStruct.embeddedStruct[5] LREAL 1 testArrayStruct2[5][5][5] &optimise=1")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myArrayStruct LREAL 1 testArrayStruct2[5][5][5] &optimise=1")
 }
 
 #Get offset from within Time struct embedded in another struct
@@ -21,20 +21,20 @@ record(ai, "$(P)readDouble2") {
 record(longin, "$(P)readDInt2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myArrayStruct.embeddedStruct[1].testDint DINT 1 testArrayStruct2[5][1][2] none")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myArrayStruct DINT 1 testArrayStruct2[5][1][2] &optimise=1")
 }
 
 record(ai, "$(P)readFloat") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynFloat64")
-    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myArrayStruct.testReal2 REAL 1 testArrayStruct2[3] none")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) myArrayStruct REAL 1 testArrayStruct2[3] &optimise=1")
 }
 
 #Read single bool from struct in array in struct
 record(bi, "$(P)readBool1") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynUInt32Digital")
-    field(INP, "@asynMask($(PORT), 0, 1)@$(POLLER) myArrayStruct.embeddedStruct[2].testBool BOOL 1 testArrayStruct2[5][2][1] none")
+    field(INP, "@asynMask($(PORT), 0, 1)@$(POLLER) myArrayStruct BOOL 1 testArrayStruct2[5][2][1] &optimise=1")
     field(ZNAM, "Off")
     field(ONAM, "On")
 }
@@ -43,7 +43,7 @@ record(bi, "$(P)readBool1") {
 record(bi, "$(P)readBool2") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynUInt32Digital")
-    field(INP, "@asynMask($(PORT), 0, 1)@$(POLLER) myArrayStruct.structArray2[21] BOOL 1 testArrayStruct2[4][21] none")
+    field(INP, "@asynMask($(PORT), 0, 1)@$(POLLER) myArrayStruct BOOL 1 testArrayStruct2[4][21] none")
     field(ZNAM, "Off")
     field(ONAM, "On")
 }

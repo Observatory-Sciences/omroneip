@@ -1,0 +1,99 @@
+#We request two fields from 8 elements of aPSU. The driver will automatically slice up the array to fit as much data
+#as possible into a single CIP message. For OmronNJNX, this should result in a single libplctag tag being created which
+#reads a slice of 8 UDTs, these are then read into the 16 asynParameters.
+
+record(ai, "$(P)aPSU1Float1") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[1] REAL 1 sPSU[1] &optimise=1")
+}
+
+record(ai, "$(P)aPSU1Float2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[1] REAL 1 sPSU[2] &optimise=1")
+}
+
+record(ai, "$(P)aPSU2Float1") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[2] REAL 1 sPSU[1] &optimise=1")
+}
+
+record(ai, "$(P)aPSU2Float2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[2] REAL 1 sPSU[2] &optimise=1")
+}
+
+record(ai, "$(P)aPSU3Float1") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[3] REAL 1 sPSU[1] &optimise=1")
+}
+
+record(ai, "$(P)aPSU3Float2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[3] REAL 1 sPSU[2] &optimise=1")
+}
+
+record(ai, "$(P)aPSU4Float1") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[4] REAL 1 sPSU[1] &optimise=1")
+}
+
+record(ai, "$(P)aPSU4Float2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[4] REAL 1 sPSU[2] &optimise=1")
+}
+
+record(ai, "$(P)aPSU5Float1") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[5] REAL 1 sPSU[1] &optimise=1")
+}
+
+record(ai, "$(P)aPSU5Float2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[5] REAL 1 sPSU[2] &optimise=1")
+}
+
+record(ai, "$(P)aPSU1Float6") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[6] REAL 1 sPSU[1] &optimise=1")
+}
+
+record(ai, "$(P)aPSU6Float2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[6] REAL 1 sPSU[2] &optimise=1")
+}
+
+record(ai, "$(P)aPSU7Float1") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[7] REAL 1 sPSU[1] &optimise=1")
+}
+
+record(ai, "$(P)aPSU7Float2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[7] REAL 1 sPSU[2] &optimise=1")
+}
+
+record(ai, "$(P)aPSU8Float1") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[8] REAL 1 sPSU[1] &optimise=1")
+}
+
+record(ai, "$(P)aPSU8Float2") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynFloat64")
+    field(INP, "@asyn($(PORT), 0, 1)@$(POLLER) aPSU[8] REAL 1 sPSU[2] &optimise=1")
+}

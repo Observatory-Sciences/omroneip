@@ -7,33 +7,15 @@ omronUtilities::omronUtilities(drvOmronEIP *ptrDriver)
     driverName = pDriver->driverName;
 }
 
-drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
+std::string omronUtilities::seperateDrvInfoVals(std::string str, std::list<std::string> & words)
 {
-  const char * functionName = "drvInfoParser";
-  const std::string str(drvInfo);
+  const char * functionName = "seperateDrvInfoVals";
+  std::string substring;
+  size_t pos = 0;
+  bool escaped = false;
   char delim = ' ';
   char escape = '/'; // I added support for tagNames which include spaces if inside the escape char, however the PLC does not support 
-  // this and it is not well tested. You should also be able to define a poller with a space in it, if you wanted to for some reason
-  drvInfoMap keyWords = {
-      {"pollerName", "none"}, // optional
-      {"tagName", "none"},  
-      {"dataType", "none"}, 
-      {"startIndex", "1"},   
-      {"sliceSize", "1"},     
-      {"offset", "0"},       
-      {"tagExtras", "none"},
-      {"strCapacity", "0"}, // only needed for getting strings from UDTs  
-      {"optimisationFlag", "not requested"}, // stores the status of optimisation, ("not requested", "attempt optimisation","dont optimise","optimisation failed","optimised","master")
-      {"stringValid", "true"}, // set to false if errors are detected which aborts creation of tag and asyn parameter, return early if false
-      {"offsetReadSize", "0"},
-      {"readAsString", "0"}, // currently just used to optionally output the TIME dtypes as user friendly strings in the local timezone
-      {"optimise", "0"} // if 0 then we use the offset to look within a datatype, if 1 then we use it to get a datatype from within an array/UDT
-  };
-  std::list<std::string> words; // Contains a list of string parameters supplied by the user through a record's drvInfo interface.
-  std::string substring;
-  bool escaped = false;
-  size_t pos = 0;
-
+  // this. You should also be able to define a poller with a space in it, if you wanted to for some reason
   for (size_t i = 0; i < str.size(); i++)
   {
     if (str[i] == escape)
@@ -77,13 +59,340 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
   if (escaped)
   {
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Escape character never closed. Record invalid\n", driverName, functionName);
-    keyWords.at("stringValid") = "false";
+    return "false";
+  }
+  return "true";
+}
+
+std::tuple<std::string,std::string> omronUtilities::checkValidExtras(std::string str, drvInfoMap &keyWords)
+{
+  // Check for valid extra attributes
+  /* These attributes overwrite libplctag attributes, other attributes which arent overwritten are not mentioned here
+    Users can overwrite these defaults and other libplctag defaults from their records */
+  drvInfoMap defaultTagAttribs = {
+      {"allow_packing=", "1"},
+      {"str_is_zero_terminated=", "0"},
+      {"str_is_fixed_length=", "0"},
+      {"str_is_counted=", "1"},
+      {"str_count_word_bytes=", "2"},
+      {"str_pad_to_multiple_bytes=", "0"}};
+
+  std::string stringValid = "true";
+  std::string extrasString;
+  std::string extrasWord;
+  if ((str!="0" && str!="none") || keyWords.at("dataType")=="STRING") 
+  {
+    // The user has specified attributes other than default, these will either be added to the list or replace existing default values
+    if ((keyWords.at("dataType")=="STRING")&&(str=="0" || str=="none")){
+      //We have a string dtype which has not defined its extrasString, this is improper behaviour but we allow it here and create
+      //a warning later. We must strip away the none identifier.
+      extrasString="",extrasWord="";
+    }
+    else
+      extrasString = str, extrasWord = str;
+
+    // look for and process the strings: str_max_capacity, offset_read_size and as_time
+    processExtrasExceptions(str, keyWords, extrasString, defaultTagAttribs);
+
+    for (auto &attrib : defaultTagAttribs)
+    {
+      auto pos = extrasWord.find(attrib.first);
+      std::string size;
+      if (pos != std::string::npos) // if attrib is one of our defined defaults
+      {
+        std::string remaining = extrasWord.substr(pos + attrib.first.size(), extrasWord.size());
+        auto nextPos = remaining.find('&');
+        if (nextPos != std::string::npos)
+        {
+          size = remaining.substr(0, nextPos);
+          extrasString = extrasWord.erase(pos-1, attrib.first.size() + nextPos + 1);
+        }
+        else if (pos!=0)
+        {
+          size = remaining.substr(0, remaining.size());
+          extrasString = extrasWord.erase(pos-1, extrasWord.size()-(pos-1));
+        }
+        else { //user has forgotten to add & at the start
+          size = remaining.substr(0, remaining.size()); 
+          extrasString = extrasWord.erase(pos, extrasWord.size()-pos);
+        }
+
+        if (size == attrib.second) // if defined value is identical to default, continue
+        {
+          continue;
+        }
+        else // set new default value
+        {
+          attrib.second = size;
+        }
+      }
+    }
   }
 
-  if (words.size() < 1)
+  //Add the non default tag attributes to the map
+  for (auto attrib : defaultTagAttribs)
   {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, No arguments supplied to driver\n", driverName, functionName);
+    if (attrib.first.substr(0,3) == "str" && !(keyWords.at("dataType") == "STRING" || keyWords.at("dataType") == "UDT"))
+    {
+      // If the user requests str type attributes for a non STRING record then ignore
+      continue;
+    }
+    extrasString += "&";
+    extrasString += attrib.first;
+    extrasString += attrib.second;
+  }
+  return std::make_tuple(stringValid,extrasString);
+}
+
+std::tuple<std::string,std::string> omronUtilities::checkValidOffset(std::string str)
+{
+// Checking for valid offset, either a positive integer or a reference to a structs definition file, eg structName[2][11]...
+  const char * functionName = "checkValidOffset";
+  size_t indexStartPos = 0; // stores the position of the first '[' within the user supplied string
+  int offset;
+  std::vector<size_t> structIndices; // the indice(s) within the structure specified by the user
+  bool indexFound = false;
+  bool firstIndex = true;
+  bool closingBracketFound = true;
+  std::string offsetStr = "0";
+  std::string stringValid = "true";
+  // user has chosen not to use an offset
+  if (str != "none")
+  {
+    // attempt to set offset to integer, if not possible then assume it is a structname
+    try
+    {
+      offset = std::stoi(str);
+    }
+    catch(...)
+    {
+      // It is either a syntax error, or a reference to a structure, we attempt to split the name and integer
+      for (size_t n = 0; n<str.size(); n++)
+      {
+        if (str.c_str()[n] == '[') // check each character of the word until we have found an opening bracket
+        {
+          closingBracketFound=false;
+          std::string offsetSubstring = str.substr(n+1);
+          if (firstIndex) {indexStartPos = n;} //only want to update indexStartPos, once we have already found the first index
+          for (size_t m = 0; m<offsetSubstring.size(); m++)
+          {
+            if (offsetSubstring.c_str()[m] == ']') // check each character of the word until we have found a closing bracket
+            {
+              closingBracketFound=true;
+              try
+              {
+                // struct integer found
+                // try to convert the string between the brackets to an int, we also -1 to convert from the user input which numbers from 1
+                // to the the system used to get the offset which numbers from 0
+                structIndices.push_back(std::stoi(offsetSubstring.substr(0,m))-1);
+                indexFound = true;
+                firstIndex = false;
+              }
+              catch(...){
+                indexFound = false;
+              }
+              break;
+            }
+          }
+        }
+        if (!closingBracketFound){
+          asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, No closing bracket for offset using structure definition: %s\n", 
+                      driverName, functionName, str.c_str());
+          stringValid = "false";
+        }
+      }
+      if (!indexFound){
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Either your offset integer is not a valid Int32 >= 0 or if you are indexing a structure, the index is invalid. Offset requested: %s\n", 
+                    driverName, functionName, str.c_str());
+        stringValid = "false";
+      }
+      
+      //look for matching structure in structMap_
+      //if found, look for the offset at the structIndex within the structure
+      std::string structName = str.substr(0,indexStartPos);
+      bool structFound = false;
+      for (auto item: pDriver->structMap_)
+      {
+        if (item.first == structName)
+        {
+          //requested structure found
+          structFound = true;
+          offset = findRequestedOffset(structIndices, structName); //lookup byte offset based off user supplied indice(s)
+          if (offset >=0) {}
+          else {
+            offset=0;
+            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid index or structure name: %s\n", driverName, functionName, str.c_str());
+            stringValid = "false";
+          }
+          break;
+        }
+      }
+      if (!structFound)
+      {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Could not parse structure requested: %s. Have you loaded a struct file?\n", 
+                    driverName, functionName, str.c_str());
+        stringValid = "false";
+      }
+    }
+    if (offset<0){
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Specified offset cannot be negative. %d < 0\n", 
+                  driverName, functionName, offset);
+      stringValid = "false";
+    }
+    else
+    {
+      offsetStr = std::to_string(offset);
+    }
+  }
+  return std::make_tuple(stringValid,offsetStr);
+}
+
+std::tuple<std::string,std::string> omronUtilities::checkValidSliceSize(const std::string str, bool indexable, std::string dtype)
+{
+  // Checking for valid sliceSize
+  const char * functionName = "checkValidSliceSize";
+  char *p;
+  std::string stringValid = "true";
+  std::string sliceSize = "1";
+  if (str != "none" && str != "1"){
+    strtol(str.c_str(), &p, 10);
+    if (*p == 0)
+    {
+      if (indexable && str != "1")
+      {
+        sliceSize = str;
+        if (dtype=="STRING" || dtype=="LINT" || dtype=="ULINT"){
+          asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, sliceSize must be 1 for this datatype.\n", driverName, functionName);
+          stringValid = "false";
+          sliceSize = "1";
+        }
+      }
+      else if (str == "0")
+      {
+        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, A sliceSize of 0 was requested, this is invalid, a value of 1 is being used instead.\n", driverName, functionName);
+        sliceSize = "1";
+      }
+      else if (str != "1")
+      {
+        //This may or may not be ok depending on whether you are trying to index something that is sliceable
+        sliceSize = str;
+        asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s:%s Warn, You may be attempting an invalid slice?. If you are slicing a structure embedded array then ignore this! Try tag_name[startIndex] to specify elements for slice.\n", driverName, functionName);
+      }
+    }
+    else
+    {
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid sliceSize, must be integer.\n", driverName, functionName);
+      stringValid = "false";
+      sliceSize = "1";
+    }
+  }
+  return std::make_tuple(stringValid, sliceSize);
+}
+
+std::string omronUtilities::checkValidDtype(const std::string str)
+{
+  // Checking for valid datatype
+  const char * functionName = "checkValidDtype";
+  bool validDataType = false;
+  std::string stringValid = "true";
+  for (size_t t = 0; t < pDriver->omronDataTypeList.size(); t++)
+  {
+    if (str == pDriver->omronDataTypeList[t].first)
+    {
+      validDataType = true;
+    }
+  }
+  if (!validDataType)
+  {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Datatype invalid.\n", driverName, functionName);
+    stringValid = "false";
+  }
+  return stringValid;
+}
+
+std::tuple<std::string,std::string,bool> omronUtilities::checkValidName(const std::string str)
+{
+  // Check for valid name or name[startIndex]
+  const char * functionName = "checkValidName";
+  std::string stringValid = "true";
+  std::string startIndex = "";
+  bool indexable = 0;
+  auto b = str.begin(), e = str.end();
+
+  while ((b = std::find(b, e, '[')) != e)
+  {
+    auto n_start = ++b;
+    indexable = 1; 
+    b = std::find(b, e, ']');
+    if (b == e) {
+      break;
+    }
+    startIndex = std::string(n_start, b);
+    if (!startIndex.empty())
+    {
+      break;
+    }
+  }
+  if (!startIndex.empty())
+  {
+    try
+    {              
+      if (std::stoi(startIndex) < 1)
+      {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, A startIndex of < 1 is forbidden\n", driverName, functionName);
+        stringValid = "false";
+        startIndex = "1";
+      }
+    }
+    catch(...)
+    {
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, startIndex must be an integer.\n", driverName, functionName);
+      stringValid = "false";
+      startIndex = "1";
+    }
+  }
+  else if (indexable){
+    // Opening bracket found, but no closing bracket.
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, invalid startIndex in name: %s\n", driverName, functionName, str.c_str());
+    stringValid = "false";
+    startIndex = "1";
+  }
+  else {
+    // No start index found
+    startIndex = "1";
+  }
+  return std::make_tuple(stringValid,startIndex,indexable);
+}
+
+drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
+{
+  const char * functionName = "drvInfoParser";
+  drvInfoMap keyWords = {
+      {"pollerName", "none"}, // optional
+      {"tagName", "none"},  
+      {"dataType", "none"}, 
+      {"startIndex", "1"},   
+      {"sliceSize", "1"},     
+      {"offset", "0"},       
+      {"tagExtras", "none"},
+      {"strCapacity", "0"}, // only needed for getting strings from UDTs  
+      {"optimisationFlag", "not requested"}, // stores the status of optimisation, ("not requested", "attempt optimisation","dont optimise","optimisation failed","optimised","master")
+      {"stringValid", "true"}, // set to false if errors are detected which aborts creation of tag and asyn parameter, return early if false
+      {"offsetReadSize", "0"},
+      {"readAsString", "0"}, // currently just used to optionally output the TIME dtypes as user friendly strings in the local timezone
+      {"optimise", "0"} // if 0 then we use the offset to look within a datatype, if 1 then we use it to get a datatype from within an array/UDT
+  };
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "============================================================================================\n");
+  std::list<std::string> words; // Contains a list of string parameters supplied by the user through a record's drvInfo interface.
+
+  // Split up drvInfo into its constituent values
+  keyWords.at("stringValid") = this->seperateDrvInfoVals(drvInfo, words);
+
+  if (words.size() < 5)
+  {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Record is missing parameters. Expected 5 space seperated terms (or 6 including poller) but recieved: %ld\n", driverName, functionName, words.size());
     keyWords.at("stringValid") = "false";
+    return keyWords;
   }
 
   if (words.front()[0] == '@')
@@ -102,205 +411,55 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
     }
   }
 
-  if (words.size() < 5)
-  {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Record is missing parameters. Expected 5 space seperated terms (or 6 including poller) but recieved: %ld\n", driverName, functionName, words.size());
-    keyWords.at("stringValid") = "false";
-    return keyWords;
-  }
-
-  int params = words.size();
   bool indexable = false;
-  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "============================================================================================\n");
-  for (int i = 0; i < params; i++)
+  size_t params = words.size();
+  for (size_t i = 0; i < params; i++)
   {
     const std::string thisWord = words.front(); // The word which we are currently processing to extract the required information
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Processing drvInfo parameter: %s\n", driverName, functionName, words.front().c_str());
     if (i == 0)
     {
       // Check for valid name or name[startIndex]
-      std::string startIndex;
-      auto b = thisWord.begin(), e = thisWord.end();
-
-      while ((b = std::find(b, e, '[')) != e)
-      {
-        auto n_start = ++b;
-        b = std::find(b, e, ']');
-        startIndex = std::string(n_start, b);
-        if (!startIndex.empty())
-        {
-          break;
-        }
+      auto tuple = this->checkValidName(thisWord);
+      keyWords.at("stringValid") = std::get<0>(tuple);
+      if (keyWords.at("stringValid")!="true"){
+        return keyWords;
       }
-      if (!startIndex.empty())
-      {
-        keyWords.at("startIndex") = startIndex;
-        indexable = true;
-        try
-        {                
-          if (std::stoi(startIndex) < 1)
-          {
-            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, A startIndex of < 1 is forbidden\n", driverName, functionName);
-            keyWords.at("stringValid") = "false";
-            return keyWords;
-          }
-        }
-        catch(...)
-        {
-          asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, startIndex must be an integer.\n", driverName, functionName);
-          keyWords.at("stringValid") = "false";
-          return keyWords;
-        }
-      }
+      keyWords.at("startIndex") = std::get<1>(tuple);
+      indexable = std::get<2>(tuple);
       keyWords.at("tagName") = thisWord;
       words.pop_front();
     }
     else if (i == 1)
     {
       // Checking for valid datatype
-      bool validDataType = false;
-      for (size_t t = 0; t < pDriver->omronDataTypeList.size(); t++)
-      {
-        if (thisWord == pDriver->omronDataTypeList[t].first)
-        {
-          validDataType = true;
-          keyWords.at("dataType") = thisWord;
-        }
-      }
-      if (!validDataType)
-      {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Datatype invalid.\n", driverName, functionName);
-        keyWords.at("stringValid") = "false";
+      keyWords.at("stringValid") = this->checkValidDtype(thisWord);
+      if (keyWords.at("stringValid")!="true"){
         return keyWords;
       }
+      keyWords.at("dataType") = thisWord;
       words.pop_front();
     }
     else if (i == 2)
     {
       // Checking for valid sliceSize
-      char *p;
-      if (thisWord == "none"){
-        keyWords.at("sliceSize") = "1";
+      auto tuple = this->checkValidSliceSize(thisWord,indexable,keyWords.at("dataType"));
+      keyWords.at("stringValid") = std::get<0>(tuple);
+      if (keyWords.at("stringValid")!="true"){
+        return keyWords;
       }
-      else {
-        strtol(thisWord.c_str(), &p, 10);
-        if (*p == 0)
-        {
-          if (indexable && thisWord != "1")
-          {
-            keyWords.at("sliceSize") = thisWord;
-            if (keyWords.at("dataType")=="STRING" || keyWords.at("dataType")=="LINT" || keyWords.at("dataType")=="ULINT"){
-              asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Error! sliceSize must be 1 for this datatype.\n", driverName, functionName);
-              keyWords.at("stringValid") = "false";
-              return keyWords;
-            }
-          }
-          else if (thisWord == "0")
-          {
-            keyWords.at("sliceSize") = "1";
-          }
-          else if (thisWord != "1")
-          {
-            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s You cannot get a slice of a whole tag. Try tag_name[startIndex] to specify elements for slice.\n", driverName, functionName);
-            keyWords.at("stringValid") = "false";
-            return keyWords;
-          }
-        }
-        else
-        {
-          asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid sliceSize, must be integer.\n", driverName, functionName);
-          keyWords.at("stringValid") = "false";
-          return keyWords;
-        }
-      }
+      keyWords.at("sliceSize") = std::get<1>(tuple);
       words.pop_front();
     }
     else if (i == 3)
     {
       // Checking for valid offset, either a positive integer or a reference to a structs definition file, eg structName[2][11]...
-      size_t indexStartPos = 0; // stores the position of the first '[' within the user supplied string
-      int offset;
-      std::vector<size_t> structIndices; // the indice(s) within the structure specified by the user
-      bool indexFound = false;
-      bool firstIndex = true;
-      // user has chosen not to use an offset
-      if (thisWord == "none")
-      {
-        keyWords.at("offset") = "0";
+      auto tuple = this->checkValidOffset(thisWord);
+      keyWords.at("stringValid") = std::get<0>(tuple);
+      if (keyWords.at("stringValid")!="true"){
+        return keyWords;
       }
-      else {
-        // attempt to set offset to integer, if not possible then assume it is a structname
-        try
-        {
-          offset = std::stoi(thisWord);
-        }
-        catch(...)
-        {
-          // It is either a syntax error, or a reference to a structure, we attempt to split the name and integer
-          for (size_t n = 0; n<thisWord.size(); n++)
-          {
-            if (thisWord.c_str()[n] == '[') // check each character of the word until we have found an opening bracket
-            {
-              std::string offsetSubstring = thisWord.substr(n+1);
-              if (firstIndex) {indexStartPos = n;} //only want to update indexStartPos, once we have already found the first index
-              for (size_t m = 0; m<offsetSubstring.size(); m++)
-              {
-                if (offsetSubstring.c_str()[m] == ']') // check each character of the word until we have found a closing bracket
-                {
-                  try
-                  {
-                    // struct integer found
-                    // try to convert the string between the brackets to an int, we also -1 to convert from the user input which numbers from 1
-                    // to the the system used to get the offset which numbers from 0
-                    structIndices.push_back(std::stoi(offsetSubstring.substr(0,m))-1);
-                    indexFound = true;
-                    firstIndex = false;
-                  }
-                  catch(...){
-                    indexFound = false;
-                  }
-                  break;
-                }
-              }
-            }
-          }
-          if (!indexFound){
-            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find a valid index for the requested structure: %s\n", driverName, functionName, words.front().c_str());
-            keyWords.at("stringValid") = "false";
-            return keyWords;
-          }
-          
-          //look for matching structure in structMap_
-          //if found, look for the offset at the structIndex within the structure
-          std::string structName = thisWord.substr(0,indexStartPos);
-          bool structFound = false;
-          for (auto item: pDriver->structMap_)
-          {
-            if (item.first == structName)
-            {
-              //requested structure found
-              structFound = true;
-              offset = findRequestedOffset(structIndices, structName); //lookup byte offset based off user supplied indice(s)
-              if (offset >=0) {}
-              else {
-                offset=0;
-                asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid index or structure name: %s\n", driverName, functionName, thisWord.c_str());
-                keyWords.at("stringValid") = "false";
-                return keyWords;
-              }
-              break;
-            }
-          }
-          if (!structFound)
-          {
-            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Could not find structure requested: %s. Have you loaded a struct file?\n", driverName, functionName, thisWord.c_str());
-            keyWords.at("stringValid") = "false";
-            return keyWords;
-            offset=0;
-          }
-        }
-        keyWords.at("offset") = std::to_string(offset);
-      }
+      keyWords.at("offset") = std::get<1>(tuple);
       words.pop_front();
     }
     else if (i == 4)
@@ -308,86 +467,17 @@ drvInfoMap omronUtilities::drvInfoParser(const char *drvInfo)
       // Check for valid extra attributes
       /* These attributes overwrite libplctag attributes, other attributes which arent overwritten are not mentioned here
         Users can overwrite these defaults and other libplctag defaults from their records */
-      drvInfoMap defaultTagAttribs = {
-          {"allow_packing=", "1"},
-          {"str_is_zero_terminated=", "0"},
-          {"str_is_fixed_length=", "0"},
-          {"str_is_counted=", "1"},
-          {"str_count_word_bytes=", "2"},
-          {"str_pad_to_multiple_bytes=", "0"}};
-
-      std::string extrasString;
-      std::string extrasWord;
-      if ((thisWord!="0" && thisWord!="none") || keyWords.at("dataType")=="STRING") 
-      {
-        // The user has specified attributes other than default, these will either be added to the list or replace existing default values
-        if ((keyWords.at("dataType")=="STRING")&&(thisWord=="0" || thisWord=="none")){
-          //We have a string dtype which has not defined its extrasString, this is improper behaviour but we allow it here and create
-          //a warning later. We must strip away the none identifier.
-          extrasString="",extrasWord="";
-        }
-        else
-          extrasString = thisWord, extrasWord = thisWord;
-
-        // look for and process the strings: str_max_capacity, offset_read_size and as_time
-        processExtrasExceptions(thisWord, keyWords, extrasString, defaultTagAttribs);
-
-        for (auto &attrib : defaultTagAttribs)
-        {
-          auto pos = extrasWord.find(attrib.first);
-          std::string size;
-          if (pos != std::string::npos) // if attrib is one of our defined defaults
-          {
-            std::string remaining = extrasWord.substr(pos + attrib.first.size(), extrasWord.size());
-            auto nextPos = remaining.find('&');
-            if (nextPos != std::string::npos)
-            {
-              size = remaining.substr(0, nextPos);
-              extrasString = extrasWord.erase(pos-1, attrib.first.size() + nextPos + 1);
-            }
-            else if (pos!=0)
-            {
-              size = remaining.substr(0, remaining.size());
-              extrasString = extrasWord.erase(pos-1, extrasWord.size()-(pos-1));
-            }
-            else { //user has forgotten to add & at the start
-              size = remaining.substr(0, remaining.size()); 
-              extrasString = extrasWord.erase(pos, extrasWord.size()-pos);
-            }
-
-            if (size == attrib.second) // if defined value is identical to default, continue
-            {
-              continue;
-            }
-            else // set new default value
-            {
-              attrib.second = size;
-            }
-          }
-        }
-        if (keyWords.at("stringValid") == "false"){
-          return keyWords;
-        }
+      auto tuple = this->checkValidExtras(thisWord, keyWords);
+      keyWords.at("stringValid") = std::get<0>(tuple);
+      if (keyWords.at("stringValid")!="true"){
+        return keyWords;
       }
-
-      //Add the non default tag attributes to the map
-      for (auto attrib : defaultTagAttribs)
-      {
-        if (attrib.first.substr(0,3) == "str" && !(keyWords.at("dataType") == "STRING" || keyWords.at("dataType") == "UDT"))
-        {
-          // If the user requests str type attributes for a non STRING record then ignore
-          continue;
-        }
-        extrasString += "&";
-        extrasString += attrib.first;
-        extrasString += attrib.second;
-      }
-      keyWords.at("tagExtras") = extrasString;
+      keyWords.at("tagExtras") = std::get<1>(tuple);
       words.pop_back();
     }
   }
 
-  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Creating libplctag tag with the following parameters:\n", driverName, functionName);
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s Extracted the following parameters from drvInfo=%s :\n", driverName, functionName, drvInfo);
   for (auto i = keyWords.begin(); i != keyWords.end(); i++)
   {
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s = %s\n", i->first.c_str(), i->second.c_str());
@@ -421,7 +511,7 @@ void omronUtilities::processExtrasExceptions(std::string thisWord, drvInfoMap &k
         //offset_read_size found
         std::stoi(size); // try to convert the string to an int
         keyWords.at("offsetReadSize") = size;  
-        extrasString.erase(pos, nextPos-pos);
+        extrasString.erase(pos-1, nextPos-pos);
       }
       catch(...){
         keyWords.at("stringValid") = "false";
@@ -455,7 +545,7 @@ void omronUtilities::processExtrasExceptions(std::string thisWord, drvInfoMap &k
         //read_as_string found
         std::stoi(size); // try to convert the string to an int
         keyWords.at("readAsString") = size;  
-        extrasString.erase(pos, nextPos-pos);
+        extrasString.erase(pos-1, nextPos-pos);
       }
       catch(...){
         keyWords.at("stringValid") = "false";
@@ -496,11 +586,11 @@ void omronUtilities::processExtrasExceptions(std::string thisWord, drvInfoMap &k
           {"str_is_counted=", "0"},
           {"str_count_word_bytes=", "0"},
           {"str_pad_to_multiple_bytes=", "0"}};
-      extrasString.erase(pos, nextPos-pos);
+      extrasString.erase(pos-1, nextPos-pos);
     }
     catch(...){
       keyWords.at("stringValid") = "false";
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid value for optimise=: %s\n", driverName, functionName, size.c_str());
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid value for optimise=: %s\n", driverName, functionName, size.c_str());
     }
   }
 
@@ -526,7 +616,7 @@ void omronUtilities::processExtrasExceptions(std::string thisWord, drvInfoMap &k
         keyWords.at("strCapacity") = size;  
       }
       catch(...){
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Invalid integer for str_max_capacity: %s\n", driverName, functionName, size.c_str());
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Invalid integer for str_max_capacity: %s\n", driverName, functionName, size.c_str());
         keyWords.at("stringValid") = "false";
       }
     }
@@ -892,9 +982,9 @@ int omronUtilities::getEmbeddedAlignment(structDtypeMap const& expandedMap, std:
     else if (nextNextItem == "start:array") {
       alignment = getEmbeddedAlignment(expandedMap, structName, expandedRow[i+2], i+1);
     }
-    else if (expandedMap.find(nextNextItem)!=expandedMap.end()){
+    else if (expandedMap.find(nextNextItem.substr(6))!=expandedMap.end()){
       // Check to see if the array dtype is a start:structName. If it is then we must lookup the biggest dtype in this struct
-      alignment = getBiggestDtype(expandedMap, nextNextItem);
+      alignment = getBiggestDtype(expandedMap, nextNextItem.substr(6));
     }
     else {
       asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Could not find the alignment rule for: %s\n", driverName, functionName, nextNextItem.c_str());
@@ -914,6 +1004,19 @@ int omronUtilities::getEmbeddedAlignment(structDtypeMap const& expandedMap, std:
       return -1;
     }
   }
+  return alignment;
+}
+
+int omronUtilities::getDtypeAlignment(std::string dtype)
+{
+  // If dtype is a basic dtype, we return the alignment
+  int alignment;
+  if (dtype == "LREAL" || dtype == "ULINT" || dtype == "LINT" || dtype == "TIME") {alignment = 8;}
+  else if (dtype == "DWORD" || dtype == "UDINT" || dtype == "DINT" || dtype == "REAL") {alignment = 4;}
+  else if (dtype == "BOOL" || dtype == "WORD" || dtype == "UINT" || dtype == "INT") {alignment = 2;}
+  else if (dtype == "SINT" || dtype == "USINT") {alignment = 1;}
+  else if (dtype.substr(0,6) == "STRING") {alignment = 1;}
+  else {alignment=0;}
   return alignment;
 }
 
@@ -954,7 +1057,6 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
     }
     else if (dtype == "end:array"){
       if (insideBoolArray){
-        //Fix to deal with back to back bool arrays
         dtypeSize = ((arrayBools-1)/8);
         if (dtypeSize < 2){dtypeSize=2;}
         else {
@@ -968,6 +1070,14 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
       continue;
     }
     else if (dtype.substr(0,4) == "end:" || dtype.substr(0,6) == "start:"){
+      /*If we have a start:struct, then we may be in the situation where we have back to back structures. In this case
+       * we have not yet checked the alignment of the next basic dtype, we have only checked the alignment of the previous 
+       * structure. So we do that now */
+      if (dtype.substr(0,6) == "start:"){
+        nextItem = expandedRow[i+1];
+        thisAlignment = getDtypeAlignment(nextItem);
+        if (thisAlignment>alignment){alignment=thisAlignment;}
+      }
       i++;
       insideBoolArray=false;
       continue;
@@ -1094,7 +1204,7 @@ int omronUtilities::findOffsets(structDtypeMap const& expandedMap, std::string s
       // based on the next dtype. While searching we also update the alignment if we come across a struct start or end with a larger internal
       // dtype than the current alignment.
       thisAlignment = getEmbeddedAlignment(expandedMap, structName, nextItem, i);
-      if (alignment < thisAlignment){alignment=thisAlignment;} // Alignment should be 0 at this point, but we check just in case
+      if (alignment < thisAlignment){alignment=thisAlignment;}
     }
     else {
       asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s:%s Err, Failed to calculate the alignment of: %s. Definition for struct: %s is invalid.\n", driverName, functionName, nextItem.c_str(), structName.c_str());

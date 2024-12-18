@@ -43,6 +43,17 @@ LIBPLCTAG_BUILD = $(LIBPLCTAG)/build/bin_dist
 STATIC_BUILD = NO
 SHARED_LIBRARIES = YES
 
+#Build doxygen docs
+#MAKE_DOCS = YES
+
+# Set USE_BOOST to YES to enable unit tests, you can leave BOOST_LIB and BOOST_INCLUDE unspecified if BOOST is installed systemwide
+#USE_BOOST = YES
+#BOOST_LIB = /usr/lib64
+#BOOST_INCLUDE = /usr/include
+
+# Set PLC_CONNECTED to YES to enable unit tests which require a correctly configured PLC
+#PLC_CONNECTED = YES
+
 # These allow developers to override the CONFIG_SITE variable
 # settings without having to modify the configure/CONFIG_SITE
 # file itself.

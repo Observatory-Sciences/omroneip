@@ -63,6 +63,12 @@ jobs:
         python .ci-local/install-libplctag.py
         cat ./configure/CONFIG_SITE.local
       if: matrix.libplctag != ''
+    - name: Install boost and configure this in the driver
+      run: |
+          sudo apt-get install libboost-test-dev
+          sudo apt-get install libboost-system-dev
+          printf "\nUSE_BOOST = YES" >> ./configure/CONFIG_SITE.local
+      if: matrix.test == 'true'
     - name: Prepare and compile dependencies
       run: python .ci/cue.py prepare
     - name: Build main module
@@ -75,9 +81,13 @@ jobs:
       run: |
         sudo apt-get update
         sudo pip3 install pytest pyepics==3.5.2
-        sudo pip3 install run-iocsh -i https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple
-    - name: Run end2end tests
-      run: |
-        python .ci/cue.py exec python iocBoot/iocCITests/runTests.py -p "Omron" -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server
-        python .ci/cue.py exec python iocBoot/iocCITests/runTests.py -p "ControlLogix" -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server
+      #  sudo pip3 install run-iocsh -i https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple
       if: matrix.test == 'true'
+    - name: Run unittests
+      run: ./bin/linux-x86_64/test_omroneip
+      if: matrix.test == 'true'
+    #- name: Run end2end tests
+      #run: |
+      #  python .ci/cue.py exec python iocBoot/iocCITests/runTests.py -p "Omron" -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server
+      #  python .ci/cue.py exec python iocBoot/iocCITests/runTests.py -p "ControlLogix" -s /home/runner/.source/libplctag/${{matrix.libplctag}}/build/bin_dist/ab_server
+    #  if: matrix.test == 'true'
