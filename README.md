@@ -15,7 +15,7 @@ This driver is being built and tested on Centos 9, using EPICS base 3.15.9 and a
 
 Software manual
 -------------------
-See /docs/Omroneip_Software_Manual.md for the latest documentation
+See [/docs/Omroneip_Software_Manual.md](https://github.com/Observatory-Sciences/omroneip/blob/main/docs/Omroneip_Software_Manual_v3.md) for the latest documentation
 
 Doxygen documentation
 -------------------
