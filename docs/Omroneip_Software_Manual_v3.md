@@ -105,9 +105,9 @@ The driver has three available commands which can be called from the IOC. The fi
 
 
 ### <a name="_toc118884400"></a>**DrvOmronEIPConfigPoller**
-#drvOmronEIPConfigPoller(driverPortName, pollerName, updateRate, spreadRequests)
 
 ```bash
+    #drvOmronEIPConfigPoller(driverPortName, pollerName, updateRate, spreadRequests)
     drvOmronEIPConfigPoller("omronDriver", "fastPoller", 0.1, 0)
     drvOmronEIPConfigPoller("omronDriver", "mediumPoller", 2, 0)
     drvOmronEIPConfigPoller("omronDriver", "slowPoller", 10, 1)
@@ -142,7 +142,7 @@ asynSetTraceMask driverPortName 0x00FF
 The mask 0x00FF enables logging of all message types, see <https://epics.anl.gov/modules/soft/asyn/R4-32/asynDriver.html> for the specifics of the masks.
 
 ## <a name="_toc247901984"></a>**Record interface**
-Records which connect to the driver are configured in the same way as any other <https://epics-modules.github.io/master/asyn/R4-7/asynDriver.html>. Specifically, they require a DTYP which matches one of the asyn interfaces supported by the driver and a valid INP field:
+Records which connect to the driver are configured in the same way as for any other asyn driver <https://epics-modules.github.io/master/asyn/R4-7/asynDriver.html>. Specifically, they require a DTYP which matches one of the asyn interfaces supported by the driver and a valid INP field:
 
 ```bash
     field(DTYP,"asynXXX")
@@ -286,7 +286,7 @@ This section highlights a few of these attributes which are relevant for communi
 ## <a name="_toc558233786"></a>**Example records**
 This section explains a few different examples. A full list of example records comes with the driver in the form of .db or .template files. I strongly recommend checking out these db file as well as the cmd files which load the databases and call the relevant omroneip commands.
 
-Record fields required for driver operation (either @asyn or @asynMask should be used):
+The following record fields are required to connect the record to the driver (either @asyn or @asynMask can be used):
 
 ```bash
     field(DTYP, "asynXXX")
@@ -511,4 +511,5 @@ else, the status must be good, so we quit this while loop and continue to read t
 When reading data from tags in libplctag (done in the *readData()* function), we lock the tag so that the tags data doesn't change while we are reading it.
 
 ![](omroneip_sequencing_diagram.png)
-Simplified sequencing diagram showing the read pollers behaviour. readData() calls one of many different plc\_tag\_get…() functions which get data cached in libplctag and send it to any records which use the asyn parameter which requested the readData().
+
+Above is a simplified sequencing diagram which shows the read pollers behaviour. readData() calls one of many different plc\_tag\_get…() functions which get data cached in libplctag and send it to any records which use the asyn parameter which requested the readData().
